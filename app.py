@@ -1576,6 +1576,61 @@ def calculate_user_grand_total(user):
             total += Decimal(t.tier5_business_user_commission or 0)
     return total
 
+from datetime import datetime, timedelta
+
+def calculate_user_earnings_split(user, delay_days=7):
+    """
+    Returns (total_earnings, available_earnings, pending_earnings)
+    based on a simple date rule: earnings are available if
+    transaction.date_time <= now - delay_days.
+    """
+    ref_code = user.referral_code
+    all_txns = UserTransaction.query.all()
+
+    total = Decimal(0)
+    available = Decimal(0)
+
+    cutoff = datetime.utcnow() - timedelta(days=delay_days)
+
+    for t in all_txns:
+        earned_here = Decimal(0)
+
+        # Same logic as calculate_user_grand_total:
+        if t.user_referral_id == ref_code and (t.cash_back or 0) > 0:
+            earned_here += Decimal(t.cash_back or 0)
+        if t.tier2_user_referral_id == ref_code and (t.tier2_commission or 0) > 0:
+            earned_here += Decimal(t.tier2_commission or 0)
+        if t.tier3_user_referral_id == ref_code and (t.tier3_commission or 0) > 0:
+            earned_here += Decimal(t.tier3_commission or 0)
+        if t.tier4_user_referral_id == ref_code and (t.tier4_commission or 0) > 0:
+            earned_here += Decimal(t.tier4_commission or 0)
+        if t.tier5_user_referral_id == ref_code and (t.tier5_commission or 0) > 0:
+            earned_here += Decimal(t.tier5_commission or 0)
+
+        # User-business commissions
+        if t.tier1_business_user_referral_id == ref_code and (t.tier1_business_user_commission or 0) > 0:
+            earned_here += Decimal(t.tier1_business_user_commission or 0)
+        if t.tier2_business_user_referral_id == ref_code and (t.tier2_business_user_commission or 0) > 0:
+            earned_here += Decimal(t.tier2_business_user_commission or 0)
+        if t.tier3_business_user_referral_id == ref_code and (t.tier3_business_user_commission or 0) > 0:
+            earned_here += Decimal(t.tier3_business_user_commission or 0)
+        if t.tier4_business_user_referral_id == ref_code and (t.tier4_business_user_commission or 0) > 0:
+            earned_here += Decimal(t.tier4_business_user_commission or 0)
+        if t.tier5_business_user_referral_id == ref_code and (t.tier5_business_user_commission or 0) > 0:
+            earned_here += Decimal(t.tier5_business_user_commission or 0)
+
+        if earned_here == 0:
+            continue
+
+        total += earned_here
+
+        # Available only if older than cutoff
+        if t.date_time <= cutoff:
+            available += earned_here
+
+    pending = total - available
+    return total, available, pending
+
 def calculate_business_grand_total(business):
     ref_code = business.referral_code
     all_txns = BusinessTransaction.query.all()
@@ -3232,9 +3287,12 @@ def dashboard():
     invite_form = InviteForm()
     user = current_user
 
-    # --- Earnings Calculation ---
-    user.grand_total_earnings = calculate_user_grand_total(user)
-    user.earnings_balance = user.grand_total_earnings - (user.withdrawn_total or Decimal(0))
+    # --- Earnings Calculation with 7-day delay ---
+    total_earnings, available_earnings, pending_earnings = calculate_user_earnings_split(user, delay_days=7)
+
+    user.grand_total_earnings = total_earnings
+    # earnings_balance should reflect what is actually available (older than 7 days) minus what was withdrawn
+    user.earnings_balance = available_earnings - (user.withdrawn_total or Decimal(0))
     db.session.commit()
 
     if request.method == "POST" and profile_form.submit.data and profile_form.validate():
@@ -3363,6 +3421,9 @@ def dashboard():
         has_active_sessions=has_active_sessions,
         active_sessions_count=active_sessions_count,
         businesses=businesses,
+        total_earnings=total_earnings,
+        available_earnings=available_earnings,
+        pending_earnings=pending_earnings,
     )
 
 @app.route("/logout")
@@ -7235,11 +7296,16 @@ def withdraw():
     if not user.stripe_account_id:
         flash("Please set up your Stripe payouts first.")
         return redirect(url_for('onboard_stripe'))
-    if user.earnings_balance is None or user.earnings_balance < MIN_PAYOUT:
-        flash(f"You need at least ${MIN_PAYOUT} to withdraw.", "warning")
+
+    # Recalculate based on 7-day availability
+    total_earnings, available_earnings, pending_earnings = calculate_user_earnings_split(user, delay_days=7)
+    net_available = available_earnings - (user.withdrawn_total or Decimal(0))
+
+    if net_available < MIN_PAYOUT:
+        flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    balance_to_withdraw = user.earnings_balance
+    balance_to_withdraw = net_available
     fee = balance_to_withdraw * Decimal("0.011")  # 1.1% instant payout fee
     payout_amount = balance_to_withdraw - fee
 
@@ -7248,17 +7314,17 @@ def withdraw():
         return redirect(url_for('dashboard'))
 
     try:
-        # Attempt instant payout
         payout = stripe.Payout.create(
-            amount=int(payout_amount * 100),  # in cents
+            amount=int(payout_amount * 100),
             currency='usd',
             method='instant',
             statement_descriptor="PerkMiner Payout",
             stripe_account=user.stripe_account_id
         )
-        # Mark FULL balance as withdrawn (including fee)
+        # mark the withdrawn funds
         user.withdrawn_total = (user.withdrawn_total or Decimal(0)) + balance_to_withdraw
-        user.earnings_balance = user.grand_total_earnings - user.withdrawn_total
+        # recompute earnings_balance for display convenience
+        user.earnings_balance = available_earnings - user.withdrawn_total
         db.session.commit()
         flash(f"Withdrawal of ${payout_amount:.2f} initiated! Stripe instant payout fee: ${fee:.2f} deducted.", "success")
     except Exception as e:
