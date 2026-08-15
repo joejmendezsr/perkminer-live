@@ -1650,6 +1650,54 @@ def calculate_business_grand_total(business):
             total += Decimal(t.sponsoree_mutual_commission or 0)
     return total
 
+from datetime import datetime, timedelta
+
+def calculate_business_earnings_split(business, delay_days=7):
+    """
+    Returns (total_earnings, available_earnings, pending_earnings) for a business,
+    based on its referral_code and BusinessTransaction rows.
+    Earnings are available if transaction.date_time <= now - delay_days.
+    """
+    ref_code = business.referral_code
+    all_txns = BusinessTransaction.query.all()
+
+    total = Decimal(0)
+    available = Decimal(0)
+
+    cutoff = datetime.utcnow() - timedelta(days=delay_days)
+
+    for t in all_txns:
+        earned_here = Decimal(0)
+
+        # Tier 1: business's own cashback
+        if t.business_referral_id == ref_code and (t.cash_back or 0) > 0:
+            earned_here += Decimal(t.cash_back or 0)
+
+        # Tiers 2-5 commissions
+        if t.tier2_business_referral_id == ref_code and (t.tier2_commission or 0) > 0:
+            earned_here += Decimal(t.tier2_commission or 0)
+        if t.tier3_business_referral_id == ref_code and (t.tier3_commission or 0) > 0:
+            earned_here += Decimal(t.tier3_commission or 0)
+        if t.tier4_business_referral_id == ref_code and (t.tier4_commission or 0) > 0:
+            earned_here += Decimal(t.tier4_commission or 0)
+        if t.tier5_business_referral_id == ref_code and (t.tier5_commission or 0) > 0:
+            earned_here += Decimal(t.tier5_commission or 0)
+
+        # Mutual sponsoree commission (0.25%) if used
+        if getattr(t, "sponsoree_mutual_referral_id", None) == ref_code and (t.sponsoree_mutual_commission or 0) > 0:
+            earned_here += Decimal(t.sponsoree_mutual_commission or 0)
+
+        if earned_here == 0:
+            continue
+
+        total += earned_here
+
+        if t.date_time <= cutoff:
+            available += earned_here
+
+    pending = total - available
+    return total, available, pending
+
 def get_featured_businesses(lat, lng):
     # 1. Find nearby businesses within 10 miles using the haversine formula
     RADIUS = 10  # miles
@@ -4932,9 +4980,11 @@ def business_dashboard():
         flash("Please log in and confirm your business email to access the dashboard.")
         return redirect(url_for("business_login"))
 
-    # ---- Update earnings at every dashboard load ----
-    biz.grand_total_earnings = calculate_business_grand_total(biz)
-    biz.earnings_balance = biz.grand_total_earnings - (biz.withdrawn_total or Decimal(0))
+    # ---- Update earnings with 7-day delay ----
+    total_biz_earnings, available_biz_earnings, pending_biz_earnings = calculate_business_earnings_split(biz, delay_days=7)
+
+    biz.grand_total_earnings = total_biz_earnings
+    biz.earnings_balance = available_biz_earnings - (biz.withdrawn_total or Decimal(0))
     db.session.commit()
 
     if request.args.get("fund_success") == "1":
@@ -5109,7 +5159,10 @@ def business_dashboard():
         latitude=latitude,
         longitude=longitude,
         active_biz_sessions_count=active_biz_sessions_count,
-        has_active_biz_sessions=has_active_biz_sessions  # pass to template
+        has_active_biz_sessions=has_active_biz_sessions,
+        total_biz_earnings=total_biz_earnings,
+        available_biz_earnings=available_biz_earnings,
+        pending_biz_earnings=pending_biz_earnings,
     )
 
 @app.route("/business/logout")
@@ -7350,32 +7403,33 @@ def business_withdraw():
         flash("Please set up your Stripe payouts first.", "warning")
         return redirect(url_for('onboard_business_stripe'))
 
-    if biz.earnings_balance is None or biz.earnings_balance < MIN_PAYOUT:
-        flash(f"You need at least ${MIN_PAYOUT} to withdraw.", "warning")
+    # Recalculate based on 7-day availability
+    total_biz_earnings, available_biz_earnings, pending_biz_earnings = calculate_business_earnings_split(biz, delay_days=7)
+    net_available = available_biz_earnings - (biz.withdrawn_total or Decimal(0))
+
+    if net_available < MIN_PAYOUT:
+        flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('business_dashboard'))
 
-    balance_to_withdraw = biz.earnings_balance
-    fee = balance_to_withdraw * Decimal("0.011")  # 1.1% instant payout fee
+    balance_to_withdraw = net_available
+    fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")  # standard bank transfer fee
     payout_amount = balance_to_withdraw - fee
 
     if payout_amount <= 0:
-        flash("Insufficient balance after the instant payout fee is deducted.", "warning")
+        flash("Insufficient balance after the standard payout fee is deducted.", "warning")
         return redirect(url_for('business_dashboard'))
 
     try:
-        # Attempt instant payout
-        payout = stripe.Payout.create(
-            amount=int(payout_amount * 100),  # in cents
+        transfer = stripe.Transfer.create(
+            amount=int(payout_amount * 100),
             currency='usd',
-            method='instant',
-            statement_descriptor="PerkMiner Business Payout",
-            stripe_account=biz.stripe_account_id
+            destination=biz.stripe_account_id,
+            description="PerkMiner Business Payout (Standard)"
         )
-        # Mark FULL balance as withdrawn (including fee)
         biz.withdrawn_total = (biz.withdrawn_total or Decimal(0)) + balance_to_withdraw
-        biz.earnings_balance = biz.grand_total_earnings - biz.withdrawn_total
+        biz.earnings_balance = available_biz_earnings - biz.withdrawn_total
         db.session.commit()
-        flash(f"Withdrawal of ${payout_amount:.2f} initiated! Stripe instant payout fee: ${fee:.2f} deducted.", "success")
+        flash(f"Business withdrawal of ${payout_amount:.2f} initiated! Stripe fee: ${fee:.2f} deducted.", "success")
     except Exception as e:
         flash(f"Failed to withdraw: {e}", "danger")
 
@@ -7497,11 +7551,15 @@ def withdraw_instant():
         flash("Please set up your Stripe payouts first.")
         return redirect(url_for('onboard_stripe'))
 
-    if user.earnings_balance is None or user.earnings_balance < MIN_PAYOUT:
-        flash(f"You need at least ${MIN_PAYOUT} to withdraw.", "warning")
+    # Recalculate based on 7-day availability
+    total_earnings, available_earnings, pending_earnings = calculate_user_earnings_split(user, delay_days=7)
+    net_available = available_earnings - (user.withdrawn_total or Decimal(0))
+
+    if net_available < MIN_PAYOUT:
+        flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    balance_to_withdraw = user.earnings_balance
+    balance_to_withdraw = net_available
     fee = balance_to_withdraw * Decimal("0.011") + Decimal("0.50")  # 1.1% + $0.50 fee
     payout_amount = balance_to_withdraw - fee
 
@@ -7518,7 +7576,8 @@ def withdraw_instant():
             stripe_account=user.stripe_account_id
         )
         user.withdrawn_total = (user.withdrawn_total or Decimal(0)) + balance_to_withdraw
-        user.earnings_balance = user.grand_total_earnings - user.withdrawn_total
+        # earnings_balance is based on available_earnings minus what was withdrawn
+        user.earnings_balance = available_earnings - user.withdrawn_total
         db.session.commit()
         flash(f"Instant withdrawal of ${payout_amount:.2f} initiated! Instant payout fee: ${fee:.2f} deducted.", "success")
     except Exception as e:
@@ -7544,11 +7603,14 @@ def business_withdraw_instant():
         flash("Please set up your Stripe payouts first.", "warning")
         return redirect(url_for('onboard_business_stripe'))
 
-    if biz.earnings_balance is None or biz.earnings_balance < MIN_PAYOUT:
-        flash(f"You need at least ${MIN_PAYOUT} to withdraw.", "warning")
+    total_biz_earnings, available_biz_earnings, pending_biz_earnings = calculate_business_earnings_split(biz, delay_days=7)
+    net_available = available_biz_earnings - (biz.withdrawn_total or Decimal(0))
+
+    if net_available < MIN_PAYOUT:
+        flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('business_dashboard'))
 
-    balance_to_withdraw = biz.earnings_balance
+    balance_to_withdraw = net_available
     fee = balance_to_withdraw * Decimal("0.011") + Decimal("0.50")
     payout_amount = balance_to_withdraw - fee
 
@@ -7565,7 +7627,7 @@ def business_withdraw_instant():
             stripe_account=biz.stripe_account_id
         )
         biz.withdrawn_total = (biz.withdrawn_total or Decimal(0)) + balance_to_withdraw
-        biz.earnings_balance = biz.grand_total_earnings - biz.withdrawn_total
+        biz.earnings_balance = available_biz_earnings - biz.withdrawn_total
         db.session.commit()
         flash(f"Instant business withdrawal of ${payout_amount:.2f} initiated! Instant payout fee: ${fee:.2f} deducted.", "success")
     except Exception as e:

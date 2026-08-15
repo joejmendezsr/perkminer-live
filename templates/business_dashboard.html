@@ -585,7 +585,46 @@
     <div class="card p-4 mb-4">
 
 <h4>Your Business Activity</h4>
+
+<!-- Business earnings summary with 7-day delay -->
 <div class="mb-3">
+  <div class="card mb-3">
+    <div class="card-header">
+      Business earnings summary (7-day delay)
+    </div>
+    <div class="card-body">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Amount</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total earnings</td>
+            <td>${{ "{:,.2f}".format(total_biz_earnings or 0) }}</td>
+            <td>All cashback and B2B commissions your business has earned (lifetime).</td>
+          </tr>
+          <tr>
+            <td>Pending earnings</td>
+            <td>${{ "{:,.2f}".format(pending_biz_earnings or 0) }}</td>
+            <td>Earnings from transactions finalized in the last 7 days. These are still in the holding period.</td>
+          </tr>
+          <tr>
+            <td>Available for withdrawal</td>
+            <td>${{ "{:,.2f}".format(available_biz_earnings or 0) }}</td>
+            <td>Earnings that are at least 7 days old and can be withdrawn to your business bank account.</td>
+          </tr>
+        </tbody>
+      </table>
+      <small class="text-muted">
+        Note: Each invoice becomes available 7 days after it is finalized as a paid transaction.
+      </small>
+    </div>
+  </div>
+
   <div class="row align-items-center">
     <div class="col-12 col-md-auto d-flex flex-wrap gap-2 mb-2 mb-md-0">
       <a href="{{ url_for('business_receipts') }}" class="btn btn-outline-secondary">View Invoices</a>
@@ -602,7 +641,7 @@
     {% endif %}
   </div>
 
-  <div class="fs-5 fw-semibold text-primary mb-2">
+  <div class="fs-5 fw-semibold text-primary mb-2 mt-2">
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
   </div>
 
@@ -619,7 +658,7 @@
         {% set std_net = earnings - std_fee %}
         <div class="mb-3 border rounded p-3">
           <div class="fw-bold mb-1">
-            <i class="bi bi-bank"></i> Standard Payout (1–3 business days)
+            <i class="bi bi-bank"></i> Standard Payout (1-3 business days)
           </div>
           <div class="text-muted mb-1" style="font-size:0.97em;">
             Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee) }} (0.25% + $0.35)<br>
@@ -632,6 +671,7 @@
             </button>
           </form>
         </div>
+
         <!-- Instant Payout -->
         {% set inst_fee = earnings * 0.011 + 0.50 %}
         {% set inst_net = earnings - inst_fee %}
