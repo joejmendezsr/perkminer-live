@@ -363,24 +363,20 @@
           <tr>
             <th>Field</th>
             <th>Amount</th>
-            <th>Note</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>Total earnings</td>
             <td>${{ "{:,.2f}".format(total_earnings or 0) }}</td>
-            <td>All earnings from your purchases and referral commissions (lifetime).</td>
           </tr>
           <tr>
             <td>Pending earnings</td>
             <td>${{ "{:,.2f}".format(pending_earnings or 0) }}</td>
-            <td>Earnings from transactions finalized in the last 7 days. These are still in the holding period.</td>
           </tr>
           <tr>
             <td>Available for withdrawal</td>
             <td>${{ "{:,.2f}".format(available_earnings or 0) }}</td>
-            <td>Earnings that are at least 7 days old and can be withdrawn to your bank account.</td>
           </tr>
         </tbody>
       </table>
