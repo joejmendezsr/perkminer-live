@@ -385,7 +385,9 @@
         </tbody>
       </table>
       <small class="text-muted">
-        Note: Each transaction becomes available 7 days after it is finalized by the business.
+        <a href="#" data-bs-toggle="modal" data-bs-target="#memberEarningsInfo">
+          <i class="bi bi-info-circle"></i> Info
+        </a>
       </small>
     </div>
   </div>
@@ -736,6 +738,23 @@
   </div>
 </div>
 {% endif %}
+
+<div class="modal fade" id="memberEarningsInfo" tabindex="-1" aria-labelledby="memberEarningsInfoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="memberEarningsInfoLabel">How your earnings work</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="font-size:0.95em;">
+        <p><b>Total earnings</b> are all cashback and referral commissions you have earned, lifetime.</p>
+        <p><b>Pending earnings</b> are from transactions finalized in the last 7 days. These are in a holding period.</p>
+        <p><b>Available for withdrawal</b> are earnings that are at least 7 days old and can be withdrawn to your bank account.</p>
+        <p>Each transaction moves from pending to available exactly 7 days after the business finalizes it.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="card p-4 text-center">
   <h4>This is your dashboard.</h4>

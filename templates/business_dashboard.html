@@ -620,7 +620,9 @@
         </tbody>
       </table>
       <small class="text-muted">
-        Note: Each invoice becomes available 7 days after it is finalized as a paid transaction.
+        <a href="#" data-bs-toggle="modal" data-bs-target="#businessEarningsInfo">
+          <i class="bi bi-info-circle"></i> Info
+        </a>
       </small>
     </div>
   </div>
@@ -847,6 +849,24 @@
     {% endif %}
   {% endwith %}
 </div>
+
+<div class="modal fade" id="businessEarningsInfo" tabindex="-1" aria-labelledby="businessEarningsInfoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="businessEarningsInfoLabel">How your business earnings work</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="font-size:0.95em;">
+        <p><b>Total earnings</b> are all cashback and B2B commissions your business has earned, lifetime.</p>
+        <p><b>Pending earnings</b> are from invoices finalized in the last 7 days. These are still in the 7-day holding period.</p>
+        <p><b>Available for withdrawal</b> are earnings that are at least 7 days old and can be withdrawn to your business bank account.</p>
+        <p>Each invoice moves from pending to available exactly 7 days after it is finalized as a paid transaction.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <footer>
   <div>
     <div class="mb-2">
