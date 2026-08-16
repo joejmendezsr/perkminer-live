@@ -1807,6 +1807,28 @@ def distribute_investor_earnings_per_transaction(transaction):
                 rate=1.0
             )
 
+def calculate_investor_earnings_split(user, delay_days=7):
+    """
+    Returns (total_earnings, available_earnings, pending_earnings) for a silent investor.
+    Uses InvestorEarnings.created_at and a delay window.
+    """
+    total = Decimal("0")
+    available = Decimal("0")
+
+    cutoff = datetime.utcnow() - timedelta(days=delay_days)
+
+    earnings = InvestorEarnings.query.filter_by(user_id=user.id).all()
+    for e in earnings:
+        amount = Decimal(str(e.amount or 0))
+        if amount <= 0:
+            continue
+        total += amount
+        if (e.created_at or datetime.utcnow()) <= cutoff:
+            available += amount
+
+    pending = total - available
+    return total, available, pending
+
 def biz_tier_commission(t, tier_field, ref_field):
     ref_id = getattr(t, ref_field)
     if ref_id and str(ref_id).strip() and ref_id != "BIZPerkMiner":
@@ -3452,6 +3474,11 @@ def dashboard():
         .all()
     )
 
+    # --- Silent investor earnings (7-day delay) ---
+    investor_total = investor_available = investor_pending = Decimal("0")
+    if current_user.has_role('silent_investor'):
+        investor_total, investor_available, investor_pending = calculate_investor_earnings_split(current_user, delay_days=7)
+
     return render_template(
         "dashboard.html",
         form=form,
@@ -3472,6 +3499,9 @@ def dashboard():
         total_earnings=total_earnings,
         available_earnings=available_earnings,
         pending_earnings=pending_earnings,
+        investor_total=investor_total,
+        investor_available=investor_available,
+        investor_pending=investor_pending,
     )
 
 @app.route("/logout")
@@ -7511,15 +7541,19 @@ def withdraw_investor():
 
     if not user.stripe_account_id:
         flash("Please set up your Stripe payouts first.")
-        return redirect(url_for('onboard_stripe'))  # Or change route as needed
+        return redirect(url_for('onboard_stripe'))
 
-    available = user.investor_earnings_balance or Decimal("0")
-    if available < MIN_PAYOUT:
-        flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings to withdraw.", "warning")
+    # Recalculate based on 7-day investor delay
+    investor_total, investor_available, investor_pending = calculate_investor_earnings_split(user, delay_days=7)
+    net_available = investor_available - (user.investor_withdrawn_total or Decimal("0"))
+
+    if net_available < MIN_PAYOUT:
+        flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    fee = available * Decimal("0.0025") + Decimal("0.35")  # Standard payout fee
-    payout_amount = available - fee
+    balance_to_withdraw = net_available
+    fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")  # standard transfer fee
+    payout_amount = balance_to_withdraw - fee
 
     if payout_amount <= 0:
         flash("Insufficient balance after the transfer fee is deducted.", "warning")
@@ -7527,13 +7561,13 @@ def withdraw_investor():
 
     try:
         transfer = stripe.Transfer.create(
-            amount=int(payout_amount * 100),  # in cents
+            amount=int(payout_amount * 100),  # cents
             currency='usd',
             destination=user.stripe_account_id,
             description="PerkMiner Silent Investor Withdrawal"
         )
-        user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal("0")) + available
-        user.investor_earnings_balance = Decimal("0")
+        user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal("0")) + balance_to_withdraw
+        user.investor_earnings_balance = investor_available - user.investor_withdrawn_total
         db.session.commit()
         flash(f"Silent investor withdrawal of ${payout_amount:.2f} initiated! Stripe fee: ${fee:.2f} deducted.", "success")
     except Exception as e:
@@ -7645,12 +7679,14 @@ def withdraw_investor_instant():
         flash("Please set up your Stripe payouts first.")
         return redirect(url_for('onboard_stripe'))
 
-    balance_to_withdraw = user.investor_earnings_balance or Decimal("0")
+    investor_total, investor_available, investor_pending = calculate_investor_earnings_split(user, delay_days=7)
+    net_available = investor_available - (user.investor_withdrawn_total or Decimal("0"))
 
-    if balance_to_withdraw < MIN_PAYOUT:
-        flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings to withdraw.", "warning")
+    if net_available < MIN_PAYOUT:
+        flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
+    balance_to_withdraw = net_available
     fee = balance_to_withdraw * Decimal("0.011") + Decimal("0.50")
     payout_amount = balance_to_withdraw - fee
 
@@ -7666,8 +7702,8 @@ def withdraw_investor_instant():
             statement_descriptor="PerkMiner Investor Payout",
             stripe_account=user.stripe_account_id
         )
-        user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal(0)) + balance_to_withdraw
-        user.investor_earnings_balance = Decimal("0")
+        user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal("0")) + balance_to_withdraw
+        user.investor_earnings_balance = investor_available - user.investor_withdrawn_total
         db.session.commit()
         flash(f"Instant silent investor withdrawal of ${payout_amount:.2f} initiated! Instant payout fee: ${fee:.2f} deducted.", "success")
     except Exception as e:
