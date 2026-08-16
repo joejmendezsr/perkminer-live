@@ -243,6 +243,9 @@
       aria-controls="profileCollapse">
       View/Edit Profile
     </button>
+      <a href="{{ url_for('change_password') }}" class="btn btn-outline-dark">
+        Change Password
+      </a>
   </div>
   {% if has_active_sessions %}
     <div>

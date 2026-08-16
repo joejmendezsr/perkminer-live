@@ -1525,6 +1525,24 @@ class StaffChangePasswordForm(FlaskForm):
     confirm_new_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password', message='Passwords must match.')])
     submit = SubmitField('Update Password')
 
+class UserChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
+    confirm_new_password = PasswordField(
+        'Confirm New Password',
+        validators=[DataRequired(), EqualTo('new_password', message='Passwords must match.')]
+    )
+    submit = SubmitField('Update Password')
+
+class BusinessChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
+    confirm_new_password = PasswordField(
+        'Confirm New Password',
+        validators=[DataRequired(), EqualTo('new_password', message='Passwords must match.')]
+    )
+    submit = SubmitField('Update Password')
+
 class FinalizedTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tx_id = db.Column(db.String(48), nullable=False, index=True)
@@ -3299,6 +3317,24 @@ def reset_password(token):
         flash("Account not found.")
     return render_template('reset_password.html', form=form)
 
+@app.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = UserChangePasswordForm()
+    if form.validate_on_submit():
+        # Verify current password
+        if not bcrypt.check_password_hash(current_user.password, form.current_password.data):
+            flash("Current password is incorrect.", "danger")
+            return redirect(url_for('change_password'))
+
+        # Set new password
+        current_user.password = bcrypt.generate_password_hash(form.new_password.data).decode('utf-8')
+        db.session.commit()
+        flash("Your password has been updated.", "success")
+        return redirect(url_for('dashboard'))
+
+    return render_template('change_password.html', form=form)
+
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -4904,6 +4940,27 @@ def business_reset_password(token):
             return redirect(url_for('business_login'))
         flash("Account not found.")
     return render_template('reset_password.html', form=form)
+
+@app.route('/business/change_password', methods=['GET', 'POST'])
+@business_login_required
+def business_change_password():
+    form = BusinessChangePasswordForm()
+    biz_id = session.get('business_id')
+    biz = Business.query.get_or_404(biz_id)
+
+    if form.validate_on_submit():
+        # Verify current password
+        if not bcrypt.check_password_hash(biz.password, form.current_password.data):
+            flash("Current password is incorrect.", "danger")
+            return redirect(url_for('business_change_password'))
+
+        # Set new password
+        biz.password = bcrypt.generate_password_hash(form.new_password.data).decode('utf-8')
+        db.session.commit()
+        flash("Your business account password has been updated.", "success")
+        return redirect(url_for('business_dashboard'))
+
+    return render_template('business_change_password.html', form=form, business=biz)
 
 @app.route('/business/invite', methods=['POST'])
 def business_invite():
