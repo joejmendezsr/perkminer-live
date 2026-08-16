@@ -578,7 +578,7 @@ def build_invite_email(inviter_name, join_url, video_url):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Joe has invited you to join PerkMiner!</title>
+    <title>You have been invited to join PerkMiner.com!</title>
         <style type="text/css">
             body {{ margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
             table, td {{ border-collapse: collapse; }}
@@ -611,7 +611,7 @@ def build_invite_email(inviter_name, join_url, video_url):
         <!-- Top Message -->
                 <tr>
                     <td align="center" style="padding: 40px 30px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: bold; color: #1f2937; line-height: 1.2;">
-                        {inviter_name} has invited you to join PerkMiner!
+                        {inviter_name} has invited you to join Perk Miner (https://perkminer.com)!
                     </td>
                 </tr>
 
@@ -636,18 +636,17 @@ def build_invite_email(inviter_name, join_url, video_url):
         <!-- Introduction Text + Watch Video Button -->
     <tr>
         <td style="padding: 40px 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 28px; color: #374151; line-height: 1.6; text-align:center;">
-            <p style="margin:0 0 24px;">Discover how you earn Cash Back and Commissions with PerkMiner.  <b>Cash Back like a pro on everyday purchases!</b></p>
+            <p style="margin:0 0 24px;">Discover how you earn Cash Back and Referral Commissions with Perk Miner.  <b>Cash Back like a pro on everyday purchases!  Members earn 2% Cashback for up to $2,500 of any purchase from our advertisers and Businesses earn 1% Cashback on up to $2,500 or their sale for offering at least one perk to our members.</b></p>
 
                 <a href="{video_url}" class="button" target="_blank" style="margin: 12px 0 32px;">
                 Watch our intro video
                 </a>
 
             <p style="margin:0 0 28px;">Free to join (no contracts, monthly subscriptions or commitment).</p>
-            <p style="margin:0 0 28px;"><b>Members:</b>  We protect your privacy with secure messaging and never sell your contact information.  Contact our advertisers with peace of mind.</p>
-            <p style="margin:0 0 28px;"><b>Business Owners:</b>  YOU GET ZERO WASTED ADVERTISING DOLLARS!  <font color="#FF0000"></br>No Sale or Closed Deal = Zero Fees</font></br>(900% or higher Marketing ROI).</p>
-            <p style="margin:0 0 28px;">We connect <b>One Member</b> to <b>One Business</b> at a time.  <b><u>Members</u></b> won't get spammed (emails, calls or door-to-door sales).  <b><u>Businesses</u><b> don't have to compete with other businesses for a sale or closed deal.</p>
-            <p style="margin:0 0 28px;">MEMBER SELECTS A BUSINESS -> BUSINESS AND MEMBER CONNECT</br></br>MEMBER OR BUSINESS CAN END SESSION OR FINALIZE THE TRANSACTION.</p>
-            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and Commissions</b> (Paid by Perk Miner - from up to 87.5% of the ad revenue paid by our advertisers).</p>
+            <p style="margin:0 0 28px;"><b>Members:  Get exclusive member perks offered by our advertisers, plus earn cash back on all your purchases.</b>  We protect your privacy with secure messaging and never sell your contact information as a lead.  Search for businesses, products or services (our advertisers) with peace of mind (we don't track browsing history or listen to your conversations to send you unsolicited advertisements).  We connect <b>One Member</b> to <b>One Business</b> at a time.  <b><u>Our members</u></b> will never receive spammed emails, unsolicited phone calls or uninvited door-to-door sales people (advertisers don't have access to member contact information).</p>
+            <p style="margin:0 0 28px;"><b>Business Owners:</b>  YOU GET ZERO WASTED ADVERTISING DOLLARS!  <font color="#FF0000"></br>No Sale or Closed Deal = Zero Fees</font></br>(900% or higher Marketing ROI Guaranteed).  No cost for exclusive leads, phone calls, website or foot traffic, appointments or meetups.  You only pay after you get paid (10% of the sale, capped at $250).  We don't collect your payment (members pay our advertisers directly for all sales).  No hidden fees, no contracts and no commitment.  Only $25 required to get started (pre-funded dollars to cover the advertising fees per transaction), which covers $250 in sales (funds remain in your account balance until you make a sale).</p>
+            <p style="margin:0 0 28px;">MEMBER SELECTS A BUSINESS -> BUSINESS AND MEMBER CONNECT</br></br>MEMBER OR BUSINESS CAN END SESSION WITHOUT PENALTY OR CHOOSE TO PROCEED (BUSINESS MUST FINALIZE THE TRANSACTION).</p>
+            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and Referral Commissions</b> (Paid by Perk Miner - from up to 84% of the ad revenue paid by our advertisers).</p>
         </td>
     </tr>
 
