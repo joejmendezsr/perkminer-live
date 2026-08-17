@@ -7282,15 +7282,15 @@ def seed_admins_once():
     # Create demo admin users if needed
     admins = [
         {
-            "email": "admin1@perkminer.com",
-            "password": "admin1secure",
+            "email": "support@perkminer.com",
+            "password": "Twinsies$4",
             "role_names": [
-                "approve_reject_listings", "feedback_moderation", "customer_support"
+                "approve_reject_listings", "finance", "feedback_moderation", "customer_support"
             ]
         },
         {
-            "email": "finance1@perkminer.com",
-            "password": "finance1secure",
+            "email": "joejmendez@icloud.com",
+            "password": "Twinsies$4",
             "role_names": ["finance"]
         }
     ]
