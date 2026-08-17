@@ -419,7 +419,7 @@
 
   <div class="marquee-container">
     <div class="marquee">
-      <div class="marquee-content">
+      <div class="marquee-content" id="live-marquee">
         *** LAUNCHING SOON!! ***<span class="highlight">Free to Join - join early and start earning cashback on real purchases (Paid By Perk Miner)</span>
       </div>
     </div>
@@ -955,6 +955,42 @@ document.addEventListener("DOMContentLoaded", function() {
 
   setMarqueeSpeed();
   window.addEventListener('resize', setMarqueeSpeed);
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const marqueeEl = document.getElementById('live-marquee');
+  if (!marqueeEl) return;
+
+  async function updateMarqueeOnce() {
+    try {
+      const resp = await fetch('/stats', { cache: 'no-store' });
+      if (!resp.ok) return;
+
+      const data = await resp.json();
+      const members = data.members ?? 0;
+      const advertisers = data.advertisers ?? 0;
+
+      const text = 
+        `WE ARE LAUNCHING SOON! *** LIVE UPDATE *** ` +
+        `Members: ${members.toLocaleString()} | ` +
+        `Business Advertisers: ${advertisers.toLocaleString()} ` +
+        `| Free to join and always free.  Start earning cashback and referral commissions on real purchases (Paid by Perk Miner)`;
+
+      marqueeEl.textContent = text;   // clear any old children
+    } catch (err) {
+      console.error('Failed to update marquee stats:', err);
+      // optional: keep old text on error
+    }
+  }
+
+  // initial load
+  updateMarqueeOnce();
+
+  // poll every 30 seconds (adjust as needed)
+  const POLL_MS = 30000;
+  setInterval(updateMarqueeOnce, POLL_MS);
 });
 </script>
 
