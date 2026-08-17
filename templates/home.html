@@ -974,11 +974,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const text = 
         `WE ARE LAUNCHING SOON! *** LIVE UPDATE *** ` +
-        `Members: ${members.toLocaleString()} | ` +
-        `Business Advertisers: ${advertisers.toLocaleString()} ` +
-        `| Free to join and always free.  Start earning cashback and referral commissions on real purchases (Paid by Perk Miner)`;
+        `Members: <span class="highlight">${members.toLocaleString()}</span>  | ` +
+        `Businesses: <span class="highlight">${advertisers.toLocaleString()}</span> ` +
+        ` |  Free to join and always free.  <span class="highlight">Start earning cashback and referral commissions</span> on real purchases (Paid by Perk Miner)`;
 
-      marqueeEl.textContent = text;   // clear any old children
+      marqueeEl.innerHTML = text;   // clear any old children
     } catch (err) {
       console.error('Failed to update marquee stats:', err);
       // optional: keep old text on error
