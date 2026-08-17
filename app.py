@@ -7282,15 +7282,15 @@ def seed_admins_once():
     # Create demo admin users if needed
     admins = [
         {
-            "email": "support@perkminer.com",
-            "password": "Twinsies$4",
+            "email": "admin1@perkminer.com",
+            "password": "49pi25yt!@3#",
             "role_names": [
                 "approve_reject_listings", "finance", "feedback_moderation", "customer_support"
             ]
         },
         {
-            "email": "joejmendez@icloud.com",
-            "password": "Twinsies$4",
+            "email": "finance1@perkminer.com",
+            "password": "84kf68oe^2&%",
             "role_names": ["finance"]
         }
     ]
@@ -7797,10 +7797,15 @@ def remove_favorite(business_id):
 
 @app.route("/stats")
 def stats():
-    # TEMP: hard-coded numbers; we’ll replace these with real queries next
+    # count confirmed users as members
+    member_count = User.query.filter_by(email_confirmed=True).count()
+
+    # count approved businesses as advertisers
+    advertiser_count = Business.query.filter_by(status="approved").count()
+
     data = {
-        "members": 1234,
-        "advertisers": 56
+        "members": member_count,
+        "advertisers": advertiser_count
     }
     return jsonify(data), 200
 
