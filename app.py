@@ -7795,6 +7795,15 @@ def remove_favorite(business_id):
         db.session.commit()
     return redirect(request.referrer or url_for("favorites"))
 
+@app.route("/stats")
+def stats():
+    # TEMP: hard-coded numbers; we’ll replace these with real queries next
+    data = {
+        "members": 1234,
+        "advertisers": 56
+    }
+    return jsonify(data), 200
+
 @app.errorhandler(500)
 def internal_server_error(error):
     # Log the full error + traceback for debugging
