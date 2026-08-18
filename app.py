@@ -7859,6 +7859,68 @@ def shop_link(interaction_id):
 
     return redirect(redirect_url)
 
+@csrf.exempt
+@app.route("/api/record_external_sale", methods=["POST"])
+def record_external_sale():
+    data = request.get_json(silent=True) or {}
+    token = data.get("perk_token")
+    amount = data.get("amount")
+
+    if not token or amount is None:
+        return jsonify({"error": "missing token or amount"}), 400
+
+    # 1) verify token
+    try:
+        payload = shop_serializer.loads(token)
+    except Exception:
+        return jsonify({"error": "invalid token"}), 400
+
+    interaction_id = payload.get("interaction_id")
+    user_id = payload.get("user_id")
+    business_id = payload.get("business_id")
+
+    interaction = Interaction.query.get(interaction_id)
+    if (
+        not interaction or
+        interaction.user_id != user_id or
+        interaction.business_id != business_id or
+        interaction.status != "active"
+    ):
+        return jsonify({"error": "invalid or inactive interaction"}), 400
+
+    business = Business.query.get(business_id)
+    if not business:
+        return jsonify({"error": "business not found"}), 400
+
+    # 2) validate amount
+    try:
+        amount_float = float(amount)
+        if amount_float <= 0:
+            raise ValueError()
+    except ValueError:
+        return jsonify({"error": "invalid amount"}), 400
+
+    # 3) call your existing finalize_interaction logic
+    try:
+        summary = finalize_interaction(
+            interaction=interaction,
+            business=business,
+            amount=amount_float,
+            staff_id=None,
+            source="external_cart",
+            local_date_time=None
+        )
+    except Exception as e:
+        # e.g. insufficient funds in account_balance, etc.
+        return jsonify({"error": str(e)}), 400
+
+    # 4) end the session
+    interaction.status = "ended"
+    interaction.awaiting_payment = False
+    db.session.commit()
+
+    return jsonify({"status": "ok", "summary": summary}), 200
+
 @app.errorhandler(500)
 def internal_server_error(error):
     # Log the full error + traceback for debugging
