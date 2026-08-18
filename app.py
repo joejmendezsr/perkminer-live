@@ -8017,6 +8017,10 @@ def shop_link(interaction_id):
 
     return redirect(redirect_url)
 
+@app.route("/online-purchase-instructions")
+def online_purchase_instructions():
+    return render_template("online_purchase_instructions.html")
+
 @csrf.exempt
 @app.route("/api/record_external_sale", methods=["POST"])
 def record_external_sale():
