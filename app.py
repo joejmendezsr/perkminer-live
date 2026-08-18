@@ -6122,30 +6122,37 @@ from flask_login import login_required
 
 @app.route("/listing/<int:biz_id>")
 def view_listing(biz_id):
-    # BLOCK if NOT user AND NOT business
     if not (current_user.is_authenticated or session.get("business_id")):
-        return redirect(url_for("login"))  # or use your custom login page
+        return redirect(url_for("login"))
 
     distance_mi = request.args.get("distance_mi")
     biz = Business.query.get_or_404(biz_id)
     biz.distance_mi = float(distance_mi) if distance_mi else None
 
-    # only allow online-shopping button if:
-    # - website is set
-    # - business marked site as e‑commerce
-    # - business allows website purchases
-    # - balance >= 250
+    has_website = bool(biz.website_url)
+    is_ecom = getattr(biz, "is_ecommerce_site", False)
+    allows_web = getattr(biz, "allow_website_purchases", False)
+    balance = biz.account_balance or 0.0
+
     can_shop_online_listing = (
-        bool(biz.website_url)
-        and getattr(biz, "is_ecommerce_site", False)
-        and getattr(biz, "allow_website_purchases", False)
-        and (biz.account_balance or 0) >= 250.0
+        has_website and
+        is_ecom and
+        allows_web and
+        balance >= 250.0
+    )
+
+    show_online_warning = (
+        has_website and
+        is_ecom and
+        allows_web and
+        balance < 250.0
     )
 
     return render_template(
         "large_listing.html",
         business=biz,
-        can_shop_online_listing=can_shop_online_listing
+        can_shop_online_listing=can_shop_online_listing,
+        show_online_warning=show_online_warning,
     )
 
 @app.route("/finance/combined-detailed-report", methods=["GET"])

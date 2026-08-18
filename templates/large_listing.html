@@ -244,9 +244,9 @@
        class="btn btn-primary mt-2">
       shop on this business's website
     </a>
-  {% elif business.website_url %}
+  {% elif show_online_warning %}
     <div class="alert alert-warning mt-2">
-      online shopping is not allowed at this time. please check back later.
+      Online shopping is not available at this time.  Please check back later.
     </div>
   {% endif %}
 {% endif %}
