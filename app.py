@@ -5266,6 +5266,9 @@ def business_dashboard():
         else:
             new_allow_website_purchases = False
 
+        # store whether terms were agreed (for audit / display)
+        new_online_terms_agreed = has_website and new_is_ecommerce and agreed_online_terms
+
         # apply changes if values changed
         if getattr(biz, "is_ecommerce_site", False) != new_is_ecommerce:
             biz.is_ecommerce_site = new_is_ecommerce
@@ -5273,6 +5276,10 @@ def business_dashboard():
 
         if getattr(biz, "allow_website_purchases", False) != new_allow_website_purchases:
             biz.allow_website_purchases = new_allow_website_purchases
+            updated = True
+
+        if getattr(biz, "online_terms_agreed", False) != new_online_terms_agreed:
+            biz.online_terms_agreed = new_online_terms_agreed
             updated = True
 
         if updated:
