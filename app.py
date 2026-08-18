@@ -4442,9 +4442,13 @@ def shop_confirm(business_id):
     # 1) find business
     business = Business.query.get_or_404(business_id)
 
-    # 2) basic checks: must have website + enough balance
+    # 2) basic checks: must have website, be marked as ecommerce, allow purchases, and have enough balance
     if not business.website_url:
         flash("This business doesn't have an e-commerce website configured.", "warning")
+        return redirect(url_for("view_listing", biz_id=business.id))
+
+    if not getattr(business, "is_ecommerce_site", False) or not getattr(business, "allow_website_purchases", False):
+        flash("This business is not configured for online purchases through PerkMiner.", "warning")
         return redirect(url_for("view_listing", biz_id=business.id))
 
     if (business.account_balance or 0) < 250.0:
@@ -6126,10 +6130,16 @@ def view_listing(biz_id):
     biz = Business.query.get_or_404(biz_id)
     biz.distance_mi = float(distance_mi) if distance_mi else None
 
-    # simple online-shop condition for now
+    # only allow online-shopping button if:
+    # - website is set
+    # - business marked site as e‑commerce
+    # - business allows website purchases
+    # - balance >= 250
     can_shop_online_listing = (
-        bool(biz.website_url) and
-        (biz.account_balance or 0) >= 250.0
+        bool(biz.website_url)
+        and getattr(biz, "is_ecommerce_site", False)
+        and getattr(biz, "allow_website_purchases", False)
+        and (biz.account_balance or 0) >= 250.0
     )
 
     return render_template(
