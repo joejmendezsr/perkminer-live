@@ -470,10 +470,14 @@
           type="checkbox"
           id="online_terms_agree"
           name="online_terms_agree"
-          value="1">
+          value="1"
+          {% if business.online_terms_agreed %}checked{% endif %}>
         <label class="form-check-label" for="online_terms_agree">
           i have read and agree to these terms.
         </label>
+        <p class="small text-muted mt-1 mb-0">
+          uncheck this box and save if you want to revoke online purchases on your website.
+        </p>
       </div>
     </div>
   </div>
