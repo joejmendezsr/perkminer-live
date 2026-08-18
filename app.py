@@ -3646,6 +3646,43 @@ def export_user_receipts_csv():
         "Content-Disposition": f"attachment;filename=user_receipts_{user.referral_code}.csv"
     })
 
+@app.route("/user/receipt/<transaction_id>")
+@login_required
+def user_receipt_single(transaction_id):
+    # find the user transaction for this member + transaction_id
+    txn = (
+        UserTransaction.query
+        .filter_by(transaction_id=transaction_id, user_referral_id=current_user.referral_code)
+        .order_by(UserTransaction.date_time.desc())
+        .first_or_404()
+    )
+
+    # try to resolve the business (via interaction.business relationship)
+    business_name = None
+    if txn.interaction and txn.interaction.business:
+        business_name = txn.interaction.business.business_name
+
+    # decide what to show as date/time: local_date_time if present, else UTC time
+    if txn.local_date_time:
+        display_datetime = txn.local_date_time
+    else:
+        # fallback format from UTC datetime
+        display_datetime = txn.date_time.strftime('%Y-%m-%d %I:%M %p UTC')
+
+    # for safety, we can re-compute 2% cashback with $50 cap from amount
+    # but we’ll mostly trust txn.cash_back and just display it
+    amount_paid = txn.amount or 0
+    cashback_earned = txn.cash_back or 0
+
+    return render_template(
+        "user_receipt_single.html",
+        transaction=txn,
+        business_name=business_name,
+        display_datetime=display_datetime,
+        amount_paid=amount_paid,
+        cashback_earned=cashback_earned
+    )
+
 @app.route("/user/earnings", methods=["GET"])
 @login_required
 def user_earnings():
