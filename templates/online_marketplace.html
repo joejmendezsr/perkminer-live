@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Perk Miner – Online Marketplace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Shop online with PerkMiner advertisers and earn cashback on real purchases.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <style>
+    :root { 
+      --pm-primary: #2a5859; 
+      --pm-accent: #ffd66b; 
+      --pm-bg: #fff; 
+      --pm-text: #222; 
+      --pm-shadow: 0 8px 32px rgba(42,88,89,0.18);
+      --pm-transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    body { background: var(--pm-bg); color: var(--pm-text); }
+    .hero-section {
+      min-height: 30vh;
+      background: url('https://res.cloudinary.com/dmrntlcfd/image/upload/v1782601402/Cash-Back_rignwa.jpg?auto=format&fit=crop&w=1200&q=60')
+        center/cover no-repeat;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0;
+    }
+    .hero-section .overlay {
+      position: absolute; inset: 0; background: rgba(42,88,89,.4); z-index:1;
+    }
+    .hero-content {
+      position: relative; z-index: 2; width:100%;
+      max-width: 680px; margin:0 auto; color:#fff;
+      text-align:center; padding: 2.5rem 1rem 2rem;
+    }
+    .hero-logo { height: 80px; width:auto; display:block; margin:0 auto 12px; }
+    .search-form .input-group {
+      border-radius: 18px;
+      box-shadow: 0 2px 10px #f2f5f5;
+      background: #fff;
+      overflow: hidden;
+    }
+    .search-form .form-control, .search-form .btn {
+      border-radius: 18px !important;
+      font-size: 1.05em;
+    }
+    .categories-section { padding: 3rem 0 2.5rem; }
+    .categories-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--pm-primary);
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+    .categories-title:after {
+      content:'';
+      position:absolute;
+      bottom:-10px; left:50%;
+      transform:translateX(-50%);
+      width:80px; height:4px;
+      background:var(--pm-accent);
+      border-radius:2px;
+    }
+    .categories-scroll-wrap {
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scroll-snap-type:x mandatory;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+      padding:0 5vw;
+      margin:0 -5vw;
+    }
+    .categories-scroll-wrap::-webkit-scrollbar { display:none; }
+    .categories-row {
+      display:flex;
+      flex-wrap:nowrap;
+      gap:1.1rem;
+      padding:1rem 0;
+    }
+    .category-card-wrapper {
+      scroll-snap-align:start;
+      flex:0 0 72vw;
+      max-width:240px;
+      transition:var(--pm-transition);
+    }
+    .category-card {
+      border-radius:16px;
+      overflow:hidden;
+      background:white;
+      box-shadow:var(--pm-shadow);
+      transition:var(--pm-transition);
+      height:100%;
+      position:relative;
+      text-decoration:none;
+      color:inherit;
+      display:block;
+    }
+    .category-card:hover {
+      transform:translateY(-10px) scale(1.03);
+      box-shadow:0 18px 40px rgba(42,88,89,0.23);
+    }
+    .category-image-wrap { position:relative; height:140px; overflow:hidden; }
+    .category-image {
+      width:100%; height:100%;
+      object-fit:cover;
+      transition:transform 0.6s ease;
+    }
+    .category-card:hover .category-image { transform:scale(1.12); }
+    .category-label {
+      padding:1.1rem 0.9rem 1.3rem;
+      font-size:1.05rem;
+      font-weight:600;
+      color:var(--pm-primary);
+      text-align:center;
+      background:linear-gradient(145deg,#ffffff,#f8fbfc);
+    }
+    @media (min-width:992px) {
+      .categories-scroll-wrap, .categories-row {
+        overflow-x:hidden !important;
+        padding:0; margin:0;
+      }
+      .categories-row {
+        display:grid !important;
+        grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+        gap:1.6rem 1.8rem;
+      }
+      .category-card-wrapper {
+        flex:1 1 auto;
+        max-width:none;
+        scroll-snap-align:none;
+      }
+      .category-image-wrap { height:160px; }
+      .category-label {
+        font-size:1.12rem;
+        padding:1.3rem 1.1rem 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="hero-section">
+    <div class="overlay"></div>
+    <div class="container hero-content">
+      <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1771632656/New_Perk_Miner_Logo_xt8y0e.jpg"
+           alt="Perk Miner" class="hero-logo">
+      <h1 class="mb-1">online marketplace</h1>
+      <h5 class="mb-3">shop with perkminer e‑commerce advertisers and earn cashback on real purchases.</h5>
+      <form class="search-form mb-2" method="get" action="{{ url_for('online_marketplace') }}">
+        <div class="input-group mb-1">
+          <input type="text"
+                 class="form-control"
+                 name="q"
+                 value="{{ q or '' }}"
+                 placeholder="Search online businesses, products, or services..."
+                 aria-label="Search">
+          <button class="btn btn-primary" type="submit">Search</button>
+        </div>
+      </form>
+      <p class="small mb-0">online marketplace results are not filtered by distance.</p>
+    </div>
+  </section>
+
+  <main class="container my-5">
+    <section class="categories-section">
+      <h2 class="categories-title">browse online categories</h2>
+
+      <div class="d-md-none text-center mb-3" style="color:#555;font-style:italic;font-size:0.95rem;">
+        ↔ swipe to explore categories
+      </div>
+
+      <div class="categories-scroll-wrap">
+        <div class="categories-row">
+          <!-- you can reuse a subset of your existing categories here,
+               or leave it as generic links to /search with q preset -->
+          <div class="category-card-wrapper">
+            <a href="{{ url_for('online_marketplace', q='shopping') }}" class="category-card">
+              <div class="category-image-wrap">
+                <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1771634200/Retail_h510gq.jpg"
+                     alt="Shopping"
+                     class="category-image">
+              </div>
+              <div class="category-label">Shopping &amp; Retail (Online)</div>
+            </a>
+          </div>
+
+          <div class="category-card-wrapper">
+            <a href="{{ url_for('online_marketplace', q='food') }}" class="category-card">
+              <div class="category-image-wrap">
+                <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1771634200/Restaurant_d1ioep.jpg"
+                     alt="Food"
+                     class="category-image">
+              </div>
+              <div class="category-label">Food &amp; Restaurants (Online)</div>
+            </a>
+          </div>
+
+          <!-- add more category-card-wrapper blocks as needed -->
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-4">
+      <h3 class="mb-3">featured online businesses</h3>
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for biz in featured_ecom %}
+          <div class="col">
+            <a href="{{ url_for('view_listing', biz_id=biz.id, from_featured=1) }}"
+               style="text-decoration:none;">
+              <div class="small-listing-modern">
+                {% if biz.profile_photo %}
+                  <img src="{{ biz.profile_photo }}" class="small-listing-modern-img" alt="{{ biz.business_name }} logo">
+                {% else %}
+                  <div class="small-listing-modern-img d-flex align-items-center justify-content-center bg-light border">
+                    <i class="bi bi-shop" style="font-size:1.6em; color:#2a5859;"></i>
+                  </div>
+                {% endif %}
+
+                <div class="card-body text-center px-3">
+                  <h5 class="card-title mb-2">{{ biz.business_name }}</h5>
+                  <div class="mb-1 small" style="font-weight:500;">
+                    <span class="badge bg-success">Online Marketplace</span>
+                  </div>
+                  <div class="mb-1">
+                    <strong>Category:</strong> {{ biz.category or "N/A" }}
+                  </div>
+                  <div class="mb-1 biz-services">
+                    <strong>Services:</strong>
+                    {% set services = [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5,
+                                       biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10] %}
+                    {{ services|select|reject('equalto','')|join(', ') if services|select|reject('equalto','')|list else 'N/A' }}
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+        {% endfor %}
+        {% if featured_ecom|length == 0 %}
+          <div class="col-12">
+            <div class="alert alert-warning text-center mt-2">
+              No online marketplace businesses are featured at this time.
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if q %}
+      <section class="mt-5">
+        <h3 class="mb-3">search results for "{{ q }}"</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+          {% for biz in ecommerce_results %}
+            <div class="col">
+              <a href="{{ url_for('view_listing', biz_id=biz.id) }}"
+                 style="text-decoration:none;">
+                <div class="small-listing-modern">
+                  {% if biz.profile_photo %}
+                    <img src="{{ biz.profile_photo }}" class="small-listing-modern-img" alt="{{ biz.business_name }} logo">
+                  {% else %}
+                    <div class="small-listing-modern-img d-flex align-items-center justify-content-center bg-light border">
+                      <i class="bi bi-shop" style="font-size:1.6em; color:#2a5859;"></i>
+                    </div>
+                  {% endif %}
+                  <div class="card-body text-center px-3">
+                    <h5 class="card-title mb-2">{{ biz.business_name }}</h5>
+                    <div class="mb-1 small" style="font-weight:500;">
+                      <span class="badge bg-success">Online Marketplace</span>
+                    </div>
+                    <div class="mb-1">
+                      <strong>Category:</strong> {{ biz.category or "N/A" }}
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          {% endfor %}
+          {% if ecommerce_results|length == 0 %}
+            <div class="col-12">
+              <div class="alert alert-info text-center mt-2">
+                No online marketplace advertisers matched your search.
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

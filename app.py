@@ -8029,6 +8029,55 @@ def shop_link(interaction_id):
 def online_purchase_instructions():
     return render_template("online_purchase_instructions.html")
 
+@app.route("/online_marketplace")
+def online_marketplace():
+    # Only businesses that:
+    # - are approved
+    # - have a website
+    # - are marked as ecommerce
+    # - allow website purchases
+    # - have account_balance >= 250
+    base_query = Business.query.filter(
+        Business.status == "approved",
+        Business.website_url.isnot(None),
+        Business.website_url != "",
+        getattr(Business, "is_ecommerce_site", False) == True,
+        getattr(Business, "allow_website_purchases", False) == True,
+        Business.account_balance >= 250.0
+    )
+
+    # search term: use search_keywords (like your normal search)
+    q = request.args.get("q", "").strip()
+    if q:
+        ecommerce_results = base_query.filter(
+            Business.search_keywords.ilike(f"%{q}%")
+        ).all()
+    else:
+        ecommerce_results = base_query.all()
+
+    # featured e‑commerce businesses (no distance, just rank/featured)
+    # prefer manual_feature, then by rank
+    manual_featured = base_query.filter(Business.manual_feature == True).order_by(Business.rank.desc()).limit(10).all()
+    needed = 10 - len(manual_featured)
+    if needed > 0:
+        ranked = (
+            base_query
+            .filter(Business.manual_feature == False)
+            .order_by(Business.rank.desc())
+            .limit(needed)
+            .all()
+        )
+        featured_ecom = manual_featured + ranked
+    else:
+        featured_ecom = manual_featured[:10]
+
+    return render_template(
+        "online_marketplace.html",
+        featured_ecom=featured_ecom,
+        ecommerce_results=ecommerce_results,
+        q=q
+    )
+
 @csrf.exempt
 @app.route("/api/record_external_sale", methods=["POST"])
 def record_external_sale():
