@@ -109,11 +109,12 @@
         <ul class="mb-0">
           <li>You will be taken to a website that is not operated by PerkMiner.</li>
           <li>Payments are made directly to the business, not to PerkMiner.</li>
-          <li>Standard PerkMiner terms apply, including the business’s obligation to maintain at least $250 in their advertising balance while online purchases are allowed.</li>
+          <li>Standard Perk Miner LLC terms apply, including the business’s obligation to maintain enough funds to cover the advertising fee while online purchases are allowed.</li>
         </ul>
       </div>
 
       <form method="post" class="btn-area">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <a href="{{ url_for('view_listing', biz_id=business.id) }}"
            class="btn btn-outline-secondary">
           cancel
