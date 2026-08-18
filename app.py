@@ -6086,13 +6086,23 @@ def view_listing(biz_id):
     # BLOCK if NOT user AND NOT business
     if not (current_user.is_authenticated or session.get("business_id")):
         return redirect(url_for("login"))  # or use your custom login page
-    
-    # Render large listing as normal
+
     distance_mi = request.args.get("distance_mi")
     biz = Business.query.get_or_404(biz_id)
     biz.distance_mi = float(distance_mi) if distance_mi else None
-    return render_template("large_listing.html", business=biz)
-    
+
+    # simple online-shop condition for now
+    can_shop_online_listing = (
+        bool(biz.website_url) and
+        (biz.account_balance or 0) >= 250.0
+    )
+
+    return render_template(
+        "large_listing.html",
+        business=biz,
+        can_shop_online_listing=can_shop_online_listing
+    )
+
 @app.route("/finance/combined-detailed-report", methods=["GET"])
 @role_required("finance")
 def combined_detailed_report():

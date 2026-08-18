@@ -238,6 +238,19 @@
     Request Service
   </a>
 
+{% if current_user.is_authenticated %}
+  {% if can_shop_online_listing %}
+    <a href="{{ url_for('shop_confirm', business_id=business.id) }}"
+       class="btn btn-primary mt-2">
+      shop on this business's website
+    </a>
+  {% elif business.website_url %}
+    <div class="alert alert-warning mt-2">
+      online shopping is not allowed at this time. please check back later.
+    </div>
+  {% endif %}
+{% endif %}
+
 </div>
     <div class="main-info mt-2">
       <div class="main-info-row">
