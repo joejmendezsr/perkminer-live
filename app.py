@@ -8031,38 +8031,39 @@ def online_purchase_instructions():
 
 @app.route("/online_marketplace")
 def online_marketplace():
-    # Only businesses that:
-    # - are approved
-    # - have a website
-    # - are marked as ecommerce
-    # - allow website purchases
-    # - have account_balance >= 250
+    # base: only e-commerce enabled businesses with enough balance
     base_query = Business.query.filter(
         Business.status == "approved",
         Business.website_url.isnot(None),
         Business.website_url != "",
-        getattr(Business, "is_ecommerce_site", False) == True,
-        getattr(Business, "allow_website_purchases", False) == True,
+        Business.is_ecommerce_site.is_(True),
+        Business.allow_website_purchases.is_(True),
         Business.account_balance >= 250.0
     )
 
-    # search term: use search_keywords (like your normal search)
+    # search term against search_keywords (like /search)
     q = request.args.get("q", "").strip()
     if q:
         ecommerce_results = base_query.filter(
             Business.search_keywords.ilike(f"%{q}%")
-        ).all()
+        ).order_by(Business.business_name.asc()).all()
     else:
-        ecommerce_results = base_query.all()
+        # no search term → show all e-commerce businesses as results
+        ecommerce_results = base_query.order_by(Business.business_name.asc()).all()
 
-    # featured e‑commerce businesses (no distance, just rank/featured)
-    # prefer manual_feature, then by rank
-    manual_featured = base_query.filter(Business.manual_feature == True).order_by(Business.rank.desc()).limit(10).all()
+    # featured e-commerce businesses (subset from same base_query)
+    manual_featured = (
+        base_query
+        .filter(Business.manual_feature.is_(True))
+        .order_by(Business.rank.desc())
+        .limit(10)
+        .all()
+    )
     needed = 10 - len(manual_featured)
     if needed > 0:
         ranked = (
             base_query
-            .filter(Business.manual_feature == False)
+            .filter(Business.manual_feature.is_(False))
             .order_by(Business.rank.desc())
             .limit(needed)
             .all()
