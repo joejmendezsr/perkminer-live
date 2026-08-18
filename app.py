@@ -1328,6 +1328,7 @@ class Business(db.Model):
     contact_js = db.Column(db.Text, nullable=True)
     is_ecommerce_site = db.Column(db.Boolean, default=False)
     allow_website_purchases = db.Column(db.Boolean, default=False)
+    online_terms_agreed = db.Column(db.Boolean, default=False)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
