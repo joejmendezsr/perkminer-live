@@ -27,6 +27,7 @@ from flask import render_template_string
 from sqlalchemy.orm import joinedload
 from flask import current_app
 from itsdangerous import URLSafeTimedSerializer
+from itsdangerous import URLSafeSerializer
 
 import os
 import stripe
@@ -185,6 +186,9 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['RECAPTCHA_PUBLIC_KEY'] = '6LdhAV8sAAAAABwITf0HytcbADISlcMd87NP-i2H'
 app.config['RECAPTCHA_PRIVATE_KEY'] = '6LdhAV8sAAAAAFi9YjxnZqFLUl3SlQjHc1g7IEOq'
+
+SHOP_SECRET = os.environ.get("SHOP_SECRET", app.config['SECRET_KEY'])
+shop_serializer = URLSafeSerializer(SHOP_SECRET, salt="shop-redirect")
 
 UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -7818,6 +7822,42 @@ def stats():
         "advertisers": advertiser_count
     }
     return jsonify(data), 200
+
+@app.route("/shop/link/<int:interaction_id>")
+@login_required
+def shop_link(interaction_id):
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    # only the member in this interaction can use this
+    if interaction.user_id != current_user.id:
+        abort(403)
+
+    business = interaction.business
+
+    # must have an e-commerce URL
+    if not business.website_url:
+        flash("This business doesn't have an e-commerce site configured.", "warning")
+        return redirect(url_for("active_session", interaction_id=interaction.id))
+
+    # HARD requirement: at least $250 ad balance
+    if (business.account_balance or 0) < 250.0:
+        flash("This business must maintain at least $250 in their advertising balance "
+              "before online purchases are allowed.", "warning")
+        return redirect(url_for("active_session", interaction_id=interaction.id))
+
+    # build signed token
+    payload = {
+        "interaction_id": interaction.id,
+        "user_id": current_user.id,
+        "business_id": business.id,
+    }
+    token = shop_serializer.dumps(payload)
+
+    # redirect to business site with perk_token on the URL
+    redirect_url = f"{business.website_url.rstrip('/')}" \
+                   f"?perk_token={token}"
+
+    return redirect(redirect_url)
 
 @app.errorhandler(500)
 def internal_server_error(error):
