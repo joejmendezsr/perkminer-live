@@ -4345,6 +4345,13 @@ def active_session(interaction_id):
         else:
             return redirect(url_for('user_biz_interactions'))
 
+    # business + shop-online flag
+    business = interaction.business
+    can_shop_online = (
+        bool(business.website_url)
+        and (business.account_balance or 0) >= 250.0
+    )
+
     if request.method == "POST":
         if is_user and request.form.get("accept_and_pay") == "1":
             interaction.awaiting_finalization = True
@@ -4422,7 +4429,59 @@ def active_session(interaction_id):
         interaction=interaction,
         is_user=is_user,
         is_biz=is_biz,
-        messages=messages_with_labels
+        messages=messages_with_labels,
+        can_shop_online=can_shop_online,
+        business=business
+    )
+
+@app.route("/shop/confirm/<int:business_id>", methods=["GET", "POST"])
+@login_required
+def shop_confirm(business_id):
+    # 1) find business
+    business = Business.query.get_or_404(business_id)
+
+    # 2) basic checks: must have website + enough balance
+    if not business.website_url:
+        flash("This business doesn't have an e-commerce website configured.", "warning")
+        return redirect(url_for("view_listing", biz_id=business.id))
+
+    if (business.account_balance or 0) < 250.0:
+        flash("This business must maintain at least $250 in their advertising balance "
+              "before members can shop on their website through PerkMiner.", "warning")
+        return redirect(url_for("view_listing", biz_id=business.id))
+
+    # 3) if member submits the confirmation form
+    if request.method == "POST":
+        # find existing active interaction between this user and business, if any
+        interaction = Interaction.query.filter_by(
+            user_id=current_user.id,
+            business_id=business.id,
+            status="active"
+        ).first()
+
+        # if none, create a new one
+        if not interaction:
+            interaction = Interaction(
+                user_id=current_user.id,
+                business_id=business.id,
+                # minimal required fields to satisfy your model
+                service_type="Online Purchase",
+                details="Member is shopping on business e-commerce site via PerkMiner.",
+                budget_low=0,
+                budget_high=0,
+                status="active",
+                referral_code=getattr(current_user, "referral_code", None)
+            )
+            db.session.add(interaction)
+            db.session.commit()
+
+        # 4) redirect into the existing shop_link flow
+        return redirect(url_for("shop_link", interaction_id=interaction.id))
+
+    # 5) GET request: show confirmation page
+    return render_template(
+        "shop_confirm.html",
+        business=business
     )
 
 @app.route("/session/<int:interaction_id>/messages")
