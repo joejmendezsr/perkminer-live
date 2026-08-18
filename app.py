@@ -1326,6 +1326,8 @@ class Business(db.Model):
     grapesjs_js = db.Column(db.Text, nullable=True)
     products_js = db.Column(db.Text, nullable=True)
     contact_js = db.Column(db.Text, nullable=True)
+    is_ecommerce_site = db.Column(db.Boolean, default=False)
+    allow_website_purchases = db.Column(db.Boolean, default=False)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -5162,6 +5164,7 @@ def business_dashboard():
             flash("Listing Type is required.")
             return redirect(url_for('business_dashboard'))
 
+        # --- existing profile field updates ---
         if biz.status == "approved":
             for field in editable_fields:
                 val = request.form.get(field)
@@ -5199,9 +5202,41 @@ def business_dashboard():
                 biz.profile_photo = upload_result.get('secure_url')
                 updated = True
 
+        # --- NEW: online purchase flags (e‑commerce + allow website purchases) ---
+
+        website_url = request.form.get("website_url", "").strip()
+        has_website = bool(website_url)
+
+        # checkbox values from the form
+        wants_ecommerce = request.form.get("is_ecommerce_site") == "1"
+        wants_allow_purchases = request.form.get("allow_website_purchases") == "1"
+        agreed_online_terms = request.form.get("online_terms_agree") == "1"
+
+        # only allow e‑commerce flag if there is a website URL
+        new_is_ecommerce = has_website and wants_ecommerce
+
+        # allow_website_purchases can only be true if:
+        # - website exists
+        # - e‑commerce is checked
+        # - merchant has checked "agree to terms"
+        if has_website and new_is_ecommerce and wants_allow_purchases and agreed_online_terms:
+            new_allow_website_purchases = True
+        else:
+            new_allow_website_purchases = False
+
+        # apply changes if values changed
+        if getattr(biz, "is_ecommerce_site", False) != new_is_ecommerce:
+            biz.is_ecommerce_site = new_is_ecommerce
+            updated = True
+
+        if getattr(biz, "allow_website_purchases", False) != new_allow_website_purchases:
+            biz.allow_website_purchases = new_allow_website_purchases
+            updated = True
+
         if updated:
             db.session.commit()
             flash("Business profile updated!")
+
         return redirect(url_for('business_dashboard'))
 
     # GET: Load profile form data (prefer draft if status=approved and draft exists)
@@ -5223,7 +5258,7 @@ def business_dashboard():
     latitude = form_data.get("latitude", "")
     longitude = form_data.get("longitude", "")
 
-    # --- Rewards and referral tree logic (leave unchanged) ---
+    # --- Rewards and referral tree logic (unchanged) ---
     if request.method == "GET":
         form.downline_level.data = '1'
         form.invoice_amount.data = 0
