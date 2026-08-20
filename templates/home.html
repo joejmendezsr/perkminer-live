@@ -207,7 +207,8 @@
       background: #d9534f;
     }
 
-    .business-listing-modern {
+    .business-listing-modern,
+    .small-listing-modern {
       border: none;
       overflow: hidden;
       border-radius: 14px;
@@ -220,6 +221,7 @@
       display: flex;
       flex-direction: column;
     }
+
     .biz-feature-img-wrap {
       width: 100%;
       height: 180px;
@@ -230,18 +232,13 @@
       align-items: center;
       justify-content: center;
     }
-    .biz-feature-img,
-    .small-listing-modern-img {
-      width: 100%;
-      height: 180%;
-      object-fit: cover;
-      display: block;
-      margin: 0 auto;
-    }
+
     .small-listing-modern-img {
       width: 180px;
       height: 180px;
       object-fit: cover;
+      display: block;
+      margin: 0 auto;
     }
     .biz-services {
       white-space: normal;
@@ -255,6 +252,15 @@
       font-weight: 500;
       opacity: .93;
     }
+
+      .small-listing-perks {
+        background: #feebe7;
+        color: #345;
+        opacity: 0.93;
+        font-size: 0.96em;
+        margin-top: 8px;
+        line-height: 1.4;
+      }
 
     .mb-1.small { font-size: .96em; }
     @media (max-width:600px) {
@@ -771,7 +777,7 @@
                                    biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10] %}
                 {{ services|select|reject('equalto','')|join(', ') if services|select|reject('equalto','')|list else 'N/A' }}
               </div>
-              <div class="mb-1">
+              <div class="small-listing-perks">
                 <strong>Perks:</strong> {{ biz.perks or "N/A" }}
               </div>
             </div>

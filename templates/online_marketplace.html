@@ -90,6 +90,15 @@
   opacity: .93;
 }
 
+      .small-listing-perks {
+        background: #feebe7;
+        color: #345;
+        opacity: 0.93;
+        font-size: 0.96em;
+        margin-top: 8px;
+        line-height: 1.4;
+      }
+
 .mb-1.small { font-size: .96em; }
 
 @media (max-width:600px) {
@@ -170,7 +179,7 @@
                                        biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10] %}
                     {{ services|select|reject('equalto','')|join(', ') if services|select|reject('equalto','')|list else 'N/A' }}
                   </div>
-                  <div class="mb-1">
+                  <div class="small-listing-perks">
                     <strong>Perks:</strong> {{ biz.perks or "N/A" }}
                   </div>
                 </div>
