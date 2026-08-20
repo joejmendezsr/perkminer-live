@@ -245,16 +245,28 @@
             &larr; Back to online marketplace results
           </a>
 
+        {% elif request.args.get('from_category') %}
+          <a href="{{ url_for('category_browse',
+                  name=request.args.get('category', ''),
+                  lat=request.args.get('lat', ''),
+                  lng=request.args.get('lng', ''),
+                  distance=request.args.get('distance', ''),
+                  page=request.args.get('page', 1)
+                ) }}"
+             class="btn btn-secondary btn-action btn-set-top">
+            &larr; Back to results
+          </a>
+
         {% else %}
           <a href="{{ url_for('search',
-              q=request.args.get('q', ''),
-              category=request.args.get('category', ''),
-              distance=request.args.get('distance', ''),
-              lat=request.args.get('lat', ''),
-              lng=request.args.get('lng', ''),
-              page=request.args.get('page', 1)
-            ) }}"
-            class="btn btn-secondary btn-action btn-set-top">
+                  q=request.args.get('q', ''),
+                  category=request.args.get('category', ''),
+                  distance=request.args.get('distance', ''),
+                  lat=request.args.get('lat', ''),
+                  lng=request.args.get('lng', ''),
+                  page=request.args.get('page', 1)
+                ) }}"
+             class="btn btn-secondary btn-action btn-set-top">
             &larr; Back to results
           </a>
         {% endif %}
