@@ -233,7 +233,7 @@
     .biz-feature-img,
     .small-listing-modern-img {
       width: 100%;
-      height: 100%;
+      height: 180%;
       object-fit: cover;
       display: block;
       margin: 0 auto;
@@ -733,7 +733,7 @@
       </div>
     </section>
 
-    <h3 class="mt-5 mb-3 text-start">Featured Businesses Near You:</h3>
+    <h3 class="mt-5 mb-3 text-start">Featured Businesses Near You (within 10 miles):</h3>
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-4">
       {% for biz in featured_listings %}
       <div class="col">
@@ -762,10 +762,17 @@
               <div class="mb-1">
                 <strong>Address:</strong> {{ biz.address or "N/A" }}
               </div>
-              <div class="mb-1 biz-services" title="{{ [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5, biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10]|select|reject('equalto','')|join(', ') }}">
+              <div class="mb-1 biz-services"
+                   title="{{ [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5,
+                              biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10]
+                              |select|reject('equalto','')|join(', ') }}">
                 <strong>Services:</strong>
-                {% set services = [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5, biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10] %}
+                {% set services = [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5,
+                                   biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10] %}
                 {{ services|select|reject('equalto','')|join(', ') if services|select|reject('equalto','')|list else 'N/A' }}
+              </div>
+              <div class="mb-1">
+                <strong>Perks:</strong> {{ biz.perks or "N/A" }}
               </div>
             </div>
           </div>
