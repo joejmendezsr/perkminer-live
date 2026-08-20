@@ -2966,12 +2966,16 @@ def search():
     lng = request.args.get("lng", type=float)
     distance = request.args.get("distance", "").strip()  # “5”, “10”, “25”, or “all”
 
-    query = Business.query.filter_by(status="approved")
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+
+    # base query: approved businesses
+    base_query = Business.query.filter_by(status="approved")
 
     if category:
-        query = query.filter(Business.category == category)
+        base_query = base_query.filter(Business.category == category)
     if q:
-        query = query.filter(Business.search_keywords.ilike(f"%{q}%"))
+        base_query = base_query.filter(Business.search_keywords.ilike(f"%{q}%"))
 
     use_location = lat is not None and lng is not None
 
@@ -2989,8 +2993,11 @@ def search():
             )
         ).label('distance_mi')
 
-        query = query.add_columns(haversine)
-        query = query.filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
+        query = (
+            base_query
+            .filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
+            .add_columns(haversine)
+        )
 
         # Filter by distance if set and not "all"
         if distance and distance != "all":
@@ -3000,17 +3007,26 @@ def search():
             except ValueError:
                 pass
 
-        # Always order by distance if calculating
+        # Order by distance
         query = query.order_by(haversine)
-        results = query.all()
-        # results = [(Business, distance), ...]
+
+        # paginate on the combined (Business, distance) rows
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        results_raw = pagination.items  # list of (Business, distance)
+
         listings = []
-        for biz, d in results:
+        for biz, d in results_raw:
             biz.distance_mi = round(d, 2) if d is not None else None
             listings.append(biz)
+
     else:
-        # No lat/lng: show normally (might show all, not filtered)
-        listings = query.all()
+        # No lat/lng: paginate plain business query (by rank/name or however you like)
+        pagination = (
+            base_query
+            .order_by(Business.rank.desc(), Business.business_name.asc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+        listings = pagination.items
 
     return render_template(
         "search_results.html",
@@ -3019,7 +3035,8 @@ def search():
         category=category,
         lat=lat,
         lng=lng,
-        selected_distance=distance
+        selected_distance=distance,
+        pagination=pagination
     )
 
 @app.route("/category/<name>")
@@ -3029,14 +3046,15 @@ def category_browse(name):
     lng = request.args.get("lng", type=float)
     distance = request.args.get("distance", "").strip()
 
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+
     # Base query: only approved businesses in this category
-    query = Business.query.filter_by(category=name, status="approved")
+    base_query = Business.query.filter_by(category=name, status="approved")
 
     use_location = lat is not None and lng is not None
 
     if use_location:
-        from sqlalchemy import func  # at top of file if not already imported
-
         haversine = (
             3959 * func.acos(
                 func.least(
@@ -3050,8 +3068,11 @@ def category_browse(name):
             )
         ).label("distance_mi")
 
-        query = query.add_columns(haversine)
-        query = query.filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
+        query = (
+            base_query
+            .filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
+            .add_columns(haversine)
+        )
 
         # If a max distance is set, limit results
         if distance and distance != "all":
@@ -3063,14 +3084,23 @@ def category_browse(name):
 
         # Sort by nearest
         query = query.order_by(haversine)
-        results = query.all()
+
+        # paginate combined (Business, distance) rows
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        results_raw = pagination.items  # list of (Business, distance)
+
         listings = []
-        for biz, d in results:
+        for biz, d in results_raw:
             biz.distance_mi = round(d, 2) if d is not None else None
             listings.append(biz)
     else:
-        # No lat/lng: just show all in this category
-        listings = query.all()
+        # No lat/lng: just paginate all in this category
+        pagination = (
+            base_query
+            .order_by(Business.rank.desc(), Business.business_name.asc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+        listings = pagination.items
 
     return render_template(
         "category_results.html",
@@ -3078,7 +3108,8 @@ def category_browse(name):
         category=name,
         lat=lat,
         lng=lng,
-        selected_distance=distance
+        selected_distance=distance,
+        pagination=pagination
     )
 
 @app.route("/intro")
@@ -8078,16 +8109,29 @@ def online_marketplace_results():
     )
 
     q = request.args.get("q", "").strip()
-    ecommerce_results = []
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+
     if q:
-        ecommerce_results = base_query.filter(
+        filtered = base_query.filter(
             Business.search_keywords.ilike(f"%{q}%")
-        ).order_by(Business.business_name.asc()).all()
+        )
+    else:
+        filtered = base_query
+
+    pagination = (
+        filtered
+        .order_by(Business.rank.desc(), Business.business_name.asc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    ecommerce_results = pagination.items
 
     return render_template(
         "online_marketplace_results.html",
         ecommerce_results=ecommerce_results,
-        q=q
+        q=q,
+        pagination=pagination
     )
 
 @csrf.exempt
