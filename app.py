@@ -8031,7 +8031,6 @@ def online_purchase_instructions():
 
 @app.route("/online_marketplace")
 def online_marketplace():
-    # base: only e-commerce enabled businesses with enough balance
     base_query = Business.query.filter(
         Business.status == "approved",
         Business.website_url.isnot(None),
@@ -8041,17 +8040,7 @@ def online_marketplace():
         Business.account_balance >= 250.0
     )
 
-    # search term against search_keywords (like /search)
-    q = request.args.get("q", "").strip()
-    if q:
-        ecommerce_results = base_query.filter(
-            Business.search_keywords.ilike(f"%{q}%")
-        ).order_by(Business.business_name.asc()).all()
-    else:
-        # no search term → show all e-commerce businesses as results
-        ecommerce_results = base_query.order_by(Business.business_name.asc()).all()
-
-    # featured e-commerce businesses (subset from same base_query)
+    # featured e-commerce businesses
     manual_featured = (
         base_query
         .filter(Business.manual_feature.is_(True))
@@ -8074,7 +8063,29 @@ def online_marketplace():
 
     return render_template(
         "online_marketplace.html",
-        featured_ecom=featured_ecom,
+        featured_ecom=featured_ecom
+    )
+
+@app.route("/online_marketplace_results")
+def online_marketplace_results():
+    base_query = Business.query.filter(
+        Business.status == "approved",
+        Business.website_url.isnot(None),
+        Business.website_url != "",
+        Business.is_ecommerce_site.is_(True),
+        Business.allow_website_purchases.is_(True),
+        Business.account_balance >= 250.0
+    )
+
+    q = request.args.get("q", "").strip()
+    ecommerce_results = []
+    if q:
+        ecommerce_results = base_query.filter(
+            Business.search_keywords.ilike(f"%{q}%")
+        ).order_by(Business.business_name.asc()).all()
+
+    return render_template(
+        "online_marketplace_results.html",
         ecommerce_results=ecommerce_results,
         q=q
     )

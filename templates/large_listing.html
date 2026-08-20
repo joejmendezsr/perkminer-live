@@ -221,6 +221,13 @@
        class="btn btn-secondary btn-action btn-set-top me-2 mb-2">
       &larr; Back to featured
     </a>
+
+  {% elif request.args.get('from_online_marketplace') %}
+    <a href="{{ url_for('online_marketplace_results', q=request.args.get('q', '')) }}"
+       class="btn btn-secondary btn-action btn-set-top me-2 mb-2">
+      &larr; Back to online marketplace results
+    </a>
+
   {% else %}
     <a href="{{ url_for('search',
         q=request.args.get('q', ''),
