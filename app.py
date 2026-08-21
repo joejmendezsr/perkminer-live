@@ -1068,27 +1068,31 @@ def finalize_interaction(interaction, business, amount, staff_id=None, source=No
     print(f"Net gross: {net_gross}")
 
     # 7. Apply 45%
-    silent_investor_pool = (net_gross * Decimal("0.45")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    silent_investor_pool = (net_gross * Decimal("0.45"))
     print(f"Silent investor pool: {silent_investor_pool}")
 
     # 8. Distribute, show share per
     silent_investors = User.query.join(User.roles).filter(Role.name == 'silent_investor').all()
     for investor in silent_investors:
         share = Decimal(str(investor.investor_share or 0))
-        print(f"Investor {investor.email} share: {share}")
         if share > 0 and silent_investor_pool > 0:
-            payout = (silent_investor_pool * share).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            print(f"Payout for {investor.email}: {payout}")
-            earning = InvestorEarnings(
-                user_id=investor.id,
-                year=datetime.utcnow().year,
-                month=datetime.utcnow().month,
-                amount=payout,
-                created_at=datetime.utcnow()
-            )
-            db.session.add(earning)
-            investor.investor_total_earnings = (investor.investor_total_earnings or Decimal("0")) + payout
-            investor.investor_earnings_balance = (investor.investor_earnings_balance or Decimal("0")) + payout
+            raw_payout = silent_investor_pool * share  # high precision
+
+            # store with 6 decimals in DB so it never hits 0.00 just because it's small
+            payout = raw_payout.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+
+            if payout > 0:
+                earning = InvestorEarnings(
+                    user_id=investor.id,
+                    year=datetime.utcnow().year,
+                    month=datetime.utcnow().month,
+                    amount=payout,
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(earning)
+
+                investor.investor_total_earnings = (investor.investor_total_earnings or Decimal("0")) + payout
+                investor.investor_earnings_balance = (investor.investor_earnings_balance or Decimal("0")) + payout
 
     db.session.commit()
 
@@ -1215,9 +1219,9 @@ class User(db.Model, UserMixin):
     roles = db.relationship('Role', secondary='user_roles', backref='users')
     is_suspended = db.Column(db.Boolean, default=False)
     investor_share = db.Column(db.Numeric(5, 4), default=0)
-    investor_total_earnings = db.Column(db.Numeric(12, 2), default=0)
+    investor_total_earnings = db.Column(db.Numeric(12, 6), default=0)
     investor_withdrawn_total = db.Column(db.Numeric(12, 2), default=0)
-    investor_earnings_balance = db.Column(db.Numeric(12, 2), default=0)
+    investor_earnings_balance = db.Column(db.Numeric(12, 6), default=0)
     def has_role(self, role_name):
         return any(role.name == role_name for role in self.roles)
 
@@ -1228,7 +1232,7 @@ class InvestorEarnings(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     year = db.Column(db.Integer, nullable=False)
     month = db.Column(db.Integer, nullable=False)
-    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    amount = db.Column(db.Numeric(12, 6), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref=db.backref('investor_earnings', lazy=True))
@@ -7810,7 +7814,7 @@ def withdraw_investor():
 
     balance_to_withdraw = net_available
     fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")  # standard transfer fee
-    payout_amount = balance_to_withdraw - fee
+    payout_amount = balance_to_withdraw.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     if payout_amount <= 0:
         flash("Insufficient balance after the transfer fee is deducted.", "warning")
