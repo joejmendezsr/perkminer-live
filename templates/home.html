@@ -356,6 +356,16 @@
       .how-it-works-btn-inner { padding: .7rem 1.15rem; font-size: 1.09em; }
     }
 
+/* force featured cards on homepage to match online marketplace width */
+.home-featured-row .small-listing-modern {
+  max-width: 380px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+}
+
   </style>
 </head>
 <body>
@@ -740,7 +750,7 @@
     </section>
 
     <h3 class="mt-5 mb-3 text-start">Featured Businesses Near You (within 10 miles):</h3>
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-4">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-4 home-featured-row">
       {% for biz in featured_listings %}
       <div class="col">
         <a href="{{ url_for('view_listing', biz_id=biz.id, distance_mi=biz.distance_mi, from_featured=1) }}" style="text-decoration:none;">
