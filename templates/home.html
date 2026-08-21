@@ -729,12 +729,11 @@
       </div>
     </section>
 
-    <h3 class="mt-5 mb-3 text-start">Featured Businesses Near You:</h3>
+    <h3 class="mt-5 mb-3 text-start">Featured Businesses Near You (within 10 miles):</h3>
       <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
       {% for biz in featured_listings %}
       <div class="col">
         <a href="{{ url_for('view_listing', biz_id=biz.id, distance_mi=biz.distance_mi, from_featured=1) }}" style="text-decoration:none;">
-           style="text-decoration:none;">
           <div class="small-listing-modern">
             {% if biz.profile_photo %}
               <img src="{{ biz.profile_photo }}" class="small-listing-modern-img" alt="{{ biz.business_name }} logo">
