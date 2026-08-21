@@ -784,7 +784,8 @@
               {% endif %}
 
               <div class="mb-1">
-                <strong>Address:</strong> {{ biz.address or "N/A" }}
+                <i class="bi bi-geo-alt" style="color:var(--pm-primary);">
+                {{ biz.address or "N/A" }}
               </div>
               <div class="mb-1 biz-services" title="{{ [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5, biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10]|select|reject('equalto','')|join(', ') }}">
                 <strong>Services:</strong>
