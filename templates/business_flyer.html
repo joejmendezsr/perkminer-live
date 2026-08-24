@@ -4,74 +4,236 @@
   <meta charset="UTF-8">
   <title>PerkMiner Business Referral Flyer</title>
   <style>
-    @media print { body { margin: 0; } }
+    /* same styles as member flyer, you can copy-paste the whole <style> block from flyer.html */
+    /* for brevity, reuse exact CSS from the first template */
+    :root {
+      --pm-primary: #2a5859;
+      --pm-accent: #ffd66b;
+      --pm-bg: #f5f7fb;
+      --pm-card-bg: #ffffff;
+      --pm-text: #1f2933;
+      --pm-muted: #6b7280;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      color: #222;
-    }
-    .flyer {
-      border: 1px solid #ddd;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
       padding: 24px;
-      max-width: 800px;
+      background: radial-gradient(circle at top left, #e0f7f6, #f5f7fb);
+      color: var(--pm-text);
+    }
+    .toolbar {
+      max-width: 900px;
+      margin: 0 auto 12px auto;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .toolbar button,
+    .toolbar a {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-print { background: var(--pm-primary); color: #fff; }
+    .btn-back { background: #e5e7eb; color: #111827; }
+    .btn-print:hover { background: #214344; }
+    .btn-back:hover { background: #d1d5db; }
+    .flyer {
+      max-width: 900px;
       margin: 0 auto;
+      background: linear-gradient(135deg, #ffffff, #fef3c7);
+      border-radius: 18px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
+      padding: 28px 28px 32px 28px;
       position: relative;
+      overflow: hidden;
     }
-    .qr {
+    .flyer::before {
+      content: "";
       position: absolute;
-      top: 24px;
-      right: 24px;
-      text-align: center;
+      top: -40px;
+      right: -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(42,88,89,0.12), transparent 60%);
+      pointer-events: none;
     }
-    .qr img {
-      width: 140px;
-      height: 140px;
+    .header-row { display:flex; align-items:flex-start; gap:20px; }
+    .header-main { flex:1; }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.72rem;
+      color: var(--pm-muted);
+      margin-bottom: 6px;
     }
     h1 {
-      margin-top: 0;
-      color: #2a5859;
+      margin: 0 0 6px 0;
+      font-size: 2.1rem;
+      color: var(--pm-primary);
     }
-    .ref-code {
-      font-size: 1.1em;
-      margin-top: 8px;
+    .subtitle { font-size:0.98rem; color:var(--pm-muted); max-width:500px; }
+    .qr-block { text-align:center; min-width:150px; }
+    .qr-block img {
+      width: 150px; height:150px; border-radius:18px;
+      background:#f1f5f9; padding:10px;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.15);
     }
-    .print-btn {
-      margin-bottom: 16px;
-      text-align: right;
+    .qr-caption { font-size:0.78rem; color:var(--pm-muted); margin-top:6px; }
+    .highlight {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 214, 107, 0.25);
+      border: 1px solid rgba(255, 214, 107, 0.7);
+      font-size: 0.9rem;
+    }
+    .content-row {
+      display:flex; gap:20px; margin-top:20px; flex-wrap:wrap;
+    }
+    .col-main { flex:2 1 300px; }
+    .col-side { flex:1.2 1 260px; }
+    h2 { margin-top:0; font-size:1.2rem; margin-bottom:6px; color:#111827; }
+    .section-lead { font-size:0.95rem; color:var(--pm-muted); margin-bottom:8px; }
+    ul.feature-list { list-style:none; padding-left:0; margin:0; font-size:0.95rem; }
+    ul.feature-list li {
+      margin-bottom:6px; display:flex; align-items:flex-start; gap:8px;
+    }
+    .bullet-dot {
+      margin-top:4px; width:8px; height:8px; border-radius:999px;
+      background:var(--pm-primary); flex-shrink:0;
+    }
+    .card {
+      background:var(--pm-card-bg); border-radius:14px;
+      padding:12px 14px; box-shadow:0 6px 18px rgba(15,23,42,0.08);
+      margin-bottom:10px; font-size:0.9rem;
+    }
+    .sample-images {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
+      gap:8px; margin-top:10px;
+    }
+    .sample-images div {
+      border-radius:10px; height:70px;
+      background-size:cover; background-position:center;
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,0.3);
+    }
+    .img-1 { background-image: linear-gradient(135deg, #6366f1, #22c55e); }
+    .img-2 { background-image: linear-gradient(135deg, #f97316, #facc15); }
+    .img-3 { background-image: linear-gradient(135deg, #0ea5e9, #c4b5fd); }
+
+    .tagline {
+      margin-top:18px; padding-top:10px;
+      border-top:1px solid #e5e7eb; font-size:0.85rem;
+      color:var(--pm-muted); display:flex; justify-content:space-between;
+      flex-wrap:wrap; gap:8px;
+    }
+    @media print {
+      body { padding:0; background:#ffffff; }
+      .toolbar { display:none !important; }
     }
   </style>
 </head>
 <body>
-<div class="print-btn">
-  <button onclick="window.print()">Print Flyer</button>
+
+<div class="toolbar no-print">
+  <a href="{{ url_for('dashboard') }}" class="btn-back">
+    ⬅ Back to Dashboard
+  </a>
+  <button class="btn-print" onclick="window.print()">
+    🖨 Print Flyer
+  </button>
 </div>
 
 <div class="flyer">
-  <div class="qr">
-    <img
-      src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ business_register_url | urlencode }}"
-      alt="Scan to register business on PerkMiner">
-    <div style="font-size:0.8em;margin-top:4px;">Scan to register your business</div>
+  <div class="header-row">
+    <div class="header-main">
+      <div class="eyebrow">business invitation</div>
+      <h1>Advertise Smarter with PerkMiner</h1>
+      <div class="subtitle">
+        Invite your favorite businesses to advertise on PerkMiner using your member referral link.
+        They only pay an advertising fee when they close a sale.
+      </div>
+    </div>
+    <div class="qr-block">
+      <img
+        src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ business_register_url | urlencode }}"
+        alt="Scan to register your business on PerkMiner">
+      <div class="qr-caption">
+        Scan to register a business<br>
+        (member referral pre-filled)
+      </div>
+    </div>
   </div>
 
-  <h1>Advertise Your Business on PerkMiner</h1>
-  <p>
-    Scan the QR code or visit:
-    <br>
-    <strong>{{ business_register_url }}</strong>
-  </p>
+  <div class="highlight">
+    This QR code opens the PerkMiner business registration page with
+    <strong>{{ user.referral_code }}</strong> already applied as the member referral.
+  </div>
 
-  <p class="ref-code">
-    Invited by member: <strong>{{ user.name or user.email }}</strong><br>
-    Member referral code: <strong>{{ user.referral_code }}</strong>
-  </p>
+  <div class="content-row">
+    <div class="col-main">
+      <h2>Why businesses join PerkMiner</h2>
+      <p class="section-lead">
+        PerkMiner gives business owners a performance-based way to acquire new customers: no monthly fees,
+        no wasted clicks—only pay when a transaction closes.
+      </p>
+      <ul class="feature-list">
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>Pay-per-closed-sale model</strong> instead of paying up front for clicks or impressions.</span>
+        </li>
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>Predictable ad fee</strong> (e.g., 10% of the sale, capped per transaction, based on your program).</span>
+        </li>
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>Built-in member network</strong> that earns cash back and helps drive repeat business.</span>
+        </li>
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>No contracts, no long-term lock-in</strong>—test the platform and scale as it works.</span>
+        </li>
+      </ul>
 
-  <hr>
+      <div class="sample-images">
+        <div class="img-1"></div>
+        <div class="img-2"></div>
+        <div class="img-3"></div>
+      </div>
+    </div>
 
-  <p>
-    PerkMiner lets you advertise with zero wasted ad spend: you only pay a fee when you close a sale.
-    Use this flyer to invite business owners to register their business through your member referral link.
-  </p>
+    <div class="col-side">
+      <div class="card">
+        <strong>How to get started</strong>
+        <ol style="margin:8px 0 4px 18px; padding-left:0; font-size:0.9rem;">
+          <li>Scan the QR code or visit the URL shown.</li>
+          <li>Fill out the business registration form.</li>
+          <li>Set up your listing, perks, and funding balance.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <strong>Inviting member</strong>
+        <p style="margin:6px 0 4px 0; font-size:0.9rem;">
+          Member: <b>{{ user.name or user.email }}</b><br>
+          Member referral code: <b>{{ user.referral_code }}</b>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tagline">
+    <span>PerkMiner — zero wasted ad spend, pay only when a sale is closed.</span>
+    <span style="font-size:0.8rem;">perkminer.com</span>
+  </div>
 </div>
+
 </body>
 </html>

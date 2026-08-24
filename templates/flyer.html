@@ -4,83 +4,315 @@
   <meta charset="UTF-8">
   <title>PerkMiner Member Referral Flyer</title>
   <style>
-    @media print {
-      body { margin: 0; }
+    :root {
+      --pm-primary: #2a5859;
+      --pm-accent: #ffd66b;
+      --pm-bg: #f5f7fb;
+      --pm-card-bg: #ffffff;
+      --pm-text: #1f2933;
+      --pm-muted: #6b7280;
+    }
+    * {
+      box-sizing: border-box;
     }
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      color: #222;
-    }
-    .flyer {
-      border: 1px solid #ddd;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
       padding: 24px;
-      max-width: 800px;
+      background: radial-gradient(circle at top left, #e0f7f6, #f5f7fb);
+      color: var(--pm-text);
+    }
+    .toolbar {
+      max-width: 900px;
+      margin: 0 auto 12px auto;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .toolbar button,
+    .toolbar a {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-print {
+      background: var(--pm-primary);
+      color: #fff;
+    }
+    .btn-back {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-print:hover { background: #214344; }
+    .btn-back:hover { background: #d1d5db; }
+
+    .flyer {
+      max-width: 900px;
       margin: 0 auto;
+      background: linear-gradient(135deg, #ffffff, #fdf8e5);
+      border-radius: 18px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
+      padding: 28px 28px 32px 28px;
       position: relative;
+      overflow: hidden;
     }
-    .qr {
+    .flyer::before {
+      content: "";
       position: absolute;
-      top: 24px;
-      right: 24px;
-      text-align: center;
+      top: -40px;
+      right: -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(42,88,89,0.12), transparent 60%);
+      pointer-events: none;
     }
-    .qr img {
-      width: 140px;
-      height: 140px;
+    .header-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .header-main {
+      flex: 1;
+    }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.72rem;
+      color: var(--pm-muted);
+      margin-bottom: 6px;
     }
     h1 {
+      margin: 0 0 6px 0;
+      font-size: 2.1rem;
+      color: var(--pm-primary);
+    }
+    .subtitle {
+      font-size: 0.98rem;
+      color: var(--pm-muted);
+      max-width: 480px;
+    }
+    .qr-block {
+      text-align: center;
+      min-width: 150px;
+    }
+    .qr-block img {
+      width: 150px;
+      height: 150px;
+      border-radius: 18px;
+      background: #f1f5f9;
+      padding: 10px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+    }
+    .qr-caption {
+      font-size: 0.78rem;
+      color: var(--pm-muted);
+      margin-top: 6px;
+    }
+
+    .highlight {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 214, 107, 0.25);
+      border: 1px solid rgba(255, 214, 107, 0.7);
+      font-size: 0.9rem;
+    }
+
+    .content-row {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .col-main {
+      flex: 2 1 300px;
+    }
+    .col-side {
+      flex: 1.2 1 260px;
+    }
+    h2 {
       margin-top: 0;
-      color: #2a5859;
+      font-size: 1.2rem;
+      margin-bottom: 6px;
+      color: #111827;
     }
-    .ref-code {
-      font-size: 1.1em;
-      margin-top: 8px;
+    .section-lead {
+      font-size: 0.95rem;
+      color: var(--pm-muted);
+      margin-bottom: 8px;
     }
-    .print-btn {
-      margin-bottom: 16px;
-      text-align: right;
+    ul.feature-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      font-size: 0.95rem;
     }
-    .print-btn button {
-      padding: 8px 16px;
+    ul.feature-list li {
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .bullet-dot {
+      margin-top: 4px;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--pm-primary);
+      flex-shrink: 0;
+    }
+
+    .card {
+      background: var(--pm-card-bg);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+    .tagline {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 0.85rem;
+      color: var(--pm-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sample-images {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .sample-images div {
+      border-radius: 10px;
+      height: 70px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.3);
+    }
+    .img-1 { background-image: linear-gradient(135deg, #38bdf8, #6366f1); }
+    .img-2 { background-image: linear-gradient(135deg, #22c55e, #bbf7d0); }
+    .img-3 { background-image: linear-gradient(135deg, #f97316, #fed7aa); }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .toolbar {
+        display: none !important;
+      }
     }
   </style>
 </head>
 <body>
-<div class="print-btn">
-  <button onclick="window.print()">Print Flyer</button>
+
+<div class="toolbar no-print">
+  <a href="{{ url_for('dashboard') }}" class="btn-back">
+    ⬅ Back to Dashboard
+  </a>
+  <button class="btn-print" onclick="window.print()">
+    🖨 Print Flyer
+  </button>
 </div>
 
 <div class="flyer">
-  <div class="qr">
-    <!-- QR code pointing to register_url -->
-    <!-- simplest: use Google Charts or similar; you can swap with your own QR later -->
-    <img
-      src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ register_url | urlencode }}"
-      alt="Scan to join PerkMiner">
-    <div style="font-size:0.8em;margin-top:4px;">Scan to join</div>
+  <div class="header-row">
+    <div class="header-main">
+      <div class="eyebrow">member invitation</div>
+      <h1>Earn Cashback on Everyday Purchases</h1>
+      <div class="subtitle">
+        Join PerkMiner through
+        <strong>{{ user.name or user.email }}</strong>
+        and start earning cash back and referral commissions on purchases you and your network make.
+      </div>
+    </div>
+    <div class="qr-block">
+      <img
+        src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ register_url | urlencode }}"
+        alt="Scan to join PerkMiner">
+      <div class="qr-caption">
+        Scan to register<br>
+        (referral code pre-filled)
+      </div>
+    </div>
   </div>
 
-  <h1>Join PerkMiner and Earn Cash Back</h1>
-  <p>
-    Scan the QR code or visit:
-    <br>
-    <strong>{{ register_url }}</strong>
-  </p>
+  <div class="highlight">
+    Use your phone’s camera to scan the QR code and you’ll be taken directly to the registration page with
+    <strong>{{ user.referral_code }}</strong> already filled in.
+  </div>
 
-  <p class="ref-code">
-    Invited by: <strong>{{ user.name or user.email }}</strong><br>
-    Referral code: <strong>{{ user.referral_code }}</strong>
-  </p>
+  <div class="content-row">
+    <div class="col-main">
+      <h2>Why join PerkMiner?</h2>
+      <p class="section-lead">
+        PerkMiner rewards you in two main ways: cash back on your own purchases and commissions when people in your
+        referral network shop with participating businesses.
+      </p>
+      <ul class="feature-list">
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>2% cashback</strong> on qualifying purchases from PerkMiner advertisers (up to program limits).</span>
+        </li>
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>Multi-tier referral earnings</strong> when people you invite (and their referrals) make purchases.</span>
+        </li>
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>No monthly fees or contracts</strong> to join as a member.</span>
+        </li>
+        <li>
+          <span class="bullet-dot"></span>
+          <span><strong>Private & secure:</strong> PerkMiner does not sell your contact info as leads.</span>
+        </li>
+      </ul>
 
-  <hr>
+      <div class="sample-images">
+        <div class="img-1"></div>
+        <div class="img-2"></div>
+        <div class="img-3"></div>
+      </div>
+    </div>
 
-  <p>
-    PerkMiner members earn cash back on purchases and referral commissions when others join and shop.
-    Use this flyer to invite friends, family, and coworkers to register for free.
-  </p>
+    <div class="col-side">
+      <div class="card">
+        <strong>How to get started</strong>
+        <ol style="margin:8px 0 4px 18px; padding-left:0; font-size:0.9rem;">
+          <li>Scan the QR code or visit the URL above.</li>
+          <li>Complete the quick registration form.</li>
+          <li>Start using your account and invite others.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <strong>Your inviter</strong>
+        <p style="margin:6px 0 4px 0; font-size:0.9rem;">
+          Name / Email: <br>
+          <b>{{ user.name or user.email }}</b><br>
+          Referral Code: <b>{{ user.referral_code }}</b>
+        </p>
+      </div>
+    </div>
+  </div>
 
-  <!-- you can add more marketing text, bullet points, etc. here -->
+  <div class="tagline">
+    <span>PerkMiner — cashback and commissions that reward real relationships.</span>
+    <span style="font-size:0.8rem;">perkminer.com</span>
+  </div>
 </div>
+
 </body>
 </html>
