@@ -7734,7 +7734,27 @@ def withdraw():
         flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    balance_to_withdraw = net_available  # withdraw full available for now
+    # optional amount from form
+    amt_str = request.form.get("amount", "").strip()
+    if amt_str:
+        try:
+            requested = Decimal(amt_str)
+        except Exception:
+            flash("Invalid withdrawal amount.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested < MIN_PAYOUT:
+            flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested > net_available:
+            flash("You cannot withdraw more than your available balance.", "warning")
+            return redirect(url_for('dashboard'))
+
+        balance_to_withdraw = requested
+    else:
+        # no custom amount → withdraw all net_available
+        balance_to_withdraw = net_available
 
     # standard bank transfer fee (0.25% + $0.35)
     fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")
@@ -7817,7 +7837,26 @@ def business_withdraw():
         flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('business_dashboard'))
 
-    balance_to_withdraw = net_available
+    # optional amount from form
+    amt_str = request.form.get("amount", "").strip()
+    if amt_str:
+        try:
+            requested = Decimal(amt_str)
+        except Exception:
+            flash("Invalid withdrawal amount.", "warning")
+            return redirect(url_for('business_dashboard'))
+
+        if requested < MIN_PAYOUT:
+            flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+            return redirect(url_for('business_dashboard'))
+
+        if requested > net_available:
+            flash("You cannot withdraw more than your available balance.", "warning")
+            return redirect(url_for('business_dashboard'))
+
+        balance_to_withdraw = requested
+    else:
+        balance_to_withdraw = net_available
 
     # standard bank fee for businesses
     fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")
@@ -7960,7 +7999,26 @@ def withdraw_investor():
         flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    balance_to_withdraw = net_available
+    # optional amount from form
+    amt_str = request.form.get("amount", "").strip()
+    if amt_str:
+        try:
+            requested = Decimal(amt_str)
+        except Exception:
+            flash("Invalid withdrawal amount.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested < MIN_PAYOUT:
+            flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested > net_available:
+            flash("You cannot withdraw more than your available balance.", "warning")
+            return redirect(url_for('dashboard'))
+
+        balance_to_withdraw = requested
+    else:
+        balance_to_withdraw = net_available
 
     # standard bank transfer fee
     fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")
@@ -8035,14 +8093,34 @@ def withdraw_instant():
         flash("Please set up your Stripe payouts first.", "warning")
         return redirect(url_for('onboard_stripe'))
 
-    # 1) compute what is actually withdrawable
+    # 1) compute what is actually withdrawable from DB
     net_available, total_earnings, available_earnings, pending_earnings = get_member_withdrawable(user, delay_days=7)
 
     if net_available < MIN_PAYOUT:
         flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    balance_to_withdraw = net_available
+    # optional amount from form
+    amt_str = request.form.get("amount", "").strip()
+    if amt_str:
+        try:
+            requested = Decimal(amt_str)
+        except Exception:
+            flash("Invalid withdrawal amount.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested < MIN_PAYOUT:
+            flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested > net_available:
+            flash("You cannot withdraw more than your available balance.", "warning")
+            return redirect(url_for('dashboard'))
+
+        balance_to_withdraw = requested
+    else:
+        # no custom amount → withdraw all net_available
+        balance_to_withdraw = net_available
 
     # instant payout fee: 1.1% + $0.50
     fee = balance_to_withdraw * Decimal("0.011") + Decimal("0.50")
@@ -8124,7 +8202,26 @@ def business_withdraw_instant():
         flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('business_dashboard'))
 
-    balance_to_withdraw = net_available
+    # optional amount from form
+    amt_str = request.form.get("amount", "").strip()
+    if amt_str:
+        try:
+            requested = Decimal(amt_str)
+        except Exception:
+            flash("Invalid withdrawal amount.", "warning")
+            return redirect(url_for('business_dashboard'))
+
+        if requested < MIN_PAYOUT:
+            flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+            return redirect(url_for('business_dashboard'))
+
+        if requested > net_available:
+            flash("You cannot withdraw more than your available balance.", "warning")
+            return redirect(url_for('business_dashboard'))
+
+        balance_to_withdraw = requested
+    else:
+        balance_to_withdraw = net_available
 
     # instant payout fee
     fee = balance_to_withdraw * Decimal("0.011") + Decimal("0.50")
@@ -8199,7 +8296,26 @@ def withdraw_investor_instant():
         flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings (after the 7-day delay) to withdraw.", "warning")
         return redirect(url_for('dashboard'))
 
-    balance_to_withdraw = net_available
+    # optional amount from form
+    amt_str = request.form.get("amount", "").strip()
+    if amt_str:
+        try:
+            requested = Decimal(amt_str)
+        except Exception:
+            flash("Invalid withdrawal amount.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested < MIN_PAYOUT:
+            flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+            return redirect(url_for('dashboard'))
+
+        if requested > net_available:
+            flash("You cannot withdraw more than your available balance.", "warning")
+            return redirect(url_for('dashboard'))
+
+        balance_to_withdraw = requested
+    else:
+        balance_to_withdraw = net_available
 
     # instant payout fee: 1.1% + $0.50
     fee = balance_to_withdraw * Decimal("0.011") + Decimal("0.50")
