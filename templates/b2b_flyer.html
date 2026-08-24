@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PerkMiner B2B Referral Flyer</title>
+  <style>
+    @media print { body { margin: 0; } }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #222;
+    }
+    .flyer {
+      border: 1px solid #ddd;
+      padding: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .qr {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      text-align: center;
+    }
+    .qr img {
+      width: 140px;
+      height: 140px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #2a5859;
+    }
+    .ref-code {
+      font-size: 1.1em;
+      margin-top: 8px;
+    }
+    .print-btn {
+      margin-bottom: 16px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+<div class="print-btn">
+  <button onclick="window.print()">Print Flyer</button>
+</div>
+
+<div class="flyer">
+  <div class="qr">
+    <img
+      src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ b2b_register_url | urlencode }}"
+      alt="Scan to register your business on PerkMiner">
+    <div style="font-size:0.8em;margin-top:4px;">Scan to join as an advertiser</div>
+  </div>
+
+  <h1>Invite Businesses to Advertise on PerkMiner</h1>
+  <p>
+    Scan the QR code or visit:
+    <br>
+    <strong>{{ b2b_register_url }}</strong>
+  </p>
+
+  <p class="ref-code">
+    Invited by business: <strong>{{ business.business_name or business.business_email }}</strong><br>
+    Business referral code: <strong>{{ business.referral_code }}</strong>
+  </p>
+
+  <hr>
+
+  <p>
+    Share this flyer with other business owners so they can sign up as advertisers
+    using your business referral code and earn you B2B commissions.
+  </p>
+</div>
+</body>
+</html>

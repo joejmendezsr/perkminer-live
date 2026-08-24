@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PerkMiner Business Referral Flyer</title>
+  <style>
+    @media print { body { margin: 0; } }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #222;
+    }
+    .flyer {
+      border: 1px solid #ddd;
+      padding: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .qr {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      text-align: center;
+    }
+    .qr img {
+      width: 140px;
+      height: 140px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #2a5859;
+    }
+    .ref-code {
+      font-size: 1.1em;
+      margin-top: 8px;
+    }
+    .print-btn {
+      margin-bottom: 16px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+<div class="print-btn">
+  <button onclick="window.print()">Print Flyer</button>
+</div>
+
+<div class="flyer">
+  <div class="qr">
+    <img
+      src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ business_register_url | urlencode }}"
+      alt="Scan to register business on PerkMiner">
+    <div style="font-size:0.8em;margin-top:4px;">Scan to register your business</div>
+  </div>
+
+  <h1>Advertise Your Business on PerkMiner</h1>
+  <p>
+    Scan the QR code or visit:
+    <br>
+    <strong>{{ business_register_url }}</strong>
+  </p>
+
+  <p class="ref-code">
+    Invited by member: <strong>{{ user.name or user.email }}</strong><br>
+    Member referral code: <strong>{{ user.referral_code }}</strong>
+  </p>
+
+  <hr>
+
+  <p>
+    PerkMiner lets you advertise with zero wasted ad spend: you only pay a fee when you close a sale.
+    Use this flyer to invite business owners to register their business through your member referral link.
+  </p>
+</div>
+</body>
+</html>

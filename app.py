@@ -8536,6 +8536,70 @@ def online_marketplace_results():
         pagination=pagination
     )
 
+from flask_login import login_required
+from flask import render_template
+
+@app.route("/member_flyer")
+@login_required
+def member_flyer():
+    """
+    Member referral flyer: QR links to /register?ref=<member referral_code>
+    Only accessible when logged in as a member.
+    """
+    user = current_user
+    if not user.referral_code:
+        # in your app this shouldn't happen, but just in case
+        flash("You need a referral code to use the flyer.", "warning")
+        return redirect(url_for("dashboard"))
+
+    # build the registration URL with ref parameter
+    register_url = url_for("register", ref=user.referral_code, _external=True)
+    return render_template("flyer.html",
+                           user=user,
+                           register_url=register_url)
+
+
+@app.route("/member_business_flyer")
+@login_required
+def member_business_flyer():
+    """
+    Member → business referral flyer:
+    QR links to /business/register?ref=<member referral_code>
+    """
+    user = current_user
+    if not user.referral_code:
+        flash("You need a referral code to use the flyer.", "warning")
+        return redirect(url_for("dashboard"))
+
+    business_register_url = url_for("business_register", ref=user.referral_code, _external=True)
+    return render_template("business_flyer.html",
+                           user=user,
+                           business_register_url=business_register_url)
+
+
+@app.route("/b2b_flyer")
+@business_login_required
+def b2b_flyer():
+    """
+    Business → business referral flyer:
+    QR links to /business/register?ref=<business referral_code>
+    Only accessible when a business is logged in.
+    """
+    biz_id = session.get("business_id")
+    if not biz_id:
+        flash("Please log in as a business to access the B2B flyer.", "warning")
+        return redirect(url_for("business_login"))
+
+    biz = Business.query.get_or_404(biz_id)
+    if not biz.referral_code:
+        flash("This business does not have a referral code yet.", "warning")
+        return redirect(url_for("business_dashboard"))
+
+    b2b_register_url = url_for("business_register", ref=biz.referral_code, _external=True)
+    return render_template("b2b_flyer.html",
+                           business=biz,
+                           b2b_register_url=b2b_register_url)
+
 @csrf.exempt
 @app.route("/api/record_external_sale", methods=["POST"])
 def record_external_sale():

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PerkMiner Member Referral Flyer</title>
+  <style>
+    @media print {
+      body { margin: 0; }
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #222;
+    }
+    .flyer {
+      border: 1px solid #ddd;
+      padding: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .qr {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      text-align: center;
+    }
+    .qr img {
+      width: 140px;
+      height: 140px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #2a5859;
+    }
+    .ref-code {
+      font-size: 1.1em;
+      margin-top: 8px;
+    }
+    .print-btn {
+      margin-bottom: 16px;
+      text-align: right;
+    }
+    .print-btn button {
+      padding: 8px 16px;
+    }
+  </style>
+</head>
+<body>
+<div class="print-btn">
+  <button onclick="window.print()">Print Flyer</button>
+</div>
+
+<div class="flyer">
+  <div class="qr">
+    <!-- QR code pointing to register_url -->
+    <!-- simplest: use Google Charts or similar; you can swap with your own QR later -->
+    <img
+      src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ register_url | urlencode }}"
+      alt="Scan to join PerkMiner">
+    <div style="font-size:0.8em;margin-top:4px;">Scan to join</div>
+  </div>
+
+  <h1>Join PerkMiner and Earn Cash Back</h1>
+  <p>
+    Scan the QR code or visit:
+    <br>
+    <strong>{{ register_url }}</strong>
+  </p>
+
+  <p class="ref-code">
+    Invited by: <strong>{{ user.name or user.email }}</strong><br>
+    Referral code: <strong>{{ user.referral_code }}</strong>
+  </p>
+
+  <hr>
+
+  <p>
+    PerkMiner members earn cash back on purchases and referral commissions when others join and shop.
+    Use this flyer to invite friends, family, and coworkers to register for free.
+  </p>
+
+  <!-- you can add more marketing text, bullet points, etc. here -->
+</div>
+</body>
+</html>
