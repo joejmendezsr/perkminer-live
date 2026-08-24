@@ -11,6 +11,7 @@
       --pm-card-bg: #ffffff;
       --pm-text: #1f2933;
       --pm-muted: #6b7280;
+      --pm-highlight: #e0f2fe;
     }
     * {
       box-sizing: border-box;
@@ -21,6 +22,8 @@
       padding: 24px;
       background: radial-gradient(circle at top left, #e0f7f6, #f5f7fb);
       color: var(--pm-text);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .toolbar {
       max-width: 900px;
@@ -41,170 +44,202 @@
       align-items: center;
       gap: 6px;
     }
-    .btn-print {
-      background: var(--pm-primary);
-      color: #fff;
-    }
-    .btn-back {
-      background: #e5e7eb;
-      color: #111827;
-    }
+    .btn-print { background: var(--pm-primary); color: #fff; }
+    .btn-back  { background: #e5e7eb; color: #111827; }
     .btn-print:hover { background: #214344; }
-    .btn-back:hover { background: #d1d5db; }
+    .btn-back:hover  { background: #d1d5db; }
 
     .flyer {
       max-width: 900px;
       margin: 0 auto;
-      background: linear-gradient(135deg, #ffffff, #fdf8e5);
+      background: var(--pm-card-bg);
       border-radius: 18px;
       box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
-      padding: 28px 28px 32px 28px;
+      padding: 24px 26px 26px 26px;
       position: relative;
       overflow: hidden;
     }
-    .flyer::before {
-      content: "";
+
+    /* QR top-right, fixed size to help printing */
+    .qr-block {
       position: absolute;
-      top: -40px;
-      right: -40px;
-      width: 220px;
-      height: 220px;
-      background: radial-gradient(circle, rgba(42,88,89,0.12), transparent 60%);
-      pointer-events: none;
+      top: 18px;
+      right: 18px;
+      text-align: center;
+      z-index: 10;
     }
-    .header-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 20px;
+    .qr-block img {
+      width: 130px;
+      height: 130px;
+      border-radius: 14px;
+      background: #f1f5f9;
+      padding: 8px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+      display: block;
     }
-    .header-main {
-      flex: 1;
+    .qr-caption {
+      font-size: 0.78rem;
+      color: var(--pm-muted);
+      margin-top: 4px;
+      max-width: 140px;
+    }
+
+    /* hero full-width image */
+    .hero-image {
+      width: 100%;
+      height: 140px;
+      border-radius: 14px;
+      background-image: linear-gradient(135deg, #0ea5e9, #22c55e);
+      background-size: cover;
+      background-position: center;
+      margin-bottom: 16px;
+    }
+
+    /* title + bullets */
+    .title-block {
+      margin-right: 170px; /* leave space for QR */
+      margin-bottom: 14px;
     }
     .eyebrow {
       text-transform: uppercase;
       letter-spacing: 0.12em;
       font-size: 0.72rem;
       color: var(--pm-muted);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     h1 {
       margin: 0 0 6px 0;
-      font-size: 2.1rem;
+      font-size: 2rem;
       color: var(--pm-primary);
     }
     .subtitle {
-      font-size: 0.98rem;
-      color: var(--pm-muted);
-      max-width: 480px;
-    }
-    .qr-block {
-      text-align: center;
-      min-width: 150px;
-    }
-    .qr-block img {
-      width: 150px;
-      height: 150px;
-      border-radius: 18px;
-      background: #f1f5f9;
-      padding: 10px;
-      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
-    }
-    .qr-caption {
-      font-size: 0.78rem;
-      color: var(--pm-muted);
-      margin-top: 6px;
-    }
-
-    .highlight {
-      margin-top: 18px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(255, 214, 107, 0.25);
-      border: 1px solid rgba(255, 214, 107, 0.7);
-      font-size: 0.9rem;
-    }
-
-    .content-row {
-      display: flex;
-      gap: 20px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-    .col-main {
-      flex: 2 1 300px;
-    }
-    .col-side {
-      flex: 1.2 1 260px;
-    }
-    h2 {
-      margin-top: 0;
-      font-size: 1.2rem;
-      margin-bottom: 6px;
-      color: #111827;
-    }
-    .section-lead {
       font-size: 0.95rem;
       color: var(--pm-muted);
-      margin-bottom: 8px;
+      max-width: 520px;
     }
-    ul.feature-list {
+    .bullet-section {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.3fr);
+      gap: 16px;
+    }
+    .bullet-list {
       list-style: none;
       padding-left: 0;
       margin: 0;
-      font-size: 0.95rem;
+      font-size: 0.93rem;
     }
-    ul.feature-list li {
-      margin-bottom: 6px;
+    .bullet-list li {
       display: flex;
       align-items: flex-start;
       gap: 8px;
+      margin-bottom: 6px;
     }
     .bullet-dot {
-      margin-top: 4px;
-      width: 8px;
-      height: 8px;
+      margin-top: 5px;
+      width: 7px;
+      height: 7px;
       border-radius: 999px;
       background: var(--pm-primary);
       flex-shrink: 0;
     }
 
-    .card {
-      background: var(--pm-card-bg);
-      border-radius: 14px;
-      padding: 12px 14px;
-      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-      margin-bottom: 10px;
-      font-size: 0.9rem;
+    .bullet-paragraph {
+      font-size: 0.93rem;
+      color: var(--pm-text);
     }
-    .tagline {
+
+    /* 2nd section: image left, text right */
+    .split-section {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.5fr);
+      gap: 18px;
+      margin-top: 20px;
+      align-items: center;
+    }
+    .split-image-left {
+      width: 100%;
+      height: 130px;
+      border-radius: 14px;
+      background-image: linear-gradient(135deg, #6366f1, #22c55e);
+      background-size: cover;
+      background-position: center;
+    }
+    .split-text-right h2 {
+      margin: 0 0 6px 0;
+      font-size: 1.15rem;
+    }
+    .split-text-right p {
+      margin: 0;
+      font-size: 0.93rem;
+      color: var(--pm-text);
+    }
+
+    /* highlighted band with text and 3 mini images */
+    .highlight-band {
+      margin-top: 20px;
+      padding: 14px 16px 14px 16px;
+      border-radius: 14px;
+      background: var(--pm-highlight);
+      border: 1px solid #bfdbfe;
+    }
+    .highlight-band p {
+      margin: 0 0 10px 0;
+      font-size: 0.93rem;
+    }
+    .mini-images-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mini-img {
+      height: 60px;
+      border-radius: 10px;
+      background-size: cover;
+      background-position: center;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.5);
+    }
+    .mini-1 { background-image: linear-gradient(135deg, #f97316, #fed7aa); }
+    .mini-2 { background-image: linear-gradient(135deg, #22c55e, #bbf7d0); }
+    .mini-3 { background-image: linear-gradient(135deg, #0ea5e9, #cffafe); }
+
+    /* 3rd section: text left, image right */
+    .split-section-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.1fr);
+      gap: 18px;
+      margin-top: 20px;
+      align-items: center;
+    }
+    .split-image-right {
+      width: 100%;
+      height: 120px;
+      border-radius: 14px;
+      background-image: linear-gradient(135deg, #22c55e, #a5b4fc);
+      background-size: cover;
+      background-position: center;
+    }
+    .split-text-left h2 {
+      margin: 0 0 6px 0;
+      font-size: 1.1rem;
+    }
+    .split-text-left p {
+      margin: 0;
+      font-size: 0.93rem;
+    }
+
+    /* footer */
+    .footer {
       margin-top: 18px;
       padding-top: 10px;
       border-top: 1px solid #e5e7eb;
-      font-size: 0.85rem;
+      font-size: 0.84rem;
       color: var(--pm-muted);
       display: flex;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
     }
-
-    .sample-images {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .sample-images div {
-      border-radius: 10px;
-      height: 70px;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.3);
-    }
-    .img-1 { background-image: linear-gradient(135deg, #38bdf8, #6366f1); }
-    .img-2 { background-image: linear-gradient(135deg, #22c55e, #bbf7d0); }
-    .img-3 { background-image: linear-gradient(135deg, #f97316, #fed7aa); }
 
     @media print {
       body {
@@ -213,6 +248,10 @@
       }
       .toolbar {
         display: none !important;
+      }
+      .flyer {
+        box-shadow: none;
+        border-radius: 0;
       }
     }
   </style>
@@ -229,89 +268,95 @@
 </div>
 
 <div class="flyer">
-  <div class="header-row">
-    <div class="header-main">
-      <div class="eyebrow">member invitation</div>
-      <h1>Earn Cashback on Everyday Purchases</h1>
-      <div class="subtitle">
-        Join PerkMiner through
-        <strong>{{ user.name or user.email }}</strong>
-        and start earning cash back and referral commissions on purchases you and your network make.
-      </div>
-    </div>
-    <div class="qr-block">
-      <img
-        src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ register_url | urlencode }}"
-        alt="Scan to join PerkMiner">
-      <div class="qr-caption">
-        Scan to register<br>
-        (referral code pre-filled)
-      </div>
+
+  <div class="qr-block">
+    <img
+      src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ register_url | urlencode }}"
+      alt="Scan to join PerkMiner">
+    <div class="qr-caption">
+      Scan to register<br>(referral code pre-filled)
     </div>
   </div>
 
-  <div class="highlight">
-    Use your phone’s camera to scan the QR code and you’ll be taken directly to the registration page with
-    <strong>{{ user.referral_code }}</strong> already filled in.
-  </div>
+  <!-- 1) hero image full width -->
+  <div class="hero-image"></div>
 
-  <div class="content-row">
-    <div class="col-main">
-      <h2>Why join PerkMiner?</h2>
-      <p class="section-lead">
-        PerkMiner rewards you in two main ways: cash back on your own purchases and commissions when people in your
-        referral network shop with participating businesses.
-      </p>
-      <ul class="feature-list">
+  <!-- 2) title + bullets + small paragraph -->
+  <div class="title-block">
+    <div class="eyebrow">member invitation</div>
+    <h1>Earn Cashback on Everyday Purchases</h1>
+    <div class="subtitle">
+      Join PerkMiner through
+      <strong>{{ user.name or user.email }}</strong>
+      and earn cash back and referral commissions as you and your network shop with participating businesses.
+    </div>
+
+    <div class="bullet-section">
+      <ul class="bullet-list">
         <li>
           <span class="bullet-dot"></span>
-          <span><strong>2% cashback</strong> on qualifying purchases from PerkMiner advertisers (up to program limits).</span>
+          <span><strong>2% cashback</strong> on qualifying purchases from PerkMiner advertisers (up to limits).</span>
         </li>
         <li>
           <span class="bullet-dot"></span>
-          <span><strong>Multi-tier referral earnings</strong> when people you invite (and their referrals) make purchases.</span>
+          <span><strong>Multi-tier referral earnings</strong> when your network shops through your link.</span>
         </li>
         <li>
           <span class="bullet-dot"></span>
-          <span><strong>No monthly fees or contracts</strong> to join as a member.</span>
-        </li>
-        <li>
-          <span class="bullet-dot"></span>
-          <span><strong>Private & secure:</strong> PerkMiner does not sell your contact info as leads.</span>
+          <span><strong>No monthly fees</strong> or contracts to join as a member.</span>
         </li>
       </ul>
-
-      <div class="sample-images">
-        <div class="img-1"></div>
-        <div class="img-2"></div>
-        <div class="img-3"></div>
-      </div>
-    </div>
-
-    <div class="col-side">
-      <div class="card">
-        <strong>How to get started</strong>
-        <ol style="margin:8px 0 4px 18px; padding-left:0; font-size:0.9rem;">
-          <li>Scan the QR code or visit the URL above.</li>
-          <li>Complete the quick registration form.</li>
-          <li>Start using your account and invite others.</li>
-        </ol>
-      </div>
-      <div class="card">
-        <strong>Your inviter</strong>
-        <p style="margin:6px 0 4px 0; font-size:0.9rem;">
-          Name / Email: <br>
-          <b>{{ user.name or user.email }}</b><br>
-          Referral Code: <b>{{ user.referral_code }}</b>
-        </p>
+      <div class="bullet-paragraph">
+        Use your referral code <strong>{{ user.referral_code }}</strong> to invite others and grow your earnings over time.
       </div>
     </div>
   </div>
 
-  <div class="tagline">
+  <!-- 3) second image with paragraph on right -->
+  <div class="split-section">
+    <div class="split-image-left"></div>
+    <div class="split-text-right">
+      <h2>How it works</h2>
+      <p>
+        Scan the QR code, complete a quick registration, then search for businesses on PerkMiner.
+        When you finalize purchases with our advertisers, you receive cash back. When your referrals shop,
+        you can earn additional commissions based on your program’s tiers.
+      </p>
+    </div>
+  </div>
+
+  <!-- 4) highlighted band with paragraph + 3 mini images -->
+  <div class="highlight-band">
+    <p>
+      PerkMiner is designed to reward loyal customers and the people who help grow the network.
+      Share this flyer with friends, family, coworkers, or neighbors who like saving money and discovering new local businesses.
+    </p>
+    <div class="mini-images-row">
+      <div class="mini-img mini-1"></div>
+      <div class="mini-img mini-2"></div>
+      <div class="mini-img mini-3"></div>
+    </div>
+  </div>
+
+  <!-- 5) third image with paragraph to the left -->
+  <div class="split-section-2">
+    <div class="split-text-left">
+      <h2>Your inviter</h2>
+      <p>
+        This flyer was shared by <strong>{{ user.name or user.email }}</strong>.
+        When you sign up using this flyer, their referral code is automatically applied so both of you can benefit
+        as you start earning with PerkMiner.
+      </p>
+    </div>
+    <div class="split-image-right"></div>
+  </div>
+
+  <!-- 6) footer -->
+  <div class="footer">
     <span>PerkMiner — cashback and commissions that reward real relationships.</span>
-    <span style="font-size:0.8rem;">perkminer.com</span>
+    <span>Learn more at <strong>perkminer.com</strong></span>
   </div>
+
 </div>
 
 </body>

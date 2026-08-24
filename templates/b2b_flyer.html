@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>PerkMiner B2B Referral Flyer</title>
   <style>
-    /* same CSS pattern, reusing from above for brevity */
     :root {
       --pm-primary: #2a5859;
       --pm-accent: #ffd66b;
@@ -12,6 +11,7 @@
       --pm-card-bg: #ffffff;
       --pm-text: #1f2933;
       --pm-muted: #6b7280;
+      --pm-highlight: #e0f2fe;
     }
     * { box-sizing: border-box; }
     body {
@@ -20,6 +20,8 @@
       padding: 24px;
       background: radial-gradient(circle at top left, #e0f7f6, #f5f7fb);
       color: var(--pm-text);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .toolbar {
       max-width: 900px;
@@ -41,88 +43,207 @@
       gap: 6px;
     }
     .btn-print { background: var(--pm-primary); color: #fff; }
-    .btn-back { background: #e5e7eb; color: #111827; }
+    .btn-back  { background: #e5e7eb; color: #111827; }
     .btn-print:hover { background: #214344; }
-    .btn-back:hover { background: #d1d5db; }
+    .btn-back:hover  { background: #d1d5db; }
+
     .flyer {
       max-width: 900px;
       margin: 0 auto;
-      background: linear-gradient(135deg, #ffffff, #e0f2fe);
+      background: var(--pm-card-bg);
       border-radius: 18px;
       box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
-      padding: 28px 28px 32px 28px;
+      padding: 24px 26px 26px 26px;
       position: relative;
       overflow: hidden;
     }
-    .flyer::before {
-      content: "";
+
+    .qr-block {
       position: absolute;
-      top: -40px;
-      right: -40px;
-      width: 220px;
-      height: 220px;
-      background: radial-gradient(circle, rgba(37,99,235,0.12), transparent 60%);
-      pointer-events: none;
+      top: 18px;
+      right: 18px;
+      text-align: center;
+      z-index: 10;
     }
-    .header-row { display:flex; align-items:flex-start; gap:20px; }
-    .header-main { flex:1; }
+    .qr-block img {
+      width: 130px;
+      height: 130px;
+      border-radius: 14px;
+      background: #f1f5f9;
+      padding: 8px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+      display: block;
+    }
+    .qr-caption {
+      font-size: 0.78rem;
+      color: var(--pm-muted);
+      margin-top: 4px;
+      max-width: 140px;
+    }
+
+    .hero-image {
+      width: 100%;
+      height: 140px;
+      border-radius: 14px;
+      background-image: linear-gradient(135deg, #0ea5e9, #6366f1);
+      background-size: cover;
+      background-position: center;
+      margin-bottom: 16px;
+    }
+
+    .title-block {
+      margin-right: 170px;
+      margin-bottom: 14px;
+    }
     .eyebrow {
       text-transform: uppercase;
       letter-spacing: 0.12em;
       font-size: 0.72rem;
       color: var(--pm-muted);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     h1 {
       margin: 0 0 6px 0;
-      font-size: 2.1rem;
+      font-size: 2rem;
       color: var(--pm-primary);
     }
-    .subtitle { font-size:0.98rem; color:var(--pm-muted); max-width:520px; }
-    .qr-block { text-align:center; min-width:150px; }
-    .qr-block img {
-      width: 150px; height:150px; border-radius:18px;
-      background:#f1f5f9; padding:10px;
-      box-shadow:0 8px 20px rgba(15,23,42,0.15);
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--pm-muted);
+      max-width: 520px;
     }
-    .qr-caption { font-size:0.78rem; color:var(--pm-muted); margin-top:6px; }
-    .highlight {
-      margin-top: 18px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(191, 219, 254, 0.45);
-      border: 1px solid rgba(59, 130, 246, 0.7);
-      font-size: 0.9rem;
+
+    .bullet-section {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.3fr);
+      gap: 16px;
     }
-    .content-row {
-      display:flex; gap:20px; margin-top:20px; flex-wrap:wrap;
+    .bullet-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      font-size: 0.93rem;
     }
-    .col-main { flex:2 1 300px; }
-    .col-side { flex:1.2 1 260px; }
-    h2 { margin-top:0; font-size:1.2rem; margin-bottom:6px; color:#111827; }
-    .section-lead { font-size:0.95rem; color:var(--pm-muted); margin-bottom:8px; }
-    ul.feature-list { list-style:none; padding-left:0; margin:0; font-size:0.95rem; }
-    ul.feature-list li {
-      margin-bottom:6px; display:flex; align-items:flex-start; gap:8px;
+    .bullet-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
     }
     .bullet-dot {
-      margin-top:4px; width:8px; height:8px; border-radius:999px;
-      background:var(--pm-primary); flex-shrink:0;
+      margin-top: 5px;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--pm-primary);
+      flex-shrink: 0;
     }
-    .card {
-      background:var(--pm-card-bg); border-radius:14px;
-      padding:12px 14px; box-shadow:0 6px 18px rgba(15,23,42,0.08);
-      margin-bottom:10px; font-size:0.9rem;
+    .bullet-paragraph {
+      font-size: 0.93rem;
+      color: var(--pm-text);
     }
-    .tagline {
-      margin-top:18px; padding-top:10px;
-      border-top:1px solid #e5e7eb; font-size:0.85rem;
-      color:var(--pm-muted); display:flex; justify-content:space-between;
-      flex-wrap:wrap; gap:8px;
+
+    .split-section {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.5fr);
+      gap: 18px;
+      margin-top: 20px;
+      align-items: center;
     }
+    .split-image-left {
+      width: 100%;
+      height: 130px;
+      border-radius: 14px;
+      background-image: linear-gradient(135deg, #22c55e, #0ea5e9);
+      background-size: cover;
+      background-position: center;
+    }
+    .split-text-right h2 {
+      margin: 0 0 6px 0;
+      font-size: 1.15rem;
+    }
+    .split-text-right p {
+      margin: 0;
+      font-size: 0.93rem;
+      color: var(--pm-text);
+    }
+
+    .highlight-band {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--pm-highlight);
+      border: 1px solid #bfdbfe;
+    }
+    .highlight-band p {
+      margin: 0 0 10px 0;
+      font-size: 0.93rem;
+    }
+    .mini-images-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mini-img {
+      height: 60px;
+      border-radius: 10px;
+      background-size: cover;
+      background-position: center;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.5);
+    }
+    .mini-1 { background-image: linear-gradient(135deg, #f97316, #fed7aa); }
+    .mini-2 { background-image: linear-gradient(135deg, #22c55e, #bbf7d0); }
+    .mini-3 { background-image: linear-gradient(135deg, #0ea5e9, #cffafe); }
+
+    .split-section-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.1fr);
+      gap: 18px;
+      margin-top: 20px;
+      align-items: center;
+    }
+    .split-image-right {
+      width: 100%;
+      height: 120px;
+      border-radius: 14px;
+      background-image: linear-gradient(135deg, #6366f1, #facc15);
+      background-size: cover;
+      background-position: center;
+    }
+    .split-text-left h2 {
+      margin: 0 0 6px 0;
+      font-size: 1.1rem;
+    }
+    .split-text-left p {
+      margin: 0;
+      font-size: 0.93rem;
+    }
+
+    .footer {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 0.84rem;
+      color: var(--pm-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
     @media print {
-      body { padding:0; background:#ffffff; }
-      .toolbar { display:none !important; }
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .flyer {
+        box-shadow: none;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
@@ -138,76 +259,95 @@
 </div>
 
 <div class="flyer">
-  <div class="header-row">
-    <div class="header-main">
-      <div class="eyebrow">b2b invitation</div>
-      <h1>Invite Businesses to Advertise with You</h1>
-      <div class="subtitle">
-        Share this flyer with other business owners so they can join PerkMiner using your business referral code
-        and become part of your B2B earnings network.
-      </div>
-    </div>
-    <div class="qr-block">
-      <img
-        src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ b2b_register_url | urlencode }}"
-        alt="Scan to register your business on PerkMiner">
-      <div class="qr-caption">
-        Scan to register a business<br>
-        (business referral pre-filled)
-      </div>
+
+  <div class="qr-block">
+    <img
+      src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ b2b_register_url | urlencode }}"
+      alt="Scan to register your business on PerkMiner">
+    <div class="qr-caption">
+      Scan to register a business<br>(business referral pre-filled)
     </div>
   </div>
 
-  <div class="highlight">
-    This QR code opens the PerkMiner business registration page with your business referral code
-    <strong>{{ business.referral_code }}</strong> already applied.
-  </div>
+  <!-- hero image -->
+  <div class="hero-image"></div>
 
-  <div class="content-row">
-    <div class="col-main">
-      <h2>Grow your B2B earnings</h2>
-      <p class="section-lead">
-        When businesses you refer join PerkMiner and generate sales, you can earn B2B commissions based on
-        your program’s multi-tier structure.
-      </p>
-      <ul class="feature-list">
+  <!-- title + bullets + paragraph -->
+  <div class="title-block">
+    <div class="eyebrow">b2b invitation</div>
+    <h1>Grow Your Business Network with PerkMiner</h1>
+    <div class="subtitle">
+      Share this flyer with other business owners so they can join PerkMiner using your business referral code
+      and become part of your B2B earnings network.
+    </div>
+
+    <div class="bullet-section">
+      <ul class="bullet-list">
         <li>
           <span class="bullet-dot"></span>
-          <span><strong>Invite fellow businesses</strong> and help them discover a pay-per-closed-sale model.</span>
+          <span><strong>Invite fellow businesses</strong> into a pay-per-closed-sale advertising model.</span>
         </li>
         <li>
           <span class="bullet-dot"></span>
-          <span><strong>Build a downline of advertisers</strong> and participate in B2B commission tiers.</span>
+          <span><strong>Build a downline of advertisers</strong> and earn B2B commissions based on your program tiers.</span>
         </li>
         <li>
           <span class="bullet-dot"></span>
-          <span><strong>No cost for them to list</strong> beyond their funded advertising balance.</span>
+          <span><strong>No extra cost</strong> to share your referral code—everyone wins when sales happen.</span>
         </li>
       </ul>
-    </div>
-    <div class="col-side">
-      <div class="card">
-        <strong>Your business info</strong>
-        <p style="margin:6px 0 4px 0; font-size:0.9rem;">
-          Business: <b>{{ business.business_name or business.business_email }}</b><br>
-          Referral Code: <b>{{ business.referral_code }}</b>
-        </p>
-      </div>
-      <div class="card">
-        <strong>How to use this flyer</strong>
-        <ol style="margin:8px 0 4px 18px; padding-left:0; font-size:0.9rem;">
-          <li>Print and hand it to business owners you know.</li>
-          <li>Ask them to scan the QR and complete registration.</li>
-          <li>Stay connected as part of the same B2B network.</li>
-        </ol>
+      <div class="bullet-paragraph">
+        This flyer uses your business referral code <strong>{{ business.referral_code }}</strong> so you
+        can earn when businesses you invite generate sales on PerkMiner.
       </div>
     </div>
   </div>
 
-  <div class="tagline">
-    <span>PerkMiner — empower your business network and earn together.</span>
-    <span style="font-size:0.8rem;">perkminer.com</span>
+  <!-- second image left, text right -->
+  <div class="split-section">
+    <div class="split-image-left"></div>
+    <div class="split-text-right">
+      <h2>Why other businesses care</h2>
+      <p>
+        Many businesses struggle with ad platforms that charge for traffic but don’t guarantee results.
+        PerkMiner focuses on completed transactions instead. When you introduce other advertisers, 
+        they gain access to a system aligned with actual revenue, not just clicks.
+      </p>
+    </div>
   </div>
+
+  <!-- highlighted band with text + 3 mini images -->
+  <div class="highlight-band">
+    <p>
+      Use this flyer at networking events, trade shows, or local meetups. When another business scans the QR code
+      or types in the URL, your referral code is already applied, connecting them to your B2B network inside PerkMiner.
+    </p>
+    <div class="mini-images-row">
+      <div class="mini-img mini-1"></div>
+      <div class="mini-img mini-2"></div>
+      <div class="mini-img mini-3"></div>
+    </div>
+  </div>
+
+  <!-- third image right, text left -->
+  <div class="split-section-2">
+    <div class="split-text-left">
+      <h2>Your business information</h2>
+      <p>
+        This flyer was generated for <strong>{{ business.business_name or business.business_email }}</strong>.
+        When another business signs up using this flyer, your referral code
+        <strong>{{ business.referral_code }}</strong> is automatically applied so your relationship is tracked in the system.
+      </p>
+    </div>
+    <div class="split-image-right"></div>
+  </div>
+
+  <!-- footer -->
+  <div class="footer">
+    <span>PerkMiner — empower your business network and earn together.</span>
+    <span>Learn more at <strong>perkminer.com</strong></span>
+  </div>
+
 </div>
 
 </body>
