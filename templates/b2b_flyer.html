@@ -66,7 +66,7 @@
     .flyer-background {
       position: absolute;
       inset: 0;
-      background-image: url("https://picsum.photos/1200/1600?b2b");
+      background-image: url("https://res.cloudinary.com/dmrntlcfd/image/upload/v1787693481/biz-flyer-final_e8idn7.jpg");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -257,47 +257,60 @@
         src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ b2b_register_url | urlencode }}"
         alt="Scan to register your business on PerkMiner">
       <div class="qr-caption">
-        Scan to register a business<br>(business referral pre-filled)
+        Scan to register
       </div>
     </div>
 
     <div class="title-block">
       <div class="eyebrow">b2b invitation</div>
-      <h1>Grow Your Business Network with PerkMiner</h1>
+      <h2>No Sale or Closed Deal = Zero Fees</h2>
       <div class="subtitle">
-        Share this flyer with other business owners so they can join PerkMiner using your
-        business referral code and become part of your B2B earnings network.
+        Grow your business with our Pay-Per-Sale / Pay-Per-Close Model.
       </div>
     </div>
 
+    <!-- main content over the image -->
     <div class="content-panel">
       <div class="bullet-section">
+        <!-- left column bullets -->
         <ul class="bullet-list">
           <li>
             <span class="bullet-dot"></span>
-            <span><strong>Invite fellow businesses</strong> into a pay-per-closed-sale advertising model.</span>
+            <span><strong>Earn 1% Cash Back</strong> on up to $2,500 of every sale you make for offering a perk to our members.</span>
           </li>
           <li>
             <span class="bullet-dot"></span>
-            <span><strong>Build a downline of advertisers</strong> and earn B2B commissions based on your program tiers.</span>
+            <span><strong>Our members pay your business directly for the sale</strong> before you pay any advertising fees.</span>
           </li>
           <li>
             <span class="bullet-dot"></span>
-            <span><strong>No extra cost</strong> to share your referral code—everyone wins when sales happen.</span>
+            <span><strong>No hidden fees</strong> — No monthly subscriptions, membership fees, contracts or commitment.</span>
           </li>
         </ul>
-        <div class="bullet-paragraph">
-          This flyer uses your business referral code
-          <strong>{{ business.referral_code }}</strong> so you can earn when businesses you invite
-          generate sales on PerkMiner.
-        </div>
+
+        <!-- right column bullets -->
+        <ul class="bullet-list">
+          <li>
+            <span class="bullet-dot"></span>
+            <span><strong>No cost to list your business</strong> - only $25 to fund your account to cover the ad fees to get started.</span>
+          </li>
+          <li>
+            <span class="bullet-dot"></span>
+            <span><strong>A Paradigm Shift in Marketing</strong> - It's not what you were taugh to believe.  We don't succeed unless you do.</span>
+          </li>
+          <li>
+            <span class="bullet-dot"></span>
+            <span><strong>Built in Rewards Program</strong> - Perk Miner pays all cash back and commissions for repeat business.</span>
+          </li>
+        </ul>
       </div>
 
       <div class="footer">
-        <span>PerkMiner — empower your business network and earn together.</span>
-        <span>Generated for <strong>{{ business.business_name or business.business_email }}</strong></span>
+        <span>PerkMiner — zero wasted ad spend, pay only when a sale is closed.</span>
+        <span>Generated for <strong>{{ user.name or user.email }}</strong></span>
       </div>
     </div>
+
   </div>
 </div>
 
