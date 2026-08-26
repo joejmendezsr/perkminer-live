@@ -614,45 +614,46 @@
     </div>
   </div>
 
-
-<div class="card p-4 mb-4">
-  <h4>Share PerkMiner with business owners</h4>
-
+<div class="collapse mt-3" id="b2bShareCollapse">
   <label for="b2b-share-link" class="form-label">Your B2B invite link</label>
-  <div class="d-flex flex-wrap gap-2 mb-2" style="max-width: 520px;">
-    <input
-      id="b2b-share-link"
-      type="text"
-      class="form-control"
-      readonly
-      value="{{ b2b_share_url }}"
-    >
-    <button type="button" class="btn btn-primary flex-shrink-0" onclick="copyB2BShareLink()">
-      Copy link
-    </button>
-  </div>
+  <input
+    id="b2b-share-link"
+    type="text"
+    class="form-control mb-2"
+    readonly
+    value="{{ b2b_share_url }}"
+  >
 
   <!-- download for social -->
   <a href="{{ url_for('download_b2b_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
     Download B2B Flyer Image (for social posts)
   </a>
 
-  <p class="mt-2 mb-1" style="font-size:0.9rem;">
-    Suggested caption (you can edit this before posting):
+  <p class="mt-1 mb-1" style="font-size:0.9rem;">
+    Suggested caption (this is what will be copied):
   </p>
   <textarea
+    id="b2b-caption"
     readonly
     rows="3"
-    class="form-control"
+    class="form-control mb-2"
     style="max-width:520px; font-size:0.9rem;"
-    >Business owners: want advertising where you only pay when a sale actually closes?  900% ROI or higher (10% of the sale, capped at $250) with no hidden fees, no contracts, no subscription or monthly membership fees, plus your business earns cash back for making sales. No cost for exclusive leads, website or foot traffic, phone calls, appointments or meet-ups.  If you don't make a sale, you pay nothing.  You also get real-time analytics and more.  Perk Miner also pays it's members cash back and referral commissions for repeat business (not paid by business advertisers).
-Join PerkMiner as an advertiser through my business invite link today!:
+  >Business owners: want advertising where you only pay when a sale actually closes?
+Join PerkMiner as an advertiser through my business invite link:
 {{ b2b_share_url }}</textarea>
 
+  <button
+    type="button"
+    class="btn btn-primary w-100"
+    onclick="copyCaptionAndLink('b2b-caption')"
+  >
+    Copy caption + link
+  </button>
+
   <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
-    1. Open your <strong>B2B Flyer</strong> from this dashboard and download or screenshot it.<br>
-    2. Post on LinkedIn, Facebook, or any business group and upload the flyer image.<br>
-    3. Paste this B2B invite link into your caption so other businesses sign up under your referral.
+    1. Download the B2B flyer image above.<br>
+    2. Upload it to your post.<br>
+    3. Paste the copied caption + link.
   </p>
 </div>
 
