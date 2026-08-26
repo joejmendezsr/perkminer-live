@@ -3581,6 +3581,9 @@ def dashboard():
 
         db.session.commit()
 
+    share_url = url_for("register", ref=user.referral_code, _external=True)
+    business_share_url = url_for("business_register", ref=user.referral_code, _external=True)
+
     return render_template(
         "dashboard.html",
         form=form,
@@ -3604,6 +3607,8 @@ def dashboard():
         investor_total=investor_total,
         investor_available=investor_available,
         investor_pending=investor_pending,
+        share_url=share_url,
+        business_share_url=business_share_url,
     )
 
 @app.route("/logout")
@@ -5442,6 +5447,8 @@ def business_dashboard():
         status='active'
     ).all()
 
+    b2b_share_url = url_for("business_register", ref=biz.referral_code, _external=True)
+
     return render_template(
         "business_dashboard.html",
         form=form,
@@ -5464,6 +5471,7 @@ def business_dashboard():
         total_biz_earnings=total_biz_earnings,
         available_biz_earnings=available_biz_earnings,
         pending_biz_earnings=pending_biz_earnings,
+        b2b_share_url=b2b_share_url,
     )
 
 @app.route("/business/logout")

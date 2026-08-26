@@ -612,6 +612,43 @@
     B2B Flyer
   </a>
     </div>
+
+<div class="card p-4 mb-4">
+  <h4>Share PerkMiner with business owners</h4>
+
+  <label for="b2b-share-link" class="form-label">Your B2B invite link</label>
+  <div class="d-flex flex-wrap gap-2 mb-2" style="max-width: 520px;">
+    <input
+      id="b2b-share-link"
+      type="text"
+      class="form-control"
+      readonly
+      value="{{ b2b_share_url }}"
+    >
+    <button type="button" class="btn btn-primary flex-shrink-0" onclick="copyB2BShareLink()">
+      Copy link
+    </button>
+  </div>
+
+  <p class="mt-2 mb-1" style="font-size:0.9rem;">
+    Suggested caption (you can edit this before posting):
+  </p>
+  <textarea
+    readonly
+    rows="3"
+    class="form-control"
+    style="max-width:520px; font-size:0.9rem;"
+  >Business owners: want advertising where you only pay when a sale actually closes?
+Join PerkMiner as an advertiser through my business invite link:
+{{ b2b_share_url }}</textarea>
+
+  <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
+    1. Open your <strong>B2B Flyer</strong> from this dashboard and download or screenshot it.<br>
+    2. Post on LinkedIn, Facebook, or any business group and upload the flyer image.<br>
+    3. Paste this B2B invite link into your caption so other businesses sign up under your referral.
+  </p>
+</div>
+
   </div>
     <div class="card p-4 mb-4">
 <h4>Finalize Transactions</h4>
@@ -1295,6 +1332,33 @@ window.addEventListener('DOMContentLoaded', function() {
     window.initProfileMap = initProfileMap;
   }
 });
+</script>
+
+<script>
+  function copyB2BShareLink() {
+    const input = document.getElementById('b2b-share-link');
+    if (!input) return;
+
+    const value = input.value;
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(value).then(function () {
+        alert('B2B invite link copied to clipboard');
+      }).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+
+    function fallbackCopy() {
+      input.select();
+      try {
+        document.execCommand('copy');
+        alert('B2B invite link copied to clipboard');
+      } catch (e) {
+        alert('Could not copy automatically, please copy the link manually.');
+      }
+    }
+  }
 </script>
 
 </body>
