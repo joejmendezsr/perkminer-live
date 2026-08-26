@@ -65,7 +65,7 @@
     .flyer-background {
       position: absolute;
       inset: 0;
-      background-image: url("https://res.cloudinary.com/dmrntlcfd/image/upload/v1787700920/flyer_qpekqt.jpg");
+      background-image: url("https://res.cloudinary.com/dmrntlcfd/image/upload/v1787703111/member-flyer-background_wyolcy.png");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -270,33 +270,48 @@
       </div>
     </div>
 
+    <!-- main content over the image -->
     <div class="content-panel">
       <div class="bullet-section">
+        <!-- left column bullets -->
         <ul class="bullet-list">
           <li>
             <span class="bullet-dot"></span>
-            <span><strong>2% cashback</strong> on qualifying purchases from PerkMiner advertisers (up to limits).</span>
+            <span><strong>Earn 2% Cash Back</strong> on up to $2,500 of every purchase you make from any advertiser.</span>
           </li>
           <li>
             <span class="bullet-dot"></span>
-            <span><strong>Multi-tier referral earnings</strong> when your network shops through your link.</span>
+            <span><strong>Generous Rewards Program </strong> members have the ability to earn more than what they spend.</span>
           </li>
           <li>
             <span class="bullet-dot"></span>
-            <span><strong>No monthly fees</strong> or contracts to join as a member.</span>
+            <span><strong>Members Earn Real Pay</strong> — Not points or gift cards.  Withdrawals go to your bank account.</span>
           </li>
         </ul>
-        <div class="bullet-paragraph">
-          Use your referral code <strong>{{ user.referral_code }}</strong> to invite others and
-          grow your earnings over time.
-        </div>
+
+        <!-- right column bullets -->
+        <ul class="bullet-list">
+          <li>
+            <span class="bullet-dot"></span>
+            <span><strong>Independent Marketing Program</strong> - A real business opportunity with zero investment or cost to our members.</span>
+          </li>
+          <li>
+            <span class="bullet-dot"></span>
+            <span><strong>The Business Opportunity</strong> - Tell others about Perk Miner and earn from real purchases and real sales.</span>
+          </li>
+          <li>
+            <span class="bullet-dot"></span>
+            <span><strong>Built in Rewards Program</strong> - Perk Miner pays all cash back and commissions from the ad revenue paid by advertisers.</span>
+          </li>
+        </ul>
       </div>
 
       <div class="footer">
-        <span>PerkMiner — cashback and commissions that reward real relationships.</span>
+        <span>PerkMiner pays out up to 84% of ad revenue receive in the form of cashback or commissions from every finalized transaction.</span>
         <span>Generated for <strong>{{ user.name or user.email }}</strong></span>
       </div>
     </div>
+
   </div>
 </div>
 
