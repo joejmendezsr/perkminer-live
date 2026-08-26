@@ -612,6 +612,8 @@
     B2B Flyer
   </a>
     </div>
+  </div>
+
 
 <div class="card p-4 mb-4">
   <h4>Share PerkMiner with business owners</h4>
@@ -630,6 +632,11 @@
     </button>
   </div>
 
+  <!-- download for social -->
+  <a href="{{ url_for('download_b2b_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
+    Download B2B Flyer Image (for social posts)
+  </a>
+
   <p class="mt-2 mb-1" style="font-size:0.9rem;">
     Suggested caption (you can edit this before posting):
   </p>
@@ -638,8 +645,8 @@
     rows="3"
     class="form-control"
     style="max-width:520px; font-size:0.9rem;"
-  >Business owners: want advertising where you only pay when a sale actually closes?
-Join PerkMiner as an advertiser through my business invite link:
+    >Business owners: want advertising where you only pay when a sale actually closes?  900% ROI or higher (10% of the sale, capped at $250) with no hidden fees, no contracts, no subscription or monthly membership fees, plus your business earns cash back for making sales. No cost for exclusive leads, website or foot traffic, phone calls, appointments or meet-ups.  If you don't make a sale, you pay nothing.  You also get real-time analytics and more.  Perk Miner also pays it's members cash back and referral commissions for repeat business (not paid by business advertisers).
+Join PerkMiner as an advertiser through my business invite link today!:
 {{ b2b_share_url }}</textarea>
 
   <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
@@ -649,7 +656,6 @@ Join PerkMiner as an advertiser through my business invite link:
   </p>
 </div>
 
-  </div>
     <div class="card p-4 mb-4">
 <h4>Finalize Transactions</h4>
 
@@ -1335,27 +1341,27 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-  function copyB2BShareLink() {
-    const input = document.getElementById('b2b-share-link');
-    if (!input) return;
+  function copyCaptionAndLink(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
 
-    const value = input.value;
+    const value = textarea.value;
 
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(value).then(function () {
-        alert('B2B invite link copied to clipboard');
+        alert('Caption + link copied to clipboard');
       }).catch(fallbackCopy);
     } else {
       fallbackCopy();
     }
 
     function fallbackCopy() {
-      input.select();
+      textarea.select();
       try {
         document.execCommand('copy');
-        alert('B2B invite link copied to clipboard');
+        alert('Caption + link copied to clipboard');
       } catch (e) {
-        alert('Could not copy automatically, please copy the link manually.');
+        alert('Could not copy automatically, please copy the text manually.');
       }
     }
   }

@@ -363,40 +363,64 @@
     Member Referral Flyer
   </a>
     </div>
+</div>
+
 
 <div class="card p-4 mb-4">
-  <h4>Share PerkMiner on social media</h4>
-
-  <label for="share-link" class="form-label">Your personal invite link</label>
-  <div class="d-flex flex-wrap gap-2 mb-2" style="max-width: 520px;">
-    <input
-      id="share-link"
-      type="text"
-      class="form-control"
-      readonly
-      value="{{ share_url }}"
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">Share PerkMiner with people</h4>
+    <button
+      class="btn btn-sm btn-outline-secondary"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#memberShareCollapse"
+      aria-expanded="false"
+      aria-controls="memberShareCollapse"
     >
-    <button type="button" class="btn btn-primary flex-shrink-0" onclick="copyShareLink()">
-      Copy link
+      Show / Hide
     </button>
   </div>
 
-  <p class="mt-2 mb-1" style="font-size:0.9rem;">
-    Suggested caption (you can edit this before posting):
-  </p>
-  <textarea
-    readonly
-    rows="3"
-    class="form-control"
-    style="max-width:520px; font-size:0.9rem;"
-  >Join PerkMiner through my link and earn cashback and referral rewards on everyday purchases:
+  <div class="collapse mt-3" id="memberShareCollapse">
+    <label for="share-link" class="form-label">Your member invite link</label>
+    <input
+      id="share-link"
+      type="text"
+      class="form-control mb-2"
+      readonly
+      value="{{ share_url }}"
+    >
+
+  <!-- download for social -->
+  <a href="{{ url_for('download_member_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
+    Download Member Flyer Image (for social posts)
+  </a>
+
+    <p class="mt-1 mb-1" style="font-size:0.9rem;">
+      Suggested caption (this is what will be copied):
+    </p>
+    <textarea
+      id="member-caption"
+      readonly
+      rows="3"
+      class="form-control mb-2"
+      style="max-width:520px; font-size:0.9rem;"
+    >Join PerkMiner through my link and earn cashback and referral commission (real cash - not points or gift cards) on everyday purchases.  Perk Miner pays out up to 84% of it's ad revenue from every finalized transaction to members and business owners.  Free to Join and always free.  Search for businesses, product or services with peace of mind through secure messaging and without ever worry about your information being sold as a lead.  No unsolicited phone calls, spam emails or uninvited sales people:
 {{ share_url }}</textarea>
 
-  <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
-    1. Download your flyer from this dashboard (Member Referral Flyer or Business Referral Flyer).<br>
-    2. Open your favorite social app, create a post, upload the flyer image.<br>
-    3. Paste this link into the caption so people register with your referral code.
-  </p>
+    <button
+      type="button"
+      class="btn btn-primary w-100"
+      onclick="copyCaptionAndLink('member-caption')"
+    >
+      Copy caption + link
+    </button>
+
+    <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
+      Tip: download your <strong>Member Referral Flyer</strong>, upload it to your post,
+      then paste this copied caption.
+    </p>
+  </div>
 </div>
 
 </br></br>
@@ -411,39 +435,61 @@
   </div>
 
 <div class="card p-4 mb-4">
-  <h4>Share PerkMiner with business owners</h4>
-
-  <label for="biz-share-link" class="form-label">Your business invite link</label>
-  <div class="d-flex flex-wrap gap-2 mb-2" style="max-width: 520px;">
-    <input
-      id="biz-share-link"
-      type="text"
-      class="form-control"
-      readonly
-      value="{{ business_share_url }}"
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">Share PerkMiner with business owners</h4>
+    <button
+      class="btn btn-sm btn-outline-secondary"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#bizShareCollapse"
+      aria-expanded="false"
+      aria-controls="bizShareCollapse"
     >
-    <button type="button" class="btn btn-primary flex-shrink-0" onclick="copyBizShareLink()">
-      Copy link
+      Show / Hide
     </button>
   </div>
 
-  <p class="mt-2 mb-1" style="font-size:0.9rem;">
-    Suggested caption (you can edit this before posting):
-  </p>
-  <textarea
-    readonly
-    rows="3"
-    class="form-control"
-    style="max-width:520px; font-size:0.9rem;"
-  >Know a business owner who wants results-based advertising?
-They can join PerkMiner and only pay when a sale is closed. Use my invite link to get started:
+  <div class="collapse mt-3" id="bizShareCollapse">
+    <label for="biz-share-link" class="form-label">Your business invite link</label>
+    <input
+      id="biz-share-link"
+      type="text"
+      class="form-control mb-2"
+      readonly
+      value="{{ business_share_url }}"
+    >
+
+  <!-- download for social -->
+  <a href="{{ url_for('download_member_business_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
+    Download Business Flyer Image (for social posts)
+  </a>
+
+    <p class="mt-1 mb-1" style="font-size:0.9rem;">
+      Suggested caption (this is what will be copied):
+    </p>
+    <textarea
+      id="biz-caption"
+      readonly
+      rows="3"
+      class="form-control mb-2"
+      style="max-width:520px; font-size:0.9rem;"
+    >Business owners: want advertising where you only pay when a sale actually closes?  900% ROI or higher (10% of the sale, capped at $250) with no hidden fees, no contracts, no subscription or monthly membership fees, plus your business earns cash back for making sales. No cost for exclusive leads, website or foot traffic, phone calls, appointments or meet-ups.  If you don't make a sale, you pay nothing.  You also get real-time analytics and more.  Perk Miner also pays it's members cash back and referral commissions for repeat business (not paid by business advertisers).
+Join PerkMiner as an advertiser through my business invite link today!:
 {{ business_share_url }}</textarea>
 
-  <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
-    1. Open the <strong>Business Referral Flyer</strong> from this dashboard and download / screenshot it.<br>
-    2. Go to LinkedIn, Facebook, or any social app and create a post aimed at business owners.<br>
-    3. Upload the <strong>Business Referral Flyer</strong> image and paste this business invite link into your caption.
-  </p>
+    <button
+      type="button"
+      class="btn btn-primary w-100"
+      onclick="copyCaptionAndLink('biz-caption')"
+    >
+      Copy caption + link
+    </button>
+
+    <p class="mt-2 mb-0" style="font-size:0.85rem; color:#6b7280;">
+      Tip: download your <strong>Business Referral Flyer</strong>, upload it to LinkedIn or FB,
+      then paste this copied caption.
+    </p>
+  </div>
 </div>
 
     <div class="card p-4 mb-4">
@@ -962,79 +1008,27 @@ They can join PerkMiner and only pay when a sale is closed. Use my invite link t
 </footer>
 
 <script>
-  function copyShareLink() {
-    const input = document.getElementById('share-link');
-    if (!input) return;
+  function copyCaptionAndLink(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
 
-    const value = input.value;
-
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(value).then(function () {
-        alert('Link copied to clipboard');
-      }).catch(function () {
-        fallbackCopy();
-      });
-    } else {
-      fallbackCopy();
-    }
-
-    function fallbackCopy() {
-      input.select();
-      try {
-        document.execCommand('copy');
-        alert('Link copied to clipboard');
-      } catch (e) {
-        alert('Could not copy automatically, please copy the link manually.');
-      }
-    }
-  }
-</script>
-
-<script>
-  function copyShareLink() {
-    const input = document.getElementById('share-link');
-    if (!input) return;
-    const value = input.value;
+    const value = textarea.value;
 
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(value).then(function () {
-        alert('Link copied to clipboard');
+        alert('Caption + link copied to clipboard');
       }).catch(fallbackCopy);
     } else {
       fallbackCopy();
     }
 
     function fallbackCopy() {
-      input.select();
+      textarea.select();
       try {
         document.execCommand('copy');
-        alert('Link copied to clipboard');
+        alert('Caption + link copied to clipboard');
       } catch (e) {
-        alert('Could not copy automatically, please copy the link manually.');
-      }
-    }
-  }
-
-  function copyBizShareLink() {
-    const input = document.getElementById('biz-share-link');
-    if (!input) return;
-    const value = input.value;
-
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(value).then(function () {
-        alert('Business invite link copied to clipboard');
-      }).catch(fallbackCopy);
-    } else {
-      fallbackCopy();
-    }
-
-    function fallbackCopy() {
-      input.select();
-      try {
-        document.execCommand('copy');
-        alert('Business invite link copied to clipboard');
-      } catch (e) {
-        alert('Could not copy automatically, please copy the link manually.');
+        alert('Could not copy automatically, please copy the text manually.');
       }
     }
   }

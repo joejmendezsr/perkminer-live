@@ -8608,6 +8608,33 @@ def b2b_flyer():
                            business=biz,
                            b2b_register_url=b2b_register_url)
 
+@app.route("/download/member_flyer")
+@login_required
+def download_member_flyer():
+    return send_from_directory(
+        os.path.join(app.root_path, "static", "flyers"),
+        "member_flyer.jpg",
+        as_attachment=True
+    )
+
+@app.route("/download/member_business_flyer")
+@login_required
+def download_member_business_flyer():
+    return send_from_directory(
+        os.path.join(app.root_path, "static", "flyers"),
+        "member_business_flyer.jpg",
+        as_attachment=True
+    )
+
+@app.route("/download/b2b_flyer")
+@business_login_required
+def download_b2b_flyer():
+    return send_from_directory(
+        os.path.join(app.root_path, "static", "flyers"),
+        "b2b_flyer.jpg",
+        as_attachment=True
+    )
+
 @csrf.exempt
 @app.route("/api/record_external_sale", methods=["POST"])
 def record_external_sale():
