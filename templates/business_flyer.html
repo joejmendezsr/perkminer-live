@@ -218,6 +218,27 @@
       }
     }
 
+/* full-screen preview mode */
+.full-preview body {
+  padding: 0;
+  background: #000;
+}
+
+.full-preview .flyer {
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.full-preview .flyer-content {
+  padding: 24px 24px 20px 24px;
+  transform-origin: top center;
+  /* if you still need to scroll a bit, uncomment the next line and tweak the scale */
+  /* transform: scale(0.9); */
+}
+
     @media print {
       @page {
         size: letter;
@@ -253,8 +274,11 @@
   <a href="{{ url_for('dashboard') }}" class="btn-back">
     ⬅ Back to Dashboard
   </a>
-  <button class="btn-print" onclick="window.print()">
+  <button class="btn-print" type="button" onclick="window.print()">
     🖨 Print Flyer
+  </button>
+  <button class="btn-print" type="button" onclick="toggleFullPreview()">
+    ⤢ Full Screen Preview
   </button>
 </div>
 
@@ -325,6 +349,12 @@
 
   </div>
 </div>
+
+<script>
+  function toggleFullPreview() {
+    document.documentElement.classList.toggle('full-preview');
+  }
+</script>
 
 </body>
 </html>
