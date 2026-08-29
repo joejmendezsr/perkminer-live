@@ -432,21 +432,31 @@
   </div>
 </div>
 
-</br></br>
-    <div>
-      <button class="btn btn-warning w-100 mt-2" type="button" data-bs-toggle="modal" data-bs-target="#inviteBusinessModal">
-        <i class="bi bi-building-add me-1"></i>Invite a Business to Join
-      </button></br></br>
-  <a href="{{ url_for('member_business_flyer') }}" class="btn w-100 btn-outline-secondary">
-    Business Referral Flyer
-  </a>
-    </div>
-  </div>
-</div>
 
 <div class="card p-4 mb-4">
+  <!-- header: title -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Business referrals</h4>
+  </div>
+
+  <!-- (optional) business-specific code section -->
+  <!-- if you don't have a separate business referral code, you can skip this block or adapt it -->
+
+  <!-- invite + flyer buttons -->
+  <div class="mb-3">
+    <button class="btn btn-warning w-100 mt-2" type="button"
+            data-bs-toggle="modal" data-bs-target="#inviteBusinessModal">
+      <i class="bi bi-building-add me-1"></i>Invite a Business to Join
+    </button>
+    <br><br>
+    <a href="{{ url_for('member_business_flyer') }}" class="btn w-100 btn-outline-secondary">
+      Business Referral Flyer
+    </a>
+  </div>
+
+  <!-- share on social: header + collapse trigger -->
   <div class="d-flex justify-content-between align-items-center">
-    <h4 class="mb-0">Share PerkMiner with business owners</h4>
+    <h5 class="mb-0">Share PerkMiner with business owners</h5>
     <button
       class="btn btn-sm btn-outline-secondary"
       type="button"
@@ -459,6 +469,7 @@
     </button>
   </div>
 
+  <!-- collapsed share content -->
   <div class="collapse mt-3" id="bizShareCollapse">
     <label for="biz-share-link" class="form-label">Your business invite link</label>
     <input
@@ -469,14 +480,14 @@
       value="{{ business_share_url }}"
     >
 
-  <!-- download for social -->
-  <a href="{{ url_for('download_member_business_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
-    Download Business Flyer Image (for social posts - no QR code)
-  </a>
+    <a href="{{ url_for('download_member_business_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
+      Download Business Flyer Image (for social posts - no QR code)
+    </a>
 
     <p class="mt-1 mb-1" style="font-size:0.9rem;">
       Suggested caption (this is what will be copied):
     </p>
+
     <textarea
       id="biz-caption"
       readonly
@@ -501,6 +512,8 @@ Join PerkMiner as an advertiser through my business invite link today!:
     </p>
   </div>
 </div>
+
+
 
     <div class="card p-4 mb-4">
 
