@@ -344,31 +344,39 @@
 </div>
 
   <!-- Referral Code Section -->
-  <div class="card p-4 mb-4">
-    <h4>Your Referral Code</h4>
-    <div class="mb-0"><b>{{ referral_code }}</b></div>
-
-  {% if sponsor %}
-
-      <div>
-        <small class="text-muted">Sponsored by: <span class="text-success">{{ sponsor.name or sponsor.email }}</span></small></div>
-      </div>
-    {% endif %}
-
-    <div>
-      <button class="btn btn-success w-100" type="button" data-bs-toggle="modal" data-bs-target="#inviteModal">
-        <i class="bi bi-person-plus me-1"></i>Invite others to join
-      </button></br></br>
-  <a href="{{ url_for('member_flyer') }}" class="btn w-100 btn-outline-secondary">
-    Member Referral Flyer
-  </a>
-    </div>
-</div>
-
-
 <div class="card p-4 mb-4">
+  <!-- header: title -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Referral Code Section</h4>
+  </div>
+
+  <!-- referral code + sponsor -->
+  <div class="mb-3">
+    <div><strong>{{ referral_code }}</strong></div>
+
+    {% if sponsor %}
+      <small class="text-muted">
+        Sponsored by:
+        <span class="text-success">{{ sponsor.name or sponsor.email }}</span>
+      </small>
+    {% endif %}
+  </div>
+
+  <!-- invite + flyer buttons -->
+  <div class="mb-3">
+    <button class="btn btn-success w-100" type="button"
+            data-bs-toggle="modal" data-bs-target="#inviteModal">
+      <i class="bi bi-person-plus me-1"></i>Invite others to join
+    </button>
+    <br><br>
+    <a href="{{ url_for('member_flyer') }}" class="btn w-100 btn-outline-secondary">
+      Member Referral Flyer
+    </a>
+  </div>
+
+  <!-- share on social: header + collapse trigger -->
   <div class="d-flex justify-content-between align-items-center">
-    <h4 class="mb-0">Share with others on Social Media</h4>
+    <h5 class="mb-0">Share with others on Social Media</h5>
     <button
       class="btn btn-sm btn-outline-secondary"
       type="button"
@@ -381,6 +389,7 @@
     </button>
   </div>
 
+  <!-- collapsed share content -->
   <div class="collapse mt-3" id="memberShareCollapse">
     <label for="share-link" class="form-label">Your member invite link</label>
     <input
@@ -391,14 +400,14 @@
       value="{{ share_url }}"
     >
 
-  <!-- download for social -->
-  <a href="{{ url_for('download_member_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
-    Download Member Flyer Image (for social posts - no QR code)
-  </a>
+    <a href="{{ url_for('download_member_flyer') }}" class="btn btn-outline-primary w-100 mb-2">
+      Download Member Flyer Image (for social posts - no QR code)
+    </a>
 
     <p class="mt-1 mb-1" style="font-size:0.9rem;">
       Suggested caption (this is what will be copied):
     </p>
+
     <textarea
       id="member-caption"
       readonly
