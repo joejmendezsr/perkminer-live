@@ -7728,7 +7728,7 @@ def withdraw():
       4) standard payout from connected account
       5) update withdrawn_total / earnings_balance
     """
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("9")
     user = current_user
 
     if not user.stripe_account_id:
@@ -7823,7 +7823,7 @@ def business_withdraw():
     """
     Standard business withdrawal (bank transfer).
     """
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("9")
     business_id = session.get('business_id')
     if not business_id:
         flash("Please log in as a business.")
@@ -7993,7 +7993,7 @@ def withdraw_investor():
     """
     Standard silent investor withdrawal (bank transfer, 1–3 business days).
     """
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("9")
     user = current_user
 
     if not user.stripe_account_id:
@@ -8094,7 +8094,7 @@ def withdraw_instant():
       4) instant payout from connected account
       5) update withdrawn_total / earnings_balance
     """
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("9")
     user = current_user
 
     if not user.stripe_account_id:
@@ -8188,7 +8188,7 @@ def business_withdraw_instant():
     """
     Instant business withdrawal.
     """
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("9")
     business_id = session.get('business_id')
     if not business_id:
         flash("Please log in as a business.")
@@ -8290,7 +8290,7 @@ def withdraw_investor_instant():
     """
     Instant silent investor withdrawal.
     """
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("9")
     user = current_user
 
     if not user.stripe_account_id:
