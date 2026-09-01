@@ -891,7 +891,7 @@
           {% for staff in business.staff_members %}
             <li class="list-group-item d-flex justify-content-between align-items-center">
               <span>
-                {{ staff.name }}{% if staff.is_active %} (Active){% else %} (Inactive){% endif %}
+                {{ staff.email }}{% if staff.is_active %} (Active){% else %} (Inactive){% endif %}
               </span>
               <form method="post" action="{{ url_for('remove_staff', staff_id=staff.id) }}"
                 style="display:inline;"
