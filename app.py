@@ -669,7 +669,7 @@ def build_invite_email(inviter_name, join_url, video_url):
             </a>
             <p style="margin:0 0 28px;">  </p>
             <p style="margin:0 0 28px;">  </p>
-            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and generous Referral Commissions</b> (Paid by Perk Miner).  Up to 6 members and 6 businesses are paid from every finalized transaction (up to 84% of the ad revenue paid by our advertisers is used to pay all cash back and referral commissions).  Advertisers pay the ad fee after making a sale ... Perk Miner pays the cash back and commissions.  Real pay that is deposited to your bank account.  Not points or gift cards.</p>
+            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and generous Referral Commissions</b> (Paid by Perk Miner).  Up to 6 members and 6 businesses are paid from every finalized transaction (up to 84% of the ad revenue paid by our advertisers is used to pay all cash back and referral commissions from every finalized transaction).  Advertisers pay the ad fee after making a sale ... Perk Miner pays the cash back and commissions.  Real pay that is deposited to your bank account.  Not points or gift cards.</p>
             <p style="margin:0 0 28px;"><b>EVERYONE WINS!</b></p>
         </td>
     </tr>
