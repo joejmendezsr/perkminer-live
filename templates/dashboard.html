@@ -532,7 +532,7 @@
 <div class="mb-3">
   <div class="card mb-3">
     <div class="card-header">
-      Earnings summary (7-day delay)
+      Earnings Summary
     </div>
     <div class="card-body">
       <table class="table table-sm">
@@ -544,19 +544,19 @@
         </thead>
         <tbody>
           <tr>
-            <td>Total earnings</td>
+            <td>Lifetime Total Earnings</td>
             <td>${{ "{:,.2f}".format(total_earnings or 0) }}</td>
           </tr>
           <tr>
-            <td>Pending earnings</td>
+            <td>Pending Earnings</td>
             <td>${{ "{:,.2f}".format(pending_earnings or 0) }}</td>
           </tr>
           <tr>
-            <td>Available for withdrawal</td>
+            <td>Available for Withdrawal</td>
             <td>${{ "{:,.2f}".format(net_available_earnings or 0) }}</td>
           </tr>
           <tr>
-            <td>Total withdrawn</td>
+            <td>Total Withdrawn (All Time)</td>
             <td>${{ "{:,.2f}".format(withdrawn_total or 0) }}</td>
           </tr>
         </tbody>
@@ -674,7 +674,7 @@
   {% if current_user.has_role('silent_investor') %}
     <div class="card mt-4">
       <div class="card-header">
-        Silent investor earnings (7-day delay)
+        Silent investor Earnings
       </div>
       <div class="card-body">
         <table class="table table-sm">
@@ -686,19 +686,19 @@
           </thead>
           <tbody>
             <tr>
-              <td>Total investor earnings</td>
+              <td>Lifetime Total Investor Earnings</td>
               <td>${{ "{:,.2f}".format(investor_total or 0) }}</td>
             </tr>
             <tr>
-              <td>Pending investor earnings</td>
+              <td>Pending Investor Earnings</td>
               <td>${{ "{:,.2f}".format(investor_pending or 0) }}</td>
             </tr>
             <tr>
-              <td>Available for withdrawal</td>
+              <td>Available for Withdrawal</td>
               <td>${{ "{:,.2f}".format(investor_net_available or 0) }}</td>
             </tr>
             <tr>
-              <td>Total withdrawn</td>
+              <td>Total Withdrawn (All Time)</td>
               <td>${{ "{:,.2f}".format(investor_withdrawn_total or 0) }}</td>
             </tr>
           </tbody>

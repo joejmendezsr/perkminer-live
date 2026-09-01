@@ -727,7 +727,7 @@
 <div class="mb-3">
   <div class="card mb-3">
     <div class="card-header">
-      Business earnings summary (7-day delay)
+      Business Earnings Summary
     </div>
     <div class="card-body">
       <table class="table table-sm">
@@ -739,19 +739,19 @@
         </thead>
         <tbody>
           <tr>
-            <td>Total earnings</td>
+            <td>Lifetime Total Earnings</td>
             <td>${{ "{:,.2f}".format(total_biz_earnings or 0) }}</td>
           </tr>
           <tr>
-            <td>Pending earnings</td>
+            <td>Pending Earnings</td>
             <td>${{ "{:,.2f}".format(pending_biz_earnings or 0) }}</td>
           </tr>
           <tr>
-            <td>Available for withdrawal</td>
+            <td>Available for Withdrawal</td>
             <td>${{ "{:,.2f}".format(net_available_biz_earnings or 0) }}</td>
           </tr>
           <tr>
-            <td>Total withdrawn</td>
+            <td>Total Withdrawn (All Time)</td>
             <td>${{ "{:,.2f}".format(biz_withdrawn_total or 0) }}</td>
           </tr>
         </tbody>
