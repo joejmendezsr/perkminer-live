@@ -771,19 +771,25 @@
         <i class="bi bi-graph-up"></i> View Earnings
       </a>
     </div>
-    {% if business.stripe_account_id %}
-      <div class="col-12 col-md text-md-end">
-        <a href="{{ url_for('business_stripe_update_info') }}" class="btn btn-outline-primary mb-2">
-          Update Payout/Banking Info
-        </a>
 
-        <a href="{{ url_for('business_stripe_dashboard') }}" class="btn btn-secondary">
-          Manage Payout Settings
-        </a>
 
-      </div>
-    {% endif %}
+{% if business.stripe_account_id %}
+  <div class="col-12 col-md text-md-end">
+    <div class="btn-group" role="group" aria-label="Business payout actions">
+      <a href="{{ url_for('business_stripe_update_info') }}"
+         class="btn btn-outline-primary">
+        Update Bank
+      </a>
+
+      <a href="{{ url_for('business_stripe_dashboard') }}"
+         class="btn btn-secondary"
+         target="_blank"
+         rel="noopener noreferrer">
+        Stripe Dashboard
+      </a>
+    </div>
   </div>
+{% endif %}
 
   <div class="fs-5 fw-semibold text-primary mb-2 mt-2">
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
