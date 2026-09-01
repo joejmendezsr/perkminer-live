@@ -1863,6 +1863,52 @@ def calculate_investor_earnings_split(user, delay_days=7):
     pending = total - available
     return total, available, pending
 
+def can_instant_payout(account_id: str, amount_cents: int):
+    """
+    Safety checks before attempting an instant payout:
+      1) confirm instant-available balance in USD is >= amount_cents
+      2) confirm at least one debit-card external account exists
+    Returns: (ok: bool, message: str)
+    """
+    try:
+        # 1) get balance for this connected account
+        balance = stripe.Balance.retrieve(stripe_account=account_id)
+
+        instant_available_cents = 0
+        for b in balance.instant_available:
+            if b.get("currency") == "usd":
+                instant_available_cents += int(b.get("amount", 0))
+
+        if instant_available_cents < amount_cents:
+            return (
+                False,
+                "Your instant-available balance is too low for this payout. "
+                "You can try a smaller instant withdrawal or use the standard payout."
+            )
+
+        # 2) check for at least one card external account
+        external_accounts = stripe.Account.list_external_accounts(
+            account_id,
+            object="card"
+        )
+
+        if not external_accounts.data:
+            return (
+                False,
+                "You need to add a debit card in your Stripe dashboard before using instant payouts."
+            )
+
+        return True, "ok"
+
+    except Exception as e:
+        # log full error, but show a generic message to the user
+        print("DEBUG: can_instant_payout failed:", repr(e))
+        return (
+            False,
+            "We couldn't verify your instant payout setup. "
+            "Please try again in a few minutes or use a standard payout."
+        )
+
 def biz_tier_commission(t, tier_field, ref_field):
     ref_id = getattr(t, ref_field)
     if ref_id and str(ref_id).strip() and ref_id != "BIZPerkMiner":
@@ -7785,6 +7831,83 @@ def ensure_platform_balance_at_least(amount_cents, currency="usd"):
     )
     return available_usd >= amount_cents
 
+@app.route('/stripe/update-info')
+@login_required
+def stripe_update_info():
+    if not current_user.stripe_account_id:
+        flash("You haven't set up payouts yet.", "warning")
+        return redirect(url_for('onboard_stripe'))
+    account_link = stripe.AccountLink.create(
+        account=current_user.stripe_account_id,
+        refresh_url=url_for('stripe_update_info', _external=True),
+        return_url=url_for('dashboard', _external=True),
+        type='account_onboarding'  # Use onboarding; works for updates too!
+    )
+    return redirect(account_link.url)
+
+@app.route('/business/stripe/update-info')
+def business_stripe_update_info():
+    biz_id = session.get('business_id')
+    if not biz_id:
+        flash("Please log in as a business.")
+        return redirect(url_for('business_login'))
+    business = Business.query.get(biz_id)
+    if not business or not business.stripe_account_id:
+        flash("Business payouts not set up yet.", "warning")
+        return redirect(url_for('onboard_business_stripe'))
+    account_link = stripe.AccountLink.create(
+        account=business.stripe_account_id,
+        refresh_url=url_for('business_stripe_update_info', _external=True),
+        return_url=url_for('business_dashboard', _external=True),
+        type='account_onboarding'
+    )
+    return redirect(account_link.url)
+
+@app.route('/member/stripe_dashboard')
+@login_required
+def member_stripe_dashboard():
+    user = current_user
+
+    if not user.stripe_account_id:
+        flash("Please set up your Stripe payouts first.", "warning")
+        return redirect(url_for('onboard_stripe'))
+
+    try:
+        login_link = stripe.Account.create_login_link(
+            user.stripe_account_id,
+            redirect_url=url_for('dashboard', _external=True)
+        )
+    except Exception as e:
+        print("DEBUG: member_stripe_dashboard failed:", repr(e))
+        flash("Could not open your Stripe payout dashboard. Please try again later.", "danger")
+        return redirect(url_for('dashboard'))
+
+    return redirect(login_link.url)
+
+@app.route('/business/stripe_dashboard')
+def business_stripe_dashboard():
+    biz_id = session.get('business_id')
+    if not biz_id:
+        flash("Please log in as a business.")
+        return redirect(url_for('business_login'))
+
+    business = Business.query.get(biz_id)
+    if not business or not business.stripe_account_id:
+        flash("Business payouts not set up yet.", "warning")
+        return redirect(url_for('onboard_business_stripe'))
+
+    try:
+        login_link = stripe.Account.create_login_link(
+            business.stripe_account_id,
+            redirect_url=url_for('business_dashboard', _external=True)
+        )
+    except Exception as e:
+        print("DEBUG: business_stripe_dashboard failed:", repr(e))
+        flash("Could not open your Stripe payout dashboard. Please try again later.", "danger")
+        return redirect(url_for('business_dashboard'))
+
+    return redirect(login_link.url)
+
 @app.route('/withdraw', methods=['POST'])
 @login_required
 def withdraw():
@@ -7992,6 +8115,13 @@ def withdraw_instant():
 
     amount_cents = int(payout_amount * 100)
 
+    # pre-check for instant payouts (balance + debit card)
+    ok, reason = can_instant_payout(user.stripe_account_id, amount_cents)
+    if not ok:
+        print("DEBUG: can_instant_payout blocked member instant payout:", reason)
+        flash(reason, "warning")
+        return redirect(url_for('dashboard'))
+
     try:
         # transfer platform -> member connected account
         print("DEBUG: creating Instant Transfer for", amount_cents, "cents to", user.stripe_account_id)
@@ -8030,8 +8160,13 @@ def withdraw_instant():
             "success"
         )
     except Exception as e:
+        # here you could also inspect e for specific Stripe error codes if desired
         print("DEBUG: withdraw_instant failed with exception:", repr(e))
-        flash(f"Instant withdrawal failed: {e}", "danger")
+        flash(
+            "Instant withdrawal failed. Please make sure you have a debit card added "
+            "in your Stripe dashboard and try again, or use a standard payout.",
+            "danger"
+        )
 
     return redirect(url_for('dashboard'))
 
@@ -8221,6 +8356,13 @@ def business_withdraw_instant():
 
     amount_cents = int(payout_amount * 100)
 
+    # pre-check for instant payouts (balance + debit card)
+    ok, reason = can_instant_payout(biz.stripe_account_id, amount_cents)
+    if not ok:
+        print("DEBUG: can_instant_payout blocked business instant payout:", reason)
+        flash(reason, "warning")
+        return redirect(url_for('business_dashboard'))
+
     try:
         print("DEBUG: creating Business Transfer (instant) for", amount_cents, "cents to", biz.stripe_account_id)
         transfer = stripe.Transfer.create(
@@ -8258,7 +8400,11 @@ def business_withdraw_instant():
         )
     except Exception as e:
         print("DEBUG: business_withdraw_instant failed with exception:", repr(e))
-        flash(f"Instant withdrawal failed: {e}", "danger")
+        flash(
+            "Instant withdrawal failed for your business account. Please make sure a debit card is added "
+            "in your Stripe dashboard and try again, or use a standard payout.",
+            "danger"
+        )
 
     return redirect(url_for('business_dashboard'))
 
@@ -8433,6 +8579,13 @@ def withdraw_investor_instant():
 
     amount_cents = int(payout_amount * 100)
 
+    # pre-check for instant payouts (balance + debit card)
+    ok, reason = can_instant_payout(user.stripe_account_id, amount_cents)
+    if not ok:
+        print("DEBUG: can_instant_payout blocked investor instant payout:", reason)
+        flash(reason, "warning")
+        return redirect(url_for('dashboard'))
+
     try:
         print("DEBUG: creating Investor Transfer (instant) for", amount_cents, "cents to", user.stripe_account_id)
         transfer = stripe.Transfer.create(
@@ -8470,41 +8623,13 @@ def withdraw_investor_instant():
         )
     except Exception as e:
         print("DEBUG: withdraw_investor_instant failed with exception:", repr(e))
-        flash(f"Instant withdrawal failed: {e}", "danger")
+        flash(
+            "Instant withdrawal failed for your investor earnings. Please make sure you have a debit card added "
+            "in your Stripe dashboard and try again, or use a standard payout.",
+            "danger"
+        )
 
     return redirect(url_for('dashboard'))
-
-@app.route('/stripe/update-info')
-@login_required
-def stripe_update_info():
-    if not current_user.stripe_account_id:
-        flash("You haven't set up payouts yet.", "warning")
-        return redirect(url_for('onboard_stripe'))
-    account_link = stripe.AccountLink.create(
-        account=current_user.stripe_account_id,
-        refresh_url=url_for('stripe_update_info', _external=True),
-        return_url=url_for('dashboard', _external=True),
-        type='account_onboarding'  # Use onboarding; works for updates too!
-    )
-    return redirect(account_link.url)
-
-@app.route('/business/stripe/update-info')
-def business_stripe_update_info():
-    biz_id = session.get('business_id')
-    if not biz_id:
-        flash("Please log in as a business.")
-        return redirect(url_for('business_login'))
-    business = Business.query.get(biz_id)
-    if not business or not business.stripe_account_id:
-        flash("Business payouts not set up yet.", "warning")
-        return redirect(url_for('onboard_business_stripe'))
-    account_link = stripe.AccountLink.create(
-        account=business.stripe_account_id,
-        refresh_url=url_for('business_stripe_update_info', _external=True),
-        return_url=url_for('business_dashboard', _external=True),
-        type='account_onboarding'
-    )
-    return redirect(account_link.url)
 
 @app.route("/investor_report")
 @login_required
