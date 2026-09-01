@@ -778,7 +778,7 @@
     <div class="btn-group" role="group" aria-label="Business payout actions">
       <a href="{{ url_for('business_stripe_update_info') }}"
          class="btn btn-outline-primary">
-        Update Bank
+        Bank Details
       </a>
 
       <a href="{{ url_for('business_stripe_dashboard') }}"
@@ -790,7 +790,7 @@
     </div>
   </div>
 {% endif %}
-
+</br></br>
   <div class="fs-5 fw-semibold text-primary mb-2 mt-2">
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
   </div>

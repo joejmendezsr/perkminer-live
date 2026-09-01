@@ -588,7 +588,7 @@
     <div class="btn-group" role="group" aria-label="Payout actions">
       <a href="{{ url_for('stripe_update_info') }}"
          class="btn btn-outline-primary">
-        Update Bank
+        Bank Details
       </a>
 
       <a href="{{ url_for('member_stripe_dashboard') }}"
@@ -600,7 +600,7 @@
     </div>
   </div>
 {% endif %}
-
+</br></br>
   <!-- REGULAR earnings (commissions + cashback) -->
   <div class="fs-5 fw-semibold text-primary mb-2">
     Withdrawable Earnings: ${{ "{:,.2f}".format(current_user.earnings_balance or 0) }}
