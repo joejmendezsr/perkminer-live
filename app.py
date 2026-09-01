@@ -646,11 +646,10 @@ def build_invite_email(inviter_name, join_url, video_url):
                 Watch our intro video
                 </a>
 
-            <p style="margin:0 0 28px;">Free to join (no contracts, monthly subscriptions or commitment).</p>
-            <p style="margin:0 0 28px;"><b>Members:  Get exclusive member perks offered by our advertisers, plus earn cash back on all your purchases.</b>  We protect your privacy with secure messaging and never sell your contact information as a lead.  Search for businesses, products or services (our advertisers) with peace of mind (we don't track browsing history or listen to your conversations to send you unsolicited advertisements).  We connect <b>One Member</b> to <b>One Business</b> at a time.  <b><u>Our members</u></b> will never receive spammed emails, unsolicited phone calls or uninvited door-to-door sales people (advertisers don't have access to member contact information).</p>
+            <p style="margin:0 0 28px;">Free to join (no contracts, monthly subscriptions or commitment).  ALWAYS FREE!</p>
+            <p style="margin:0 0 28px;"><b>Members:  Get exclusive member perks offered by our advertisers, plus earn cash back on all your purchases and referral commissions (from purchases made by others you invite).</b>  We protect your privacy with secure messaging and never sell your contact information as a lead.  Search for businesses, products or services (our advertisers) with peace of mind (we don't track browsing history or listen to your conversations to send you unsolicited advertisements).  We connect <b>One Member</b> to <b>One Business</b> at a time.  <b><u>Our members</u></b> will never receive spammed emails, unsolicited phone calls or uninvited door-to-door sales people (advertisers don't have access to member contact information).</p>
             <p style="margin:0 0 28px;"><b>Business Owners:</b>  YOU GET ZERO WASTED ADVERTISING DOLLARS!  <font color="#FF0000"></br>No Sale or Closed Deal = Zero Fees</font></br>(900% or higher Marketing ROI Guaranteed).  No cost for exclusive leads, phone calls, website or foot traffic, appointments or meetups.  You only pay after you get paid (10% of the sale, capped at $250).  We don't collect your payment (members pay our advertisers directly for all sales).  No hidden fees, no contracts and no commitment.  Only $25 required to get started (pre-funded dollars to cover the advertising fees per transaction), which covers $250 in sales (funds remain in your account balance until you make a sale).</p>
             <p style="margin:0 0 28px;">MEMBER SELECTS A BUSINESS -> BUSINESS AND MEMBER CONNECT</br></br>MEMBER OR BUSINESS CAN END SESSION WITHOUT PENALTY OR CHOOSE TO PROCEED (BUSINESS MUST FINALIZE THE TRANSACTION).</p>
-            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and Referral Commissions</b> (Paid by Perk Miner - from up to 84% of the ad revenue paid by our advertisers).</p>
         </td>
     </tr>
 
@@ -669,6 +668,7 @@ def build_invite_email(inviter_name, join_url, video_url):
             Join PerkMiner Now
             </a>
         </td>
+            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and Referral Commissions</b> (Paid by Perk Miner).  Up to 6 members and 6 businesses are paid from every finalized transaction (up to 84% of the ad revenue paid by our advertisers is used to pay all cash back and referral commissions.  Advertisers pay the ad fee ... Perk Miner pays the cash back and commissions.  Real pay that is deposited to your bank account.  Not points and not gift cards.</p>
     </tr>
 
         <!-- Footer -->
