@@ -3425,11 +3425,11 @@ def invite():
     )
     return redirect(url_for('dashboard'))
 
-from flask import render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
 from decimal import Decimal
 from datetime import datetime, timedelta
-from sqlalchemy import desc, func
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+from sqlalchemy import func
 
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
@@ -3440,22 +3440,31 @@ def dashboard():
     invite_form = InviteForm()
     user = current_user
 
-    # --- Earnings Calculation with 7-day delay ---
-    total_earnings, available_earnings, pending_earnings = calculate_user_earnings_split(user, delay_days=7)
+    # --- Earnings Calculation with 7-day delay (REGULAR MEMBER) ---
+    total_earnings, available_earnings, pending_earnings = calculate_user_earnings_split(
+        user, delay_days=7
+    )
 
     # summary fields for regular member earnings
     user.grand_total_earnings = total_earnings
-
-    # amount actually available to withdraw = 7-day available minus already withdrawn
-    net_available = available_earnings - (user.withdrawn_total or Decimal(0))
-    user.earnings_balance = net_available
-
-    # NEW: detailed split
     user.pending_earnings = pending_earnings
+    # this is the "raw" available that just passed the 7-day delay
     user.available_for_withdrawal = available_earnings
+
+    # withdrawn total already tracked on user
+    withdrawn_total = user.withdrawn_total or Decimal("0")
+
+    # net available for withdrawal:
+    # option A (equivalent): available_earnings - withdrawn_total
+    # option B (invariant): total - pending - withdrawn
+    net_available = total_earnings - pending_earnings - withdrawn_total
+
+    # this is what you use as "Withdrawable Earnings"
+    user.earnings_balance = net_available
 
     db.session.commit()
 
+    # --- Profile form handling ---
     if request.method == "POST" and profile_form.submit.data and profile_form.validate():
         updated = False
         if profile_form.name.data and profile_form.name.data != user.name:
@@ -3471,7 +3480,7 @@ def dashboard():
             flash("Profile updated!")
         return redirect(url_for('dashboard'))
 
-    # Calculator setup (rewards, tiers, etc)
+    # --- Rewards calculator setup ---
     if request.method == "GET":
         form.downline_level.data = '1'
         form.invoice_amount.data = 0
@@ -3480,6 +3489,7 @@ def dashboard():
     invoice_amount = float(form.invoice_amount.data or 0)
     downline_level = int(form.downline_level.data or 1)
     cap = None
+
     if not request.method == "POST" or not form.validate_on_submit():
         downline_level = 1
         form.downline_level.data = '1'
@@ -3506,6 +3516,7 @@ def dashboard():
         else:
             reward = 0
             rewards_desc = ""
+
     if invoice_amount > 0 and reward is not None:
         if cap:
             rewards_table += f"<h5 class='mt-4 mb-2'>{rewards_desc} of ${invoice_amount:,.2f}:</h5>"
@@ -3514,6 +3525,7 @@ def dashboard():
             rewards_table += f"<h5 class='mt-4 mb-2'>{rewards_desc} of ${invoice_amount:,.2f}:</h5>"
             rewards_table += f"<div class='alert alert-success'>You earn <strong>${reward:.2f}</strong> as cashback.</div>"
 
+    # --- Referral network (users) ---
     sponsor = User.query.get(current_user.sponsor_id) if current_user.sponsor_id else None
     level2 = User.query.filter_by(sponsor_id=current_user.id).all()
     level3, level4, level5 = [], [], []
@@ -3530,21 +3542,39 @@ def dashboard():
     # --- Business network tiers ---
     user_id = current_user.id
     biz_level1 = Business.query.filter_by(user_sponsor_id=user_id).all()
-    def biz_ids(bizlist): return [b.id for b in bizlist]
-    biz_level2 = Business.query.filter(Business.sponsor_id.in_(biz_ids(biz_level1))).all() if biz_level1 else []
-    biz_level3 = Business.query.filter(Business.sponsor_id.in_(biz_ids(biz_level2))).all() if biz_level2 else []
-    biz_level4 = Business.query.filter(Business.sponsor_id.in_(biz_ids(biz_level3))).all() if biz_level3 else []
-    biz_level5 = Business.query.filter(Business.sponsor_id.in_(biz_ids(biz_level4))).all() if biz_level4 else []
+
+    def biz_ids(bizlist):
+        return [b.id for b in bizlist]
+
+    biz_level2 = Business.query.filter(
+        Business.sponsor_id.in_(biz_ids(biz_level1))
+    ).all() if biz_level1 else []
+
+    biz_level3 = Business.query.filter(
+        Business.sponsor_id.in_(biz_ids(biz_level2))
+    ).all() if biz_level2 else []
+
+    biz_level4 = Business.query.filter(
+        Business.sponsor_id.in_(biz_ids(biz_level3))
+    ).all() if biz_level3 else []
+
+    biz_level5 = Business.query.filter(
+        Business.sponsor_id.in_(biz_ids(biz_level4))
+    ).all() if biz_level4 else []
+
     has_invited_business = len(biz_level1) > 0
 
-    # Query for active sessions for this user
-    active_sessions = Interaction.query.filter_by(user_id=current_user.id, status='active').all()
+    # --- Active sessions for this user ---
+    active_sessions = Interaction.query.filter_by(
+        user_id=current_user.id, status='active'
+    ).all()
     has_active_sessions = len(active_sessions) > 0
     active_sessions_count = len(active_sessions)
 
-    # --- Businesses user has interacted with (unique, recent, limit 5, Postgres-safe) ---
+    # --- Businesses user has interacted with (unique, recent, limit 5) ---
     days = 60
     since = datetime.utcnow() - timedelta(days=days)
+
     latest_per_business = (
         db.session.query(
             Interaction.business_id,
@@ -3559,6 +3589,7 @@ def dashboard():
         .limit(5)
         .subquery()
     )
+
     businesses = (
         db.session.query(Business)
         .join(latest_per_business, latest_per_business.c.business_id == Business.id)
@@ -3567,17 +3598,28 @@ def dashboard():
 
     # --- Silent investor earnings (7-day delay) ---
     investor_total = investor_available = investor_pending = Decimal("0")
+    investor_withdrawn_total = Decimal("0")
+    investor_net_available = Decimal("0")
+
     if current_user.has_role('silent_investor'):
-        investor_total, investor_available, investor_pending = calculate_investor_earnings_split(current_user, delay_days=7)
+        investor_total, investor_available, investor_pending = calculate_investor_earnings_split(
+            current_user, delay_days=7
+        )
 
         # update investor summary fields on the user model
         user.investor_total_earnings = investor_total
-        net_investor_available = investor_available - (user.investor_withdrawn_total or Decimal("0"))
-        user.investor_earnings_balance = net_investor_available
-
-        # NEW: detailed investor split
         user.pending_investor_earnings = investor_pending
+        # raw investor available after 7-day delay
         user.investor_earnings_withdraw_ready = investor_available
+
+        # investor withdrawn total from user model
+        investor_withdrawn_total = user.investor_withdrawn_total or Decimal("0")
+
+        # investor net available (same invariant pattern)
+        investor_net_available = investor_total - investor_pending - investor_withdrawn_total
+
+        # this is what you use as investor withdrawable balance
+        user.investor_earnings_balance = investor_net_available
 
         db.session.commit()
 
@@ -3594,19 +3636,29 @@ def dashboard():
         sponsor=sponsor if sponsor else None,
         rewards_table=rewards_table,
         level2=level2, level3=level3, level4=level4, level5=level5,
-        biz_level1=biz_level1, biz_level2=biz_level2, biz_level3=biz_level3, biz_level4=biz_level4, biz_level5=biz_level5,
+        biz_level1=biz_level1, biz_level2=biz_level2,
+        biz_level3=biz_level3, biz_level4=biz_level4, biz_level5=biz_level5,
         has_invited_business=has_invited_business,
         user_name=current_user.name,
         profile_img_url=current_user.profile_photo,
         has_active_sessions=has_active_sessions,
         active_sessions_count=active_sessions_count,
         businesses=businesses,
+
+        # regular earnings summary (for top table)
         total_earnings=total_earnings,
-        available_earnings=available_earnings,
         pending_earnings=pending_earnings,
+        available_earnings=available_earnings,           # raw, if you still want it
+        net_available_earnings=net_available,            # matches Withdrawable Earnings
+        withdrawn_total=withdrawn_total,                 # for "Total withdrawn" row
+
+        # silent investor summary
         investor_total=investor_total,
-        investor_available=investor_available,
+        investor_available=investor_available,           # raw
         investor_pending=investor_pending,
+        investor_withdrawn_total=investor_withdrawn_total,
+        investor_net_available=investor_net_available,
+
         share_url=share_url,
         business_share_url=business_share_url,
     )
@@ -5226,6 +5278,11 @@ def biz_active_session(interaction_id):
         messages=messages
     )
 
+from decimal import Decimal
+from datetime import datetime, timedelta
+from flask import render_template, request, redirect, url_for, flash, session
+from sqlalchemy import func
+
 @app.route("/business/dashboard", methods=["GET", "POST"])
 def business_dashboard():
     form = BusinessRewardForm(request.form)
@@ -5239,17 +5296,24 @@ def business_dashboard():
         return redirect(url_for("business_login"))
 
     # ---- Update earnings with 7-day delay ----
-    total_biz_earnings, available_biz_earnings, pending_biz_earnings = calculate_business_earnings_split(biz, delay_days=7)
+    total_biz_earnings, available_biz_earnings, pending_biz_earnings = calculate_business_earnings_split(
+        biz, delay_days=7
+    )
 
     # summary for business earnings
     biz.grand_total_earnings = total_biz_earnings
-
-    net_available_biz = available_biz_earnings - (biz.withdrawn_total or Decimal(0))
-    biz.earnings_balance = net_available_biz
-
-    # NEW: detailed split
     biz.pending_earnings = pending_biz_earnings
+    # raw available right after 7-day delay
     biz.available_to_withdraw = available_biz_earnings
+
+    # withdrawn total already tracked on biz
+    biz_withdrawn_total = biz.withdrawn_total or Decimal("0")
+
+    # net available: total - pending - withdrawn
+    net_available_biz = total_biz_earnings - pending_biz_earnings - biz_withdrawn_total
+
+    # this is what you show as "Earnings Balance" / withdrawable
+    biz.earnings_balance = net_available_biz
 
     db.session.commit()
 
@@ -5318,7 +5382,6 @@ def business_dashboard():
                 updated = True
 
         # --- NEW: online purchase flags (e‑commerce + allow website purchases) ---
-
         website_url = request.form.get("website_url", "").strip()
         has_website = bool(website_url)
 
@@ -5384,7 +5447,8 @@ def business_dashboard():
     if request.method == "GET":
         form.downline_level.data = '1'
         form.invoice_amount.data = 0
-    rewards_table = ""; reward = None
+    rewards_table = ""
+    reward = None
     invoice_amount = float(form.invoice_amount.data or 0)
     downline_level = int(form.downline_level.data or 1)
     cap = None
@@ -5440,7 +5504,7 @@ def business_dashboard():
     has_active_biz_sessions = len(active_biz_sessions) > 0
     active_biz_sessions_count = len(active_biz_sessions)
 
-    # Add this line to fetch payment alerts/awaiting payments
+    # payment alerts / awaiting payments
     payment_alerts = Interaction.query.filter_by(
         business_id=biz.id,
         awaiting_payment=True,
@@ -5455,7 +5519,7 @@ def business_dashboard():
         profile_form=profile_form,
         invite_form=invite_form,
         business=biz,
-        payment_alerts=payment_alerts,  # <-- This line passes to template
+        payment_alerts=payment_alerts,
         form_data=form_data,
         sponsor=sponsor,
         referral_code=biz.referral_code,
@@ -5468,9 +5532,14 @@ def business_dashboard():
         longitude=longitude,
         active_biz_sessions_count=active_biz_sessions_count,
         has_active_biz_sessions=has_active_biz_sessions,
+
+        # business earnings summary for template
         total_biz_earnings=total_biz_earnings,
-        available_biz_earnings=available_biz_earnings,
         pending_biz_earnings=pending_biz_earnings,
+        available_biz_earnings=available_biz_earnings,   # raw available (if you still want it)
+        net_available_biz_earnings=net_available_biz,    # net available = balance
+        biz_withdrawn_total=biz_withdrawn_total,         # total withdrawn
+
         b2b_share_url=b2b_share_url,
     )
 

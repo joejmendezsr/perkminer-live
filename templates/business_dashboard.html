@@ -748,7 +748,11 @@
           </tr>
           <tr>
             <td>Available for withdrawal</td>
-            <td>${{ "{:,.2f}".format(available_biz_earnings or 0) }}</td>
+            <td>${{ "{:,.2f}".format(net_available_biz_earnings or 0) }}</td>
+          </tr>
+          <tr>
+            <td>Total withdrawn</td>
+            <td>${{ "{:,.2f}".format(biz_withdrawn_total or 0) }}</td>
           </tr>
         </tbody>
       </table>
@@ -775,6 +779,7 @@
       </div>
     {% endif %}
   </div>
+
   <div class="fs-5 fw-semibold text-primary mb-2 mt-2">
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
   </div>
@@ -841,7 +846,7 @@
                 class="form-control"
                 step="0.01"
                 min="10"
-                max="{{ '{:,.2f}'.format(biz_net) }}"
+                max="{{ '{:.2f}'.format(biz_net) }}"
                 placeholder="Amount (leave blank for full)"
               >
             </div>
