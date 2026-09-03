@@ -28,6 +28,8 @@ from sqlalchemy.orm import joinedload
 from flask import current_app
 from itsdangerous import URLSafeTimedSerializer
 from itsdangerous import URLSafeSerializer
+from cloudinary.utils import api_sign_request
+import time
 
 import os
 import stripe
@@ -1400,6 +1402,8 @@ class TestimonialVideo(db.Model):
 
     lifetime_amount_at_submission = db.Column(db.Numeric(12, 2), nullable=False)
 
+    title = db.Column(db.String(150), nullable=True)
+
     cloudinary_public_id = db.Column(db.String(255), nullable=False)
     cloudinary_secure_url = db.Column(db.String(500), nullable=False)
     cloudinary_duration_sec = db.Column(db.Integer)
@@ -1438,6 +1442,13 @@ def upload_testimonial():
     owner_id = user.id
 
     data = request.get_json() or {}
+
+    # NEW: optional title from client
+    title = data.get('title', '')
+    if isinstance(title, str):
+        title = title.strip() or None
+    else:
+        title = None
 
     level_code = data.get('level_code')
     if level_code not in ALLOWED_MEMBER_LEVELS:
@@ -1486,6 +1497,9 @@ def upload_testimonial():
         tv.rejection_reason = None
         tv.lifetime_amount_at_submission = user.grand_total_earnings or Decimal('0')
 
+    # NEW: set or clear title for this submission
+    tv.title = title
+
     # update Cloudinary fields
     tv.cloudinary_public_id = public_id
     tv.cloudinary_secure_url = secure_url
@@ -1515,6 +1529,13 @@ def upload_business_testimonial():
     owner_id = biz.id
 
     data = request.get_json() or {}
+
+    # NEW
+    title = data.get('title', '')
+    if isinstance(title, str):
+        title = title.strip() or None
+    else:
+        title = None
 
     level_code = data.get('level_code')
     if level_code not in ALLOWED_BUSINESS_LEVELS:
@@ -1557,6 +1578,9 @@ def upload_business_testimonial():
         tv.status = 'pending'
         tv.rejection_reason = None
         tv.lifetime_amount_at_submission = biz.grand_total_earnings or Decimal('0')
+
+    # NEW
+    tv.title = title
 
     tv.cloudinary_public_id = public_id
     tv.cloudinary_secure_url = secure_url
@@ -1618,6 +1642,7 @@ def public_testimonials():
             'business_name': business_name,
             'level_code': tv.level_code,
             'lifetime_amount_at_submission': str(tv.lifetime_amount_at_submission),
+            'title': tv.title,
             'thumbnail_url': tv.cloudinary_secure_url,  # front-end can use this for thumb/player
             'created_at': tv.created_at.isoformat() if tv.created_at else None,
         })
@@ -1656,6 +1681,7 @@ def public_testimonial_detail(testimonial_id):
         'cloudinary_public_id': tv.cloudinary_public_id,
         'cloudinary_secure_url': tv.cloudinary_secure_url,
         'cloudinary_duration_sec': tv.cloudinary_duration_sec,
+        'title': tv.title,
         'status': tv.status,
         'created_at': tv.created_at.isoformat() if tv.created_at else None,
         'reviewed_at': tv.reviewed_at.isoformat() if tv.reviewed_at else None,
@@ -1683,6 +1709,92 @@ def public_testimonial_others(testimonial_id):
         })
 
     return jsonify({'items': items})
+
+@app.route('/api/member/upload_params', methods=['GET'])
+@login_required
+def member_upload_params():
+    """
+    Returns signed Cloudinary upload params for a *member* testimonial video.
+    Frontend uses this to POST the file directly to Cloudinary.
+    """
+    user = current_user
+
+    level_code = request.args.get('level_code')
+    if level_code not in ALLOWED_MEMBER_LEVELS:
+        return jsonify({'error': 'Invalid level_code'}), 400
+
+    # check they qualify (same logic you already use)
+    highest_level = get_member_level_code(user)
+    if highest_level is None:
+        return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
+
+    level_order = {'member_10k': 1, 'member_50k': 2, 'member_100k': 3}
+    if level_order[level_code] > level_order[highest_level]:
+        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+
+    # build params to sign
+    timestamp = int(time.time())
+
+    params_to_sign = {
+        'timestamp': timestamp,
+        'folder': f'testimonials/members/{user.id}',
+        'resource_type': 'video'
+        # you can also add eager transformations etc. later
+    }
+
+    api_secret = cloudinary.config().api_secret
+    signature = api_sign_request(params_to_sign, api_secret)
+
+    return jsonify({
+        'cloud_name': cloudinary.config().cloud_name,
+        'api_key': cloudinary.config().api_key,
+        'timestamp': timestamp,
+        'signature': signature,
+        'folder': params_to_sign['folder'],
+        'resource_type': 'video'
+    })
+
+@app.route('/api/business/upload_params', methods=['GET'])
+@business_login_required
+def business_upload_params():
+    """
+    Returns signed Cloudinary upload params for a *business* testimonial video.
+    Frontend uses this to POST the file directly to Cloudinary.
+    """
+    biz_id = session.get('business_id')
+    biz = Business.query.get_or_404(biz_id)
+
+    level_code = request.args.get('level_code')
+    if level_code not in ALLOWED_BUSINESS_LEVELS:
+        return jsonify({'error': 'Invalid level_code'}), 400
+
+    highest_level = get_business_level_code(biz)
+    if highest_level is None:
+        return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
+
+    level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
+    if level_order[level_code] > level_order[highest_level]:
+        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+
+    timestamp = int(time.time())
+
+    params_to_sign = {
+        'timestamp': timestamp,
+        'folder': f'testimonials/businesses/{biz.id}',
+        'resource_type': 'video'
+    }
+
+    api_secret = cloudinary.config().api_secret
+    signature = api_sign_request(params_to_sign, api_secret)
+
+    return jsonify({
+        'cloud_name': cloudinary.config().cloud_name,
+        'api_key': cloudinary.config().api_key,
+        'timestamp': timestamp,
+        'signature': signature,
+        'folder': params_to_sign['folder'],
+        'resource_type': 'video'
+    })
 
 class Quote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -6119,6 +6231,7 @@ def admin_list_testimonials():
             'owner_id': tv.owner_id,
             'level_code': tv.level_code,
             'lifetime_amount_at_submission': str(tv.lifetime_amount_at_submission),
+            'title': tv.title,
             'status': tv.status,
             'created_at': tv.created_at.isoformat() if tv.created_at else None,
         })
