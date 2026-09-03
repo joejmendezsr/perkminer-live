@@ -9360,6 +9360,26 @@ def download_b2b_flyer():
         as_attachment=True
     )
 
+@app.route("/testimonials")
+def testimonials_members():
+    return render_template("testimonials.html", initial_owner_type="member")
+
+
+@app.route("/testimonials/businesses")
+def testimonials_businesses():
+    return render_template("testimonials.html", initial_owner_type="business")
+
+@app.route("/testimonials/<int:testimonial_id>")
+def testimonial_detail_page(testimonial_id):
+    # template fetches via JS using the API
+    return render_template("testimonial_detail.html", testimonial_id=testimonial_id)
+
+@app.route("/video-testimonials-dashboard")
+@role_required("approve_reject_testimonials")
+@login_required
+def video_testimonials_dashboard():
+    return render_template("video_testimonials_dashboard.html")
+
 @csrf.exempt
 @app.route("/api/record_external_sale", methods=["POST"])
 def record_external_sale():

@@ -38,6 +38,14 @@
             </a>
         {% endif %}
 
+
+        {% if current_user.has_role('approve_reject_tesitmonials') %}
+            <a href="{{ url_for('video_testimonials_dashboard') }}">
+              Approve/Reject Testimonials
+            </a>
+        {% endif %}
+
+
         {% if current_user.has_role('feedback_moderation') %}
             <a href="{{ url_for('feedback_dashboard') }}" class="list-group-item list-group-item-action">
                 <i class="bi bi-chat-left-text"></i> Feedback Moderation

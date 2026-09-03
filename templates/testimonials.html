@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+  <h2>Testimonials</h2>
+  <p class="text-muted">
+    Only members with $10,000+ in earnings and businesses with $25,000+ in sales can appear here.
+  </p>
+
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+      <a class="nav-link {% if initial_owner_type == 'member' %}active{% endif %}"
+         href="{{ url_for('testimonials_members') }}">Members</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if initial_owner_type == 'business' %}active{% endif %}"
+         href="{{ url_for('testimonials_businesses') }}">Businesses</a>
+    </li>
+  </ul>
+
+  <div id="testimonials-grid"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const ownerType = "{{ initial_owner_type }}";
+  const grid = document.getElementById('testimonials-grid');
+
+  async function loadTestimonials(page = 1) {
+    const resp = await fetch(`/api/testimonials/public?owner_type=${ownerType}&page=${page}`);
+    const data = await resp.json();
+    grid.innerHTML = "";
+
+    if (!data.items || data.items.length === 0) {
+      grid.innerHTML = "<p>No testimonials yet.</p>";
+      return;
+    }
+
+    const row = document.createElement('div');
+    row.className = "row";
+
+    data.items.forEach(item => {
+      const col = document.createElement('div');
+      col.className = "col-12 col-md-4 mb-3";
+
+      const name = item.owner_type === 'member'
+        ? (item.owner_name || 'Member')
+        : (item.business_name || 'Business');
+
+      col.innerHTML = `
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="card-title">${name}</h6>
+            <p class="card-text mb-1">
+              <strong>Level:</strong> ${item.level_code}
+            </p>
+            <p class="card-text mb-1">
+              <strong>Amount:</strong> $${item.lifetime_amount_at_submission}
+            </p>
+            <a href="/testimonials/${item.id}" class="btn btn-sm btn-primary mt-2">
+              View video
+            </a>
+          </div>
+        </div>
+      `;
+      row.appendChild(col);
+    });
+
+    grid.appendChild(row);
+  }
+
+  loadTestimonials();
+});
+</script>
+{% endblock %}

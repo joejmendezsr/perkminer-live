@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-4">
+  <div id="testimonial-detail">Loading...</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+  const id = {{ testimonial_id }};
+  const container = document.getElementById('testimonial-detail');
+
+  const resp = await fetch(`/api/testimonials/${id}`);
+  if (!resp.ok) {
+    container.innerHTML = "<p>Testimonial not found.</p>";
+    return;
+  }
+  const tv = await resp.json();
+
+  const othersResp = await fetch(`/api/testimonials/${id}/others`);
+  const othersData = await othersResp.json();
+
+  const name = tv.owner_type === 'member'
+    ? (tv.owner_name || 'Member')
+    : (tv.business_name || 'Business');
+
+  let html = `
+    <h2>${name}</h2>
+    <p><strong>Level:</strong> ${tv.level_code}</p>
+    <p><strong>Amount at submission:</strong> $${tv.lifetime_amount_at_submission}</p>
+    <video controls class="w-100" src="${tv.cloudinary_secure_url}"></video>
+  `;
+
+  if (othersData.items && othersData.items.length > 0) {
+    html += `<h4 class="mt-4">Other videos by this ${tv.owner_type === 'member' ? 'member' : 'business'}:</h4>`;
+    html += `<ul>`;
+    othersData.items.forEach(o => {
+      html += `
+        <li>
+          <a href="/testimonials/${o.id}">
+            ${o.level_code} – $${o.lifetime_amount_at_submission}
+          </a>
+        </li>
+      `;
+    });
+    html += `</ul>`;
+  }
+
+  container.innerHTML = html;
+});
+</script>
+{% endblock %}
