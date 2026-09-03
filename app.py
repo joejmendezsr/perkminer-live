@@ -1116,6 +1116,24 @@ def finalize_interaction(interaction, business, amount, staff_id=None, source=No
     }
     return summary
 
+def get_member_level_code(user: User) -> str | None:
+    """
+    Returns the highest level_code this member qualifies for
+    based on grand_total_earnings.
+    """
+    total = user.grand_total_earnings or Decimal('0')
+
+    if total >= Decimal('100000'):
+        return 'member_100k'
+    elif total >= Decimal('50000'):
+        return 'member_50k'
+    elif total >= Decimal('10000'):
+        return 'member_10k'
+    else:
+        return None
+
+ALLOWED_MEMBER_LEVELS = ['member_10k', 'member_50k', 'member_100k']
+
 def issue_store_sale_rewards(business, amount, buyer_email=None):
     """
     Issues rewards and commissions for a store sale:
@@ -1352,6 +1370,120 @@ class Favorite(db.Model):
     user = db.relationship('User', backref='favorites', lazy=True)
     business = db.relationship('Business', backref='favorited_by', lazy=True)
     __table_args__ = (db.UniqueConstraint('user_id', 'business_id', name='_user_business_uc'),)
+
+class TestimonialVideo(db.Model):
+    __tablename__ = 'testimonial_videos'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    owner_type = db.Column(db.String(20), nullable=False)  # 'member' or 'business'
+    owner_id = db.Column(db.Integer, nullable=False)
+
+    level_code = db.Column(db.String(32), nullable=False)  # e.g. 'member_10k'
+
+    lifetime_amount_at_submission = db.Column(db.Numeric(12, 2), nullable=False)
+
+    cloudinary_public_id = db.Column(db.String(255), nullable=False)
+    cloudinary_secure_url = db.Column(db.String(500), nullable=False)
+    cloudinary_duration_sec = db.Column(db.Integer)
+    cloudinary_bytes = db.Column(db.Integer)
+    cloudinary_format = db.Column(db.String(20))
+    cloudinary_width = db.Column(db.Integer)
+    cloudinary_height = db.Column(db.Integer)
+
+    status = db.Column(db.String(20), nullable=False, default='pending')  # 'pending', 'approved', 'rejected'
+    rejection_reason = db.Column(db.Text)
+
+    reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    reviewed_by_user = db.relationship('User', foreign_keys=[reviewed_by_user_id])
+    reviewed_at = db.Column(db.DateTime(timezone=True))
+
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), nullable=False)
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        server_default=db.func.now(),
+        onupdate=db.func.now(),
+        nullable=False
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('owner_type', 'owner_id', 'level_code', name='uq_owner_level'),
+    )
+
+@app.route('/api/testimonials/upload', methods=['POST'])
+@login_required
+def upload_testimonial():
+    user = current_user
+
+    # only members for now
+    owner_type = 'member'
+    owner_id = user.id
+
+    data = request.get_json() or {}
+
+    level_code = data.get('level_code')
+    if level_code not in ALLOWED_MEMBER_LEVELS:
+        return jsonify({'error': 'Invalid level_code'}), 400
+
+    # check they qualify for this level
+    highest_level = get_member_level_code(user)
+    if highest_level is None:
+        return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
+
+    # simple ordering: member_100k > member_50k > member_10k
+    level_order = {'member_10k': 1, 'member_50k': 2, 'member_100k': 3}
+    if level_order[level_code] > level_order[highest_level]:
+        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+
+    # duration validation (Cloudinary returns seconds)
+    duration = data.get('duration')
+    if duration is None or duration > 60:
+        return jsonify({'error': 'Video duration must be 60 seconds or less.'}), 400
+
+    # required Cloudinary fields
+    public_id = data.get('public_id')
+    secure_url = data.get('secure_url')
+    if not public_id or not secure_url:
+        return jsonify({'error': 'Missing Cloudinary data.'}), 400
+
+    # find existing row for this level
+    existing = TestimonialVideo.query.filter_by(
+        owner_type=owner_type,
+        owner_id=owner_id,
+        level_code=level_code
+    ).first()
+
+    if existing is None:
+        tv = TestimonialVideo(
+            owner_type=owner_type,
+            owner_id=owner_id,
+            level_code=level_code,
+            lifetime_amount_at_submission=user.grand_total_earnings or Decimal('0'),
+            status='pending'
+        )
+        db.session.add(tv)
+    else:
+        tv = existing
+        tv.status = 'pending'
+        tv.rejection_reason = None
+        tv.lifetime_amount_at_submission = user.grand_total_earnings or Decimal('0')
+
+    # update Cloudinary fields
+    tv.cloudinary_public_id = public_id
+    tv.cloudinary_secure_url = secure_url
+    tv.cloudinary_duration_sec = duration
+    tv.cloudinary_bytes = data.get('bytes')
+    tv.cloudinary_format = data.get('format')
+    tv.cloudinary_width = data.get('width')
+    tv.cloudinary_height = data.get('height')
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Your video has been submitted for review.',
+        'status': tv.status,
+        'id': tv.id
+    }), 201
 
 class Quote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -5736,6 +5868,88 @@ def admin_dashboard():
         business_forms=business_forms,
         user_lookup={user.id: user for user in users},
     )
+
+@app.route('/api/admin/testimonials', methods=['GET'])
+@login_required
+@admin_required
+def admin_list_testimonials():
+    status = request.args.get('status', 'pending')
+    owner_type = request.args.get('owner_type')  # 'member' or 'business'
+
+    query = TestimonialVideo.query
+
+    if status:
+        query = query.filter_by(status=status)
+
+    if owner_type in ('member', 'business'):
+        query = query.filter_by(owner_type=owner_type)
+
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+
+    pagination = query.order_by(TestimonialVideo.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    items = []
+    for tv in pagination.items:
+        items.append({
+            'id': tv.id,
+            'owner_type': tv.owner_type,
+            'owner_id': tv.owner_id,
+            'level_code': tv.level_code,
+            'lifetime_amount_at_submission': str(tv.lifetime_amount_at_submission),
+            'status': tv.status,
+            'created_at': tv.created_at.isoformat() if tv.created_at else None,
+        })
+
+    return jsonify({
+        'items': items,
+        'page': pagination.page,
+        'pages': pagination.pages,
+        'total': pagination.total
+    })
+
+from datetime import datetime, timezone  # you already import datetime; add timezone if needed
+
+@app.route('/api/admin/testimonials/<int:testimonial_id>/approve', methods=['POST'])
+@login_required
+@admin_required
+def admin_approve_testimonial(testimonial_id):
+    tv = TestimonialVideo.query.get_or_404(testimonial_id)
+
+    if tv.status == 'approved':
+        return jsonify({'error': 'Already approved.'}), 400
+
+    tv.status = 'approved'
+    tv.rejection_reason = None
+    tv.reviewed_by_user_id = current_user.id
+    tv.reviewed_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Testimonial approved.', 'status': tv.status})
+
+
+@app.route('/api/admin/testimonials/<int:testimonial_id>/reject', methods=['POST'])
+@login_required
+@admin_required
+def admin_reject_testimonial(testimonial_id):
+    tv = TestimonialVideo.query.get_or_404(testimonial_id)
+
+    data = request.get_json() or {}
+    reason = data.get('reason', 'Rejected by admin.')
+
+    tv.status = 'rejected'
+    tv.rejection_reason = reason
+    tv.reviewed_by_user_id = current_user.id
+    tv.reviewed_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Testimonial rejected.', 'status': tv.status})
 
 @app.route("/finance-dashboard", methods=["GET"])
 @role_required("finance")
