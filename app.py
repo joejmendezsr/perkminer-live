@@ -1410,6 +1410,7 @@ class TestimonialVideo(db.Model):
         db.UniqueConstraint('owner_type', 'owner_id', 'level_code', name='uq_owner_level'),
     )
 
+@csrf.exempt
 @app.route('/api/testimonials/upload', methods=['POST'])
 @login_required
 def upload_testimonial():
@@ -6034,6 +6035,7 @@ def admin_list_testimonials():
 
 from datetime import datetime, timezone  # you already import datetime; add timezone if needed
 
+@csrf.exempt
 @app.route('/api/admin/testimonials/<int:testimonial_id>/approve', methods=['POST'])
 @login_required
 @admin_required
@@ -6052,7 +6054,7 @@ def admin_approve_testimonial(testimonial_id):
 
     return jsonify({'message': 'Testimonial approved.', 'status': tv.status})
 
-
+@csrf.exempt
 @app.route('/api/admin/testimonials/<int:testimonial_id>/reject', methods=['POST'])
 @login_required
 @admin_required
