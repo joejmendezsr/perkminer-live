@@ -39,9 +39,9 @@
         {% endif %}
 
 
-        {% if current_user.has_role('approve_reject_tesitmonials') %}
-            <a href="{{ url_for('video_testimonials_dashboard') }}">
-              Approve/Reject Testimonials
+        {% if current_user.has_role('approve_reject_testimonials') %}
+            <a href="{{ url_for('video_testimonials_dashboard') }}" class="list-group-item list-group-item-action">
+                Approve/Reject Testimonials
             </a>
         {% endif %}
 
