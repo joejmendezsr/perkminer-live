@@ -1485,6 +1485,116 @@ def upload_testimonial():
         'id': tv.id
     }), 201
 
+@app.route('/api/testimonials/public', methods=['GET'])
+def public_testimonials():
+    owner_type = request.args.get('owner_type')  # 'member', 'business', or None for all
+    level = request.args.get('level')            # e.g. 'member_10k'
+    sort_by = request.args.get('sort', 'newest') # 'newest' or 'amount'
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 12))
+
+    query = TestimonialVideo.query.filter_by(status='approved')
+
+    if owner_type in ('member', 'business'):
+        query = query.filter_by(owner_type=owner_type)
+
+    if level:
+        query = query.filter_by(level_code=level)
+
+    # sorting
+    if sort_by == 'amount':
+        query = query.order_by(TestimonialVideo.lifetime_amount_at_submission.desc())
+    else:  # newest
+        query = query.order_by(TestimonialVideo.created_at.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    items = []
+    for tv in pagination.items:
+        # basic owner info lookups
+        if tv.owner_type == 'member':
+            owner = User.query.get(tv.owner_id)
+            owner_name = owner.name or owner.email if owner else None
+            business_name = None
+        else:
+            biz = Business.query.get(tv.owner_id)
+            owner_name = None
+            business_name = biz.business_name if biz else None
+
+        items.append({
+            'id': tv.id,
+            'owner_type': tv.owner_type,
+            'owner_id': tv.owner_id,
+            'owner_name': owner_name,
+            'business_name': business_name,
+            'level_code': tv.level_code,
+            'lifetime_amount_at_submission': str(tv.lifetime_amount_at_submission),
+            'thumbnail_url': tv.cloudinary_secure_url,  # front-end can use this for thumb/player
+            'created_at': tv.created_at.isoformat() if tv.created_at else None,
+        })
+
+    return jsonify({
+        'items': items,
+        'page': pagination.page,
+        'pages': pagination.pages,
+        'total': pagination.total
+    })
+
+@app.route('/api/testimonials/<int:testimonial_id>', methods=['GET'])
+def public_testimonial_detail(testimonial_id):
+    tv = TestimonialVideo.query.filter_by(id=testimonial_id, status='approved').first_or_404()
+
+    if tv.owner_type == 'member':
+        owner = User.query.get(tv.owner_id)
+        owner_name = owner.name or owner.email if owner else None
+        business_name = None
+        avatar_url = owner.profile_photo if owner else None
+    else:
+        biz = Business.query.get(tv.owner_id)
+        owner_name = None
+        business_name = biz.business_name if biz else None
+        avatar_url = biz.profile_photo if biz else None
+
+    return jsonify({
+        'id': tv.id,
+        'owner_type': tv.owner_type,
+        'owner_id': tv.owner_id,
+        'owner_name': owner_name,
+        'business_name': business_name,
+        'avatar_url': avatar_url,
+        'level_code': tv.level_code,
+        'lifetime_amount_at_submission': str(tv.lifetime_amount_at_submission),
+        'cloudinary_public_id': tv.cloudinary_public_id,
+        'cloudinary_secure_url': tv.cloudinary_secure_url,
+        'cloudinary_duration_sec': tv.cloudinary_duration_sec,
+        'status': tv.status,
+        'created_at': tv.created_at.isoformat() if tv.created_at else None,
+        'reviewed_at': tv.reviewed_at.isoformat() if tv.reviewed_at else None,
+    })
+
+@app.route('/api/testimonials/<int:testimonial_id>/others', methods=['GET'])
+def public_testimonial_others(testimonial_id):
+    tv = TestimonialVideo.query.filter_by(id=testimonial_id, status='approved').first_or_404()
+
+    others = TestimonialVideo.query.filter(
+        TestimonialVideo.owner_type == tv.owner_type,
+        TestimonialVideo.owner_id == tv.owner_id,
+        TestimonialVideo.status == 'approved',
+        TestimonialVideo.id != tv.id
+    ).order_by(TestimonialVideo.created_at.desc()).all()
+
+    items = []
+    for other in others:
+        items.append({
+            'id': other.id,
+            'level_code': other.level_code,
+            'lifetime_amount_at_submission': str(other.lifetime_amount_at_submission),
+            'thumbnail_url': other.cloudinary_secure_url,
+            'created_at': other.created_at.isoformat() if other.created_at else None,
+        })
+
+    return jsonify({'items': items})
+
 class Quote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     interaction_id = db.Column(db.Integer, db.ForeignKey('interaction.id'), nullable=False, unique=True)
