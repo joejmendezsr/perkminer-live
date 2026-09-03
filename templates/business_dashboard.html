@@ -1445,86 +1445,51 @@ window.addEventListener('DOMContentLoaded', function() {
     const btn = document.getElementById('biz-upload-testimonial-btn');
     if (!btn) return;
 
-    const cloudName = "dmrntlcfd";
-    const uploadPreset = "testimonial_unsigned";
-
-    btn.addEventListener('click', function () {
+    btn.addEventListener('click', async function () {
       const levelCode = btn.getAttribute('data-level');
 
-      const widgetOptions = {
-        cloudName: cloudName,
-        uploadPreset: uploadPreset,
-        sources: ['local', 'camera'],
-        resourceType: 'video',
-        multiple: false,
-        maxFileSize: 50 * 1024 * 1024,
-        folder: 'testimonials/businesses',
-        clientAllowedFormats: ['mp4', 'mov', 'webm'],
-        maxVideoDuration: 60,
-        // uploadPreset: 'your_unsigned_preset',
+      const fakeCloudinaryData = {
+        level_code: levelCode,
+        public_id: "testimonials/business/123/" + levelCode + "_demo",
+        secure_url: "https://example.com/biz_demo.mp4",
+        duration: 45,
+        bytes: 1500000,
+        format: "mp4",
+        width: 1280,
+        height: 720
       };
 
-      const widget = cloudinary.createUploadWidget(
-        widgetOptions,
-        async (error, result) => {
-          if (error) {
-            console.error("Cloudinary widget error (biz):", error);
-            alert("Upload error. Please try again.");
-            return;
-          }
-          if (!result || result.event !== "success") {
-            return;
-          }
+      try {
+        const resp = await fetch("/api/business/testimonials/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(fakeCloudinaryData)
+        });
 
-          const info = result.info;
-          console.log("Cloudinary upload success (biz):", info);
-
-          const payload = {
-            level_code: levelCode,
-            public_id: info.public_id,
-            secure_url: info.secure_url,
-            duration: Math.round(info.duration || 0),
-            bytes: info.bytes,
-            format: info.format,
-            width: info.width,
-            height: info.height
-          };
-
-          try {
-            const resp = await fetch("/api/business/testimonials/upload", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(payload)
-            });
-
-            const text = await resp.text();
-            let data;
-            try {
-              data = JSON.parse(text);
-            } catch (e) {
-              console.error("Non-JSON response from server (biz):", text);
-              alert("Server returned an unexpected response. Please try again.");
-              return;
-            }
-
-            if (!resp.ok) {
-              console.error("Biz upload API error:", data);
-              alert("Saving business testimonial failed: " + (data.error || "Unknown error"));
-              return;
-            }
-
-            alert("Your business testimonial has been submitted for review!");
-            window.location.reload();
-          } catch (err) {
-            console.error("Error calling /api/business/testimonials/upload:", err);
-            alert("Something went wrong saving your business testimonial.");
-          }
+        const text = await resp.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Non-JSON response from server:", text);
+          alert("Server returned non-JSON response for business testimonial. See console.");
+          return;
         }
-      );
 
-      widget.open();
+        if (!resp.ok) {
+          console.error("Business upload error:", data);
+          alert("Business upload failed: " + (data.error || "Unknown error"));
+          return;
+        }
+
+        alert("Business testimonial submitted for review!");
+        window.location.reload();
+      } catch (err) {
+        console.error("Network or JS error (business testimonial):", err);
+        alert("Something went wrong submitting your business testimonial.");
+      }
     });
   });
 </script>
