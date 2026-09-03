@@ -1131,8 +1131,6 @@
     btn.addEventListener('click', async function () {
       const levelCode = btn.getAttribute('data-level');
 
-      // TODO: replace this block with real Cloudinary upload
-      // for now we just simulate a Cloudinary response to test the API.
       const fakeCloudinaryData = {
         level_code: levelCode,
         public_id: "testimonials/member/123/member_10k_demo",
@@ -1153,18 +1151,28 @@
           body: JSON.stringify(fakeCloudinaryData)
         });
 
-        const data = await resp.json();
+        const text = await resp.text();  // read raw body
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Non-JSON response from server:", text);
+          alert("Server returned non-JSON response. Check console for details.");
+          return;
+        }
+
         if (!resp.ok) {
+          console.error("Upload error:", data);
           alert("Upload failed: " + (data.error || "Unknown error"));
           return;
         }
 
+        console.log("Upload success:", data);
         alert("Testimonial submitted for review!");
-        // simple: reload to see updated list
         window.location.reload();
       } catch (err) {
-        console.error(err);
-        alert("Something went wrong submitting your testimonial.");
+        console.error("Network or JS error while submitting testimonial:", err);
+        alert("Something went wrong submitting your testimonial. See console for details.");
       }
     });
   });
