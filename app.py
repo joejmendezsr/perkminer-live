@@ -8064,6 +8064,7 @@ def seed_admins_once():
         "approve_reject_listings",
         "finance",
         "feedback_moderation",
+        "approve_reject_testimonials",
         "customer_support"
     ]
     roles = {}
