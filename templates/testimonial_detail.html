@@ -20,7 +20,11 @@ document.addEventListener('DOMContentLoaded', async function () {
   const id = {{ testimonial_id }};
   const container = document.getElementById('testimonial-detail');
 
+  // your Cloudinary cloud name
+  const cloudName = "dmrntlcfd";
+
   try {
+    // main testimonial
     const resp = await fetch(`/api/testimonials/${id}`);
     if (!resp.ok) {
       container.innerHTML = "<p class='text-danger mb-0'>Testimonial not found.</p>";
@@ -28,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     const tv = await resp.json();
 
+    // other videos by same owner
     const othersResp = await fetch(`/api/testimonials/${id}/others`);
     const othersData = await othersResp.json();
 
@@ -35,7 +40,13 @@ document.addEventListener('DOMContentLoaded', async function () {
       ? (tv.owner_name || 'Member')
       : (tv.business_name || 'Business');
 
-    // main layout: video takes all width on mobile, centered on larger screens
+    // build transformed Cloudinary URL from public_id
+    const publicId = tv.cloudinary_public_id;
+    // transformation: 720p-ish, compressed MP4 (H.264), auto quality
+    const transformedUrl =
+      `https://res.cloudinary.com/${cloudName}/video/upload/` +
+      `q_auto:good,vc_h264,br_1000k,ac_aac,ar_44100,f_mp4/${publicId}.mp4`;
+
     let html = `
       <div class="row">
         <div class="col-12 col-lg-8 mb-4">
@@ -48,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 $${tv.lifetime_amount_at_submission}
               </p>
               <div class="ratio ratio-16x9 mb-2">
-                <video controls src="${tv.cloudinary_secure_url}" style="width: 100%; height: 100%;"></video>
+                <video controls src="${transformedUrl}" style="width: 100%; height: 100%;"></video>
               </div>
             </div>
           </div>

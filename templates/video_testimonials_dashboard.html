@@ -37,6 +37,30 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const container = document.getElementById('testimonial-admin');
+  const cloudName = "dmrntlcfd";
+
+  // create modal HTML once
+  const modalHtml = `
+    <div class="modal fade" id="testimonialPreviewModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Testimonial preview</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="testimonial-preview-body">
+              <p class="text-muted mb-0">Loading video...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('afterend', modalHtml);
+  const previewBody = document.getElementById('testimonial-preview-body');
+  const previewModalEl = document.getElementById('testimonialPreviewModal');
+  const previewModal = new bootstrap.Modal(previewModalEl);
 
   async function loadTestimonials() {
     try {
@@ -51,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const tableWrapper = document.createElement('div');
-      tableWrapper.className = "table-responsive";  // responsive on mobile/tablet
+      tableWrapper.className = "table-responsive";
 
       const table = document.createElement('table');
       table.className = "table table-sm table-striped align-middle mb-0";
@@ -74,8 +98,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const tr = document.createElement('tr');
 
         const ownerLabel = item.owner_type === 'member'
-          ? `Member #${item.owner_id}`
-          : `Business #${item.owner_id}`;
+          ? \`Member #\${item.owner_id}\`
+          : \`Business #\${item.owner_id}\`;
 
         tr.innerHTML = `
           <td>${item.id}</td>
@@ -85,6 +109,11 @@ document.addEventListener('DOMContentLoaded', function () {
           <td>$${item.lifetime_amount_at_submission}</td>
           <td>
             <div class="d-flex flex-wrap gap-1">
+              <button class="btn btn-secondary btn-sm"
+                      data-action="preview"
+                      data-id="${item.id}">
+                View
+              </button>
               <button class="btn btn-success btn-sm"
                       data-action="approve"
                       data-id="${item.id}">
@@ -109,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  // handle all button clicks (preview / approve / reject)
   container.addEventListener('click', async function (e) {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
@@ -116,7 +146,44 @@ document.addEventListener('DOMContentLoaded', function () {
     const action = btn.getAttribute('data-action');
     const id = btn.getAttribute('data-id');
 
-    if (action === 'approve') {
+    if (action === 'preview') {
+      try {
+        previewBody.innerHTML = "<p class='text-muted mb-0'>Loading video...</p>";
+
+        const resp = await fetch(`/api/testimonials/${id}`);
+        if (!resp.ok) {
+          previewBody.innerHTML = "<p class='text-danger mb-0'>Failed to load testimonial.</p>";
+          previewModal.show();
+          return;
+        }
+        const tv = await resp.json();
+
+        const publicId = tv.cloudinary_public_id;
+        const transformedUrl =
+          `https://res.cloudinary.com/${cloudName}/video/upload/` +
+          `q_auto:good,vc_h264,br_1000k,ac_aac,ar_44100,f_mp4/${publicId}.mp4`;
+
+        const ownerName = tv.owner_type === 'member'
+          ? (tv.owner_name || 'Member')
+          : (tv.business_name || 'Business');
+
+        previewBody.innerHTML = `
+          <p class="mb-1"><strong>Owner:</strong> ${ownerName}</p>
+          <p class="mb-1"><strong>Type:</strong> ${tv.owner_type}</p>
+          <p class="mb-2"><strong>Level:</strong> ${tv.level_code}</p>
+          <div class="ratio ratio-16x9">
+            <video controls src="${transformedUrl}" style="width: 100%; height: 100%;"></video>
+          </div>
+        `;
+        previewModal.show();
+      } catch (err) {
+        console.error("Preview error:", err);
+        previewBody.innerHTML = "<p class='text-danger mb-0'>Error loading video.</p>";
+        previewModal.show();
+      }
+    }
+
+    else if (action === 'approve') {
       try {
         const resp = await fetch(`/api/admin/testimonials/${id}/approve`, {
           method: "POST",
@@ -133,7 +200,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error("Approve error:", err);
         alert("Error approving testimonial.");
       }
-    } else if (action === 'reject') {
+    }
+
+    else if (action === 'reject') {
       const reason = prompt("Rejection reason:", "Does not meet guidelines");
       if (reason === null) return;
       try {

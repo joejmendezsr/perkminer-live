@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container my-4">
 
-  <!-- header + description -->
+  <!-- header + description + back button -->
   <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3">
     <div class="mb-2 mb-md-0">
       <h2 class="mb-1">Testimonials</h2>
@@ -11,6 +11,11 @@
         Only members with $10,000+ in lifetime earnings and businesses with $25,000+ in sales
         can appear here.
       </p>
+    </div>
+    <div class="mt-2 mt-md-0">
+      <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-sm">
+        ← Back to Home
+      </a>
     </div>
   </div>
 
@@ -58,7 +63,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       data.items.forEach(item => {
         const col = document.createElement('div');
-        // 1 per row on mobile, 2 on tablet, 3 on desktop
         col.className = "col-12 col-md-6 col-lg-4 mb-3";
 
         const name = item.owner_type === 'member'
