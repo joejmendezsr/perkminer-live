@@ -1133,6 +1133,23 @@ def get_member_level_code(user: User) -> str | None:
         return None
 
 ALLOWED_MEMBER_LEVELS = ['member_10k', 'member_50k', 'member_100k']
+ALLOWED_BUSINESS_LEVELS = ['biz_25k', 'biz_100k', 'biz_250k']
+
+def get_business_level_code(biz: Business) -> str | None:
+    """
+    Returns the highest level_code this business qualifies for
+    based on grand_total_earnings (sales).
+    """
+    total = biz.grand_total_earnings or Decimal('0')
+
+    if total >= Decimal('250000'):
+        return 'biz_250k'
+    elif total >= Decimal('100000'):
+        return 'biz_100k'
+    elif total >= Decimal('25000'):
+        return 'biz_25k'
+    else:
+        return None
 
 def issue_store_sale_rewards(business, amount, buyer_email=None):
     """
@@ -1482,6 +1499,77 @@ def upload_testimonial():
 
     return jsonify({
         'message': 'Your video has been submitted for review.',
+        'status': tv.status,
+        'id': tv.id
+    }), 201
+
+@csrf.exempt
+@app.route('/api/business/testimonials/upload', methods=['POST'])
+@business_login_required
+def upload_business_testimonial():
+    # current business from session
+    biz_id = session.get('business_id')
+    biz = Business.query.get_or_404(biz_id)
+
+    owner_type = 'business'
+    owner_id = biz.id
+
+    data = request.get_json() or {}
+
+    level_code = data.get('level_code')
+    if level_code not in ALLOWED_BUSINESS_LEVELS:
+        return jsonify({'error': 'Invalid level_code'}), 400
+
+    highest_level = get_business_level_code(biz)
+    if highest_level is None:
+        return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
+
+    level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
+    if level_order[level_code] > level_order[highest_level]:
+        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+
+    duration = data.get('duration')
+    if duration is None or duration > 60:
+        return jsonify({'error': 'Video duration must be 60 seconds or less.'}), 400
+
+    public_id = data.get('public_id')
+    secure_url = data.get('secure_url')
+    if not public_id or not secure_url:
+        return jsonify({'error': 'Missing Cloudinary data.'}), 400
+
+    existing = TestimonialVideo.query.filter_by(
+        owner_type=owner_type,
+        owner_id=owner_id,
+        level_code=level_code
+    ).first()
+
+    if existing is None:
+        tv = TestimonialVideo(
+            owner_type=owner_type,
+            owner_id=owner_id,
+            level_code=level_code,
+            lifetime_amount_at_submission=biz.grand_total_earnings or Decimal('0'),
+            status='pending'
+        )
+        db.session.add(tv)
+    else:
+        tv = existing
+        tv.status = 'pending'
+        tv.rejection_reason = None
+        tv.lifetime_amount_at_submission = biz.grand_total_earnings or Decimal('0')
+
+    tv.cloudinary_public_id = public_id
+    tv.cloudinary_secure_url = secure_url
+    tv.cloudinary_duration_sec = duration
+    tv.cloudinary_bytes = data.get('bytes')
+    tv.cloudinary_format = data.get('format')
+    tv.cloudinary_width = data.get('width')
+    tv.cloudinary_height = data.get('height')
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Your business testimonial has been submitted for review.',
         'status': tv.status,
         'id': tv.id
     }), 201
@@ -5815,6 +5903,13 @@ def business_dashboard():
 
     b2b_share_url = url_for("business_register", ref=biz.referral_code, _external=True)
 
+    # business testimonial info
+    biz_level_code = get_business_level_code(biz)
+    biz_testimonials = TestimonialVideo.query.filter_by(
+        owner_type='business',
+        owner_id=biz.id
+    ).order_by(TestimonialVideo.level_code, TestimonialVideo.created_at.desc()).all()
+
     return render_template(
         "business_dashboard.html",
         form=form,
@@ -5843,6 +5938,8 @@ def business_dashboard():
         biz_withdrawn_total=biz_withdrawn_total,         # total withdrawn
 
         b2b_share_url=b2b_share_url,
+        biz_level_code=biz_level_code,
+        biz_testimonials=biz_testimonials,
     )
 
 @app.route("/business/logout")

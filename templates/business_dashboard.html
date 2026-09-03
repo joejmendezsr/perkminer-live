@@ -342,6 +342,40 @@
         </div>
         {% endif %}
 
+{% if biz_level_code %}
+  <div class="card p-4 mb-4">
+    <h5>Testimonial videos</h5>
+    <p class="mb-2">
+      Your business currently qualifies for level:
+      <strong>{{ biz_level_code }}</strong>.
+    </p>
+
+    <button
+      class="btn btn-primary mb-3"
+      id="biz-upload-testimonial-btn"
+      data-level="{{ biz_level_code }}"
+      type="button"
+    >
+      Upload / Replace testimonial video
+    </button>
+
+    <ul class="list-unstyled">
+      {% for tv in biz_testimonials %}
+        <li class="mb-1">
+          <strong>Level:</strong> {{ tv.level_code }}
+          &nbsp;|&nbsp;
+          <strong>Status:</strong> {{ tv.status }}
+          &nbsp;|&nbsp;
+          <strong>Amount at submission:</strong>
+          ${{ tv.lifetime_amount_at_submission }}
+        </li>
+      {% else %}
+        <li>No testimonial videos yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
       <!-- Invite Modal stays unchanged... -->
       <div class="modal fade" id="inviteModal" tabindex="-1" aria-labelledby="inviteModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -1404,6 +1438,62 @@ window.addEventListener('DOMContentLoaded', function() {
     }
   }
 </script>
+
+{% if biz_level_code %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('biz-upload-testimonial-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async function () {
+      const levelCode = btn.getAttribute('data-level');
+
+      const fakeCloudinaryData = {
+        level_code: levelCode,
+        public_id: "testimonials/business/123/" + levelCode + "_demo",
+        secure_url: "https://example.com/biz_demo.mp4",
+        duration: 45,
+        bytes: 1500000,
+        format: "mp4",
+        width: 1280,
+        height: 720
+      };
+
+      try {
+        const resp = await fetch("/api/business/testimonials/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(fakeCloudinaryData)
+        });
+
+        const text = await resp.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Non-JSON response from server:", text);
+          alert("Server returned non-JSON response for business testimonial. See console.");
+          return;
+        }
+
+        if (!resp.ok) {
+          console.error("Business upload error:", data);
+          alert("Business upload failed: " + (data.error || "Unknown error"));
+          return;
+        }
+
+        alert("Business testimonial submitted for review!");
+        window.location.reload();
+      } catch (err) {
+        console.error("Network or JS error (business testimonial):", err);
+        alert("Something went wrong submitting your business testimonial.");
+      }
+    });
+  });
+</script>
+{% endif %}
 
 </body>
 </html>
