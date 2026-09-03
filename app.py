@@ -3917,6 +3917,14 @@ def dashboard():
     share_url = url_for("register", ref=user.referral_code, _external=True)
     business_share_url = url_for("business_register", ref=user.referral_code, _external=True)
 
+    # member testimonial info
+    member_level_code = get_member_level_code(user)
+
+    member_testimonials = TestimonialVideo.query.filter_by(
+        owner_type='member',
+        owner_id=user.id
+    ).order_by(TestimonialVideo.level_code, TestimonialVideo.created_at.desc()).all()
+
     return render_template(
         "dashboard.html",
         form=form,
@@ -3952,6 +3960,8 @@ def dashboard():
 
         share_url=share_url,
         business_share_url=business_share_url,
+        member_level_code=member_level_code,
+        member_testimonials=member_testimonials,
     )
 
 @app.route("/logout")

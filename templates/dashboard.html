@@ -258,6 +258,43 @@
     </div>
   </div>
 
+  {% if member_level_code %}
+    <hr class="my-3">
+
+    <section class="mt-2">
+      <h5>Testimonial videos</h5>
+      <p class="mb-2">
+        You currently qualify for level:
+        <strong>{{ member_level_code }}</strong>.
+      </p>
+
+      <button
+        class="btn btn-primary mb-3"
+        id="upload-testimonial-btn"
+        data-level="{{ member_level_code }}"
+        type="button"
+      >
+        Upload / Replace testimonial video
+      </button>
+
+      <ul class="list-unstyled">
+        {% for tv in member_testimonials %}
+          <li class="mb-1">
+            <strong>Level:</strong> {{ tv.level_code }}
+            &nbsp;|&nbsp;
+            <strong>Status:</strong> {{ tv.status }}
+            &nbsp;|&nbsp;
+            <strong>Amount at submission:</strong>
+            ${{ tv.lifetime_amount_at_submission }}
+          </li>
+        {% else %}
+          <li>No testimonial videos yet.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+</div>
+
   <div class="collapse" id="profileCollapse">
     <!-- existing profile form content here -->
   </div>
@@ -1084,6 +1121,55 @@
     }
   }
 </script>
+
+{% if member_level_code %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('upload-testimonial-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async function () {
+      const levelCode = btn.getAttribute('data-level');
+
+      // TODO: replace this block with real Cloudinary upload
+      // for now we just simulate a Cloudinary response to test the API.
+      const fakeCloudinaryData = {
+        level_code: levelCode,
+        public_id: "testimonials/member/123/member_10k_demo",
+        secure_url: "https://example.com/demo.mp4",
+        duration: 42,
+        bytes: 1234567,
+        format: "mp4",
+        width: 1280,
+        height: 720
+      };
+
+      try {
+        const resp = await fetch("/api/testimonials/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(fakeCloudinaryData)
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          alert("Upload failed: " + (data.error || "Unknown error"));
+          return;
+        }
+
+        alert("Testimonial submitted for review!");
+        // simple: reload to see updated list
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("Something went wrong submitting your testimonial.");
+      }
+    });
+  });
+</script>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
