@@ -1171,7 +1171,7 @@ def get_business_level_code(biz: Business) -> str | None:
     Returns the highest level_code this business qualifies for
     based on grand_total_earnings (sales).
     """
-    total = biz.grand_total_earnings or Decimal('0')
+    total = biz.lifetime_gross_sales or Decimal('0')
 
     if total >= Decimal('250000'):
         return 'biz_250k'
@@ -1602,7 +1602,7 @@ def upload_business_testimonial():
             owner_type=owner_type,
             owner_id=owner_id,
             level_code=level_code,
-            lifetime_amount_at_submission=biz.grand_total_earnings or Decimal('0'),
+            lifetime_amount_at_submission=biz.lifetime_gross_sales or Decimal('0'),
             status='pending'
         )
         db.session.add(tv)
@@ -1610,7 +1610,7 @@ def upload_business_testimonial():
         tv = existing
         tv.status = 'pending'
         tv.rejection_reason = None
-        tv.lifetime_amount_at_submission = biz.grand_total_earnings or Decimal('0')
+        tv.lifetime_amount_at_submission = biz.lifetime_gross_sales or Decimal('0')
 
     # NEW
     tv.title = title
