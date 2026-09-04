@@ -1710,6 +1710,53 @@ def public_testimonial_others(testimonial_id):
 
     return jsonify({'items': items})
 
+@app.route('/api/admin/testimonials/<int:testimonial_id>', methods=['GET'])
+@login_required
+@admin_required
+def admin_testimonial_detail(testimonial_id):
+    """
+    Admin-only detail for a testimonial.
+    Does NOT require status='approved' so admins can review pending/rejected videos.
+    """
+    tv = TestimonialVideo.query.get_or_404(testimonial_id)
+
+    if tv.owner_type == 'member':
+        owner = User.query.get(tv.owner_id)
+        owner_name = owner.name or owner.email if owner else None
+        business_name = None
+        avatar_url = owner.profile_photo if owner else None
+    else:
+        biz = Business.query.get(tv.owner_id)
+        owner_name = None
+        business_name = biz.business_name if biz else None
+        avatar_url = biz.profile_photo if biz else None
+
+    return jsonify({
+        'id': tv.id,
+        'owner_type': tv.owner_type,
+        'owner_id': tv.owner_id,
+        'owner_name': owner_name,
+        'business_name': business_name,
+        'avatar_url': avatar_url,
+        'level_code': tv.level_code,
+        'lifetime_amount_at_submission': str(tv.lifetime_amount_at_submission),
+        'title': tv.title,
+        'cloudinary_public_id': tv.cloudinary_public_id,
+        'cloudinary_secure_url': tv.cloudinary_secure_url,
+        'cloudinary_duration_sec': tv.cloudinary_duration_sec,
+        'status': tv.status,
+        'created_at': tv.created_at.isoformat() if tv.created_at else None,
+        'reviewed_at': tv.reviewed_at.isoformat() if tv.reviewed_at else None,
+        'rejection_reason': tv.rejection_reason,
+    })
+
+@app.route("/admin/testimonials/<int:testimonial_id>/preview")
+@login_required
+@admin_required
+def admin_testimonial_preview_page(testimonial_id):
+    # template will fetch data via JS using the admin API
+    return render_template("admin_testimonial_preview.html", testimonial_id=testimonial_id)
+
 @app.route('/api/member/upload_params', methods=['GET'])
 @login_required
 def member_upload_params():
