@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', function () {
           ? `Member #${item.owner_id}`
           : `Business #${item.owner_id}`;
 
+        // NEW: define title with a fallback
+        const title = item.title || '(no title)';
+
         tr.innerHTML = `
           <td>${item.id}</td>
           <td>${ownerLabel}</td>
