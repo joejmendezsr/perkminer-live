@@ -668,6 +668,7 @@
   </div>
 {% endif %}
 </br></br>
+
   <!-- REGULAR earnings (commissions + cashback) -->
   <div class="fs-5 fw-semibold text-primary mb-2">
     Withdrawable Earnings: ${{ "{:,.2f}".format(current_user.earnings_balance or 0) }}
@@ -712,37 +713,10 @@
             </button>
           </form>
         </div>
-
-        <!-- Instant Payout (Regular Earnings) -->
-        {% set inst_fee = earnings * 0.011 + 0.50 %}
-        {% set inst_net = earnings - inst_fee %}
-        <div class="border rounded p-3 bg-warning-subtle mt-3">
-          <div class="fw-bold mb-1">
-            <i class="bi bi-lightning-fill text-warning"></i> Instant Payout (Instant, 24/7)
-          </div>
-          <div class="text-muted mb-1" style="font-size:0.97em;">
-            Stripe instant payout fee: ${{ '{:,.2f}'.format(inst_fee) }} (1.1% + $0.50)<br>
-            You will receive: <b>${{ '{:,.2f}'.format(inst_net) }}</b>
-          </div>
-          <form action="{{ url_for('withdraw_instant') }}" method="POST" class="d-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="input-group mb-2">
-              <span class="input-group-text">$</span>
-              <input
-                type="number"
-                name="amount"
-                class="form-control"
-                step="0.01"
-                min="10"
-                max="{{ '{:.2f}'.format(current_user.earnings_balance or 0) }}"
-                placeholder="Amount (leave blank for full)"
-              >
-            </div>
-            <button type="submit" class="btn btn-warning w-100">
-              Withdraw Instantly <i class="bi bi-lightning-charge-fill"></i>
-            </button>
-          </form>
-        </div>
+      {% else %}
+        <small class="text-muted">
+          You need at least $10 in available earnings to withdraw.
+        </small>
       {% endif %}
     {% endif %}
   </div>
@@ -814,37 +788,6 @@
                 </div>
                 <button type="submit" class="btn btn-success w-100">
                   Withdraw Investor Earnings (Standard)
-                </button>
-              </form>
-            </div>
-
-            <!-- instant investor payout -->
-            {% set inst_fee_inv = inv_net * 0.011 + 0.50 %}
-            {% set inst_net_inv = inv_net - inst_fee_inv %}
-            <div class="border rounded p-3 bg-warning-subtle">
-              <div class="fw-bold mb-1">
-                <i class="bi bi-lightning-fill text-warning"></i> Investor Instant Payout
-              </div>
-              <div class="text-muted mb-1" style="font-size:0.95em;">
-                Stripe instant payout fee: ${{ '{:,.2f}'.format(inst_fee_inv) }} (1.1% + $0.50)<br>
-                If you withdraw full balance, you would receive: <b>${{ '{:,.2f}'.format(inst_net_inv) }}</b>
-              </div>
-              <form action="{{ url_for('withdraw_investor_instant') }}" method="POST" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="input-group mb-2">
-                  <span class="input-group-text">$</span>
-                  <input
-                    type="number"
-                    name="amount"
-                    class="form-control"
-                    step="0.01"
-                    min="10"
-                    max="{{ '{:.2f}'.format(inv_net) }}"
-                    placeholder="Amount (leave blank for full)"
-                  >
-                </div>
-                <button type="submit" class="btn btn-warning w-100">
-                  Withdraw Investor Earnings Instantly <i class="bi bi-lightning-charge-fill"></i>
                 </button>
               </form>
             </div>

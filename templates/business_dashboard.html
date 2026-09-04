@@ -344,7 +344,7 @@
 
 {% if biz_level_code %}
   <div class="card p-4 mb-4">
-    <h5>Testimonial videos</h5>
+    <h5>Congratulations! You qualify to upload a Testimonial Video</h5>
     <p class="mb-2">
       Your business currently qualifies for level:
       <strong>{{ biz_level_code }}</strong>.
@@ -890,6 +890,7 @@
   </div>
 {% endif %}
 </br></br>
+
   <div class="fs-5 fw-semibold text-primary mb-2 mt-2">
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
   </div>
@@ -933,38 +934,6 @@
             </button>
           </form>
         </div>
-
-        {# Instant business payout #}
-        {% set inst_fee_biz = biz_net * 0.011 + 0.50 %}
-        {% set inst_net_biz = biz_net - inst_fee_biz %}
-        <div class="border rounded p-3 bg-warning-subtle">
-          <div class="fw-bold mb-1">
-            <i class="bi bi-lightning-fill text-warning"></i> Instant Payout (Instant, 24/7)
-          </div>
-          <div class="text-muted mb-1" style="font-size:0.97em;">
-            Stripe instant payout fee: ${{ '{:,.2f}'.format(inst_fee_biz) }} (1.1% + $0.50)<br>
-            If you withdraw full balance, you would receive:
-            <b>${{ '{:,.2f}'.format(inst_net_biz) }}</b>
-          </div>
-          <form action="{{ url_for('business_withdraw_instant') }}" method="POST" class="d-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="input-group mb-2">
-              <span class="input-group-text">$</span>
-              <input
-                type="number"
-                name="amount"
-                class="form-control"
-                step="0.01"
-                min="10"
-                max="{{ '{:.2f}'.format(biz_net) }}"
-                placeholder="Amount (leave blank for full)"
-              >
-            </div>
-            <button type="submit" class="btn btn-warning w-100">
-              Withdraw Instantly <i class="bi bi-lightning-charge-fill"></i>
-            </button>
-          </form>
-        </div>
       {% else %}
         <small class="text-muted">
           You need at least $10 in available business earnings to withdraw.
@@ -973,7 +942,6 @@
     {% endif %}
   </div>
 </div>
-
 
 <div class="card p-4 mb-4">
   <h4>Staff Section</h4>
