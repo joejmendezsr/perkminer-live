@@ -1128,13 +1128,14 @@
     const btn = document.getElementById('upload-testimonial-btn');
     if (!btn) return;
 
+    let pendingTitle = null;
+
     btn.addEventListener('click', async function () {
+      // first click: ask for title, then immediately open file chooser
       const levelCode = btn.getAttribute('data-level');
 
-      // 1) ask user for a title
-      const title = prompt("Title for your testimonial video (optional):", "") || "";
+      pendingTitle = prompt("Title for your testimonial video (optional):", "") || "";
 
-      // 2) open a file picker
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
       fileInput.accept = 'video/*';
@@ -1147,7 +1148,7 @@
         }
 
         try {
-          // 3) get signed params from your Flask backend
+          // 1) get signed params from your Flask backend
           const paramsRes = await fetch(`/api/member/upload_params?level_code=${encodeURIComponent(levelCode)}`);
           const params = await paramsRes.json();
           if (!paramsRes.ok) {
@@ -1155,7 +1156,7 @@
             return;
           }
 
-          // 4) upload file directly to Cloudinary
+          // 2) upload file directly to Cloudinary
           const formData = new FormData();
           formData.append('file', file);
           formData.append('api_key', params.api_key);
@@ -1177,17 +1178,15 @@
             return;
           }
 
-          // Optional: quick client-side duration guard if Cloudinary returns it
           if (cld.duration && cld.duration > 60) {
             alert("Video is longer than 60 seconds. Please upload a shorter one.");
-            // (You might want to delete the Cloudinary asset here if you care)
             return;
           }
 
-          // 5) send metadata to your Flask testimonials endpoint
+          // 3) send metadata + title to your Flask testimonials endpoint
           const payload = {
             level_code: levelCode,
-            title: title,
+            title: pendingTitle || "",
             public_id: cld.public_id,
             secure_url: cld.secure_url,
             duration: cld.duration,
@@ -1230,7 +1229,7 @@
         }
       };
 
-      // trigger the file picker
+      // IMPORTANT: call click() directly in the same user-initiated handler
       fileInput.click();
     });
   });
