@@ -786,6 +786,42 @@
 
 <h4>Your Business Activity</h4>
 
+  <div class="card mb-3">
+    <div class="card-header">
+      Lifetime Sales Summary
+    </div>
+    <div class="card-body">
+      <table class="table table-sm">
+        <tbody>
+          <tr>
+            <td>Lifetime Gross Sales</td>
+            <td>
+              ${{ "{:,.2f}".format(business.lifetime_gross_sales or 0) }}
+            </td>
+          </tr>
+          <tr>
+            <td>Lifetime Advertising Fees Paid</td>
+            <td>
+              ${{ "{:,.2f}".format(business.lifetime_ad_fee_paid or 0) }}
+            </td>
+          </tr>
+          <tr>
+            <td>Lifetime Net Gross (after ad fees)</td>
+            <td>
+              ${{ "{:,.2f}".format(business.lifetime_net_gross or 0) }}
+            </td>
+          </tr>
+          <tr>
+            <td>Lifetime Marketing ROI</td>
+            <td>
+              {{ "{:,.2f}".format(business.lifetime_roi or 0) }}%
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 <!-- Business earnings summary with 7-day delay -->
 <div class="mb-3">
   <div class="card mb-3">

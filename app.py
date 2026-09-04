@@ -1121,6 +1121,32 @@ def finalize_interaction(interaction, business, amount, staff_id=None, source=No
     }
     return summary
 
+def calculate_business_sales_summary(biz):
+    """
+    Returns (gross_sales, ad_fee_paid, net_gross, roi_percent)
+    based on BusinessTransaction rows for this business.
+    """
+    ref_code = biz.referral_code
+
+    # All transactions where this business is the main seller
+    txns = BusinessTransaction.query.filter_by(business_referral_id=ref_code).all()
+
+    gross = Decimal("0")
+    ad_fees = Decimal("0")
+
+    for t in txns:
+        gross += Decimal(str(t.amount or 0))
+        ad_fees += Decimal(str(t.ad_fee or 0))
+
+    net = gross - ad_fees
+
+    if ad_fees > 0:
+        roi = (net / ad_fees) * Decimal("100")  # percent ROI
+    else:
+        roi = Decimal("0")
+
+    return gross, ad_fees, net, roi
+
 def get_member_level_code(user: User) -> str | None:
     """
     Returns the highest level_code this member qualifies for
@@ -1381,6 +1407,10 @@ class Business(db.Model):
     contact_js = db.Column(db.Text, nullable=True)
     is_ecommerce_site = db.Column(db.Boolean, default=False)
     allow_website_purchases = db.Column(db.Boolean, default=False)
+    lifetime_gross_sales = db.Column(db.Numeric(12, 2), default=0)
+    lifetime_ad_fee_paid = db.Column(db.Numeric(12, 2), default=0)
+    lifetime_net_gross = db.Column(db.Numeric(12, 2), default=0)
+    lifetime_roi = db.Column(db.Numeric(6, 2), default=0)  # e.g., 900.00 for 900% ROI
     online_terms_agreed = db.Column(db.Boolean, default=False)
     theme_type = db.Column(db.String(50))
 
@@ -5863,6 +5893,13 @@ def business_dashboard():
 
     # this is what you show as "Earnings Balance" / withdrawable
     biz.earnings_balance = net_available_biz
+
+    # NEW: lifetime sales summary (gross, ad fee, net, ROI)
+    gross, ad_fees, net, roi = calculate_business_sales_summary(biz)
+    biz.lifetime_gross_sales = gross
+    biz.lifetime_ad_fee_paid = ad_fees
+    biz.lifetime_net_gross = net
+    biz.lifetime_roi = roi
 
     db.session.commit()
 
