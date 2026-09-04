@@ -359,7 +359,7 @@
       Upload / Replace testimonial video
     </button>
 
-    <ul class="list-unstyled">
+    <ul class="list-unstyled mb-3">
       {% for tv in biz_testimonials %}
         <li class="mb-1">
           <strong>Level:</strong> {{ tv.level_code }}
@@ -373,8 +373,35 @@
         <li>No testimonial videos yet.</li>
       {% endfor %}
     </ul>
-  </div>
-{% endif %}
+
+    <!-- NEW: collapsible list of approved business videos -->
+    <button
+      class="btn btn-outline-secondary btn-sm mb-2"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#bizApprovedVideos"
+      aria-expanded="false"
+      aria-controls="bizApprovedVideos"
+    >
+      My approved testimonial videos
+    </button>
+
+    <div class="collapse mt-2" id="bizApprovedVideos">
+      {% set approved_biz = biz_testimonials | selectattr("status", "equalto", "approved") | list %}
+      {% if approved_biz %}
+        <ul class="list-unstyled mb-0">
+          {% for tv in approved_biz %}
+            <li class="mb-1">
+              <a href="{{ url_for('testimonial_detail_page', testimonial_id=tv.id) }}" target="_blank">
+                {{ tv.title or tv.level_code }} – ${{ tv.lifetime_amount_at_submission }} ({{ tv.level_code }})
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted mb-0">No approved videos yet.</p>
+      {% endif %}
+    </div>
 
       <!-- Invite Modal stays unchanged... -->
       <div class="modal fade" id="inviteModal" tabindex="-1" aria-labelledby="inviteModalLabel" aria-hidden="true">

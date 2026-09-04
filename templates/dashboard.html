@@ -277,20 +277,50 @@
         Upload / Replace testimonial video
       </button>
 
-      <ul class="list-unstyled">
-        {% for tv in member_testimonials %}
-          <li class="mb-1">
-            <strong>Level:</strong> {{ tv.level_code }}
-            &nbsp;|&nbsp;
-            <strong>Status:</strong> {{ tv.status }}
-            &nbsp;|&nbsp;
-            <strong>Amount at submission:</strong>
-            ${{ tv.lifetime_amount_at_submission }}
-          </li>
-        {% else %}
-          <li>No testimonial videos yet.</li>
-        {% endfor %}
-      </ul>
+    <!-- existing list can stay if you like; or you can simplify -->
+    <ul class="list-unstyled mb-3">
+      {% for tv in member_testimonials %}
+        <li class="mb-1">
+          <strong>Level:</strong> {{ tv.level_code }}
+          &nbsp;|&nbsp;
+          <strong>Status:</strong> {{ tv.status }}
+          &nbsp;|&nbsp;
+          <strong>Amount at submission:</strong>
+          ${{ tv.lifetime_amount_at_submission }}
+        </li>
+      {% else %}
+        <li>No testimonial videos yet.</li>
+      {% endfor %}
+    </ul>
+
+    <!-- NEW: collapsible list of *approved* videos with links -->
+    <button
+      class="btn btn-outline-secondary btn-sm mb-2"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#memberApprovedVideos"
+      aria-expanded="false"
+      aria-controls="memberApprovedVideos"
+    >
+      My approved testimonial videos
+    </button>
+
+    <div class="collapse mt-2" id="memberApprovedVideos">
+      {% set approved = member_testimonials | selectattr("status", "equalto", "approved") | list %}
+      {% if approved %}
+        <ul class="list-unstyled mb-0">
+          {% for tv in approved %}
+            <li class="mb-1">
+              <a href="{{ url_for('testimonial_detail_page', testimonial_id=tv.id) }}" target="_blank">
+                {{ tv.title or tv.level_code }} – ${{ tv.lifetime_amount_at_submission }} ({{ tv.level_code }})
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted mb-0">No approved videos yet.</p>
+      {% endif %}
+    </div>
     </section>
   {% endif %}
 </div>
