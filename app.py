@@ -1738,8 +1738,6 @@ def member_upload_params():
     params_to_sign = {
         'timestamp': timestamp,
         'folder': f'testimonials/members/{user.id}',
-        'resource_type': 'video'
-        # you can also add eager transformations etc. later
     }
 
     api_secret = cloudinary.config().api_secret
@@ -1781,7 +1779,6 @@ def business_upload_params():
     params_to_sign = {
         'timestamp': timestamp,
         'folder': f'testimonials/businesses/{biz.id}',
-        'resource_type': 'video'
     }
 
     api_secret = cloudinary.config().api_secret
