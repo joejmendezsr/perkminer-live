@@ -155,10 +155,13 @@ def business_login_required(f):
     return decorated_function
 
 cloudinary.config(
-  cloud_name = 'dmrntlcfd',
-  api_key = '786387955898581',
-  api_secret = 'cLtDoC44BarYjVrr3dIgi_0XiKo'
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', 'dmrntlcfd'),
+    api_key    = os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
 )
+
+if not cloudinary.config().api_key or not cloudinary.config().api_secret:
+    logging.error("Cloudinary API key/secret missing from environment!")
 
 app = Flask(__name__)
 
