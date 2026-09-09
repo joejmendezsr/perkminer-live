@@ -59,10 +59,10 @@
         {% endif %}
 
         {% if current_user.has_role('ecommerce') %}
-            <a href="{{ url_for('admin_verify_ecommerce', biz_id=biz.id) }}"
-               class="btn btn-sm btn-outline-primary">
-              Verify e‑commerce
-            </a>
+          <a href="{{ url_for('admin_verify_ecommerce', biz_id=business.id) }}"
+             class="btn btn-sm btn-outline-primary">
+            Verify e‑commerce
+          </a>
         {% endif %}
 
         {% if current_user.has_role('super_admin') %}
