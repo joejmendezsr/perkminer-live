@@ -7062,21 +7062,15 @@ def view_listing(biz_id):
     has_website = bool(biz.website_url)
     is_ecom = getattr(biz, "is_ecommerce_site", False)
     allows_web = getattr(biz, "allow_website_purchases", False)
+    online_terms = getattr(biz, "online_terms_agreed", False)
+    verified = getattr(biz, "ecommerce_verified", False)
     balance = biz.account_balance or 0.0
 
-    can_shop_online_listing = (
-        has_website and
-        is_ecom and
-        allows_web and
-        balance >= 250.0
-    )
+    # all four flags must be true
+    core_flags_ok = has_website and is_ecom and allows_web and online_terms and verified
 
-    show_online_warning = (
-        has_website and
-        is_ecom and
-        allows_web and
-        balance < 250.0
-    )
+    can_shop_online_listing = core_flags_ok and balance >= 250.0
+    show_online_warning = core_flags_ok and balance < 250.0
 
     # NEW: finalized transaction count
     finalized_tx_count = get_finalized_tx_count_for_business(biz)
