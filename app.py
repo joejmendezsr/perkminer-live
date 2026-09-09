@@ -2255,6 +2255,22 @@ def calculate_business_earnings_split(business, delay_days=7):
     pending = total - available
     return total, available, pending
 
+def get_finalized_tx_count_for_business(business: Business) -> int:
+    """
+    Returns how many finalized transactions this business has.
+    Finalized txs are recorded as BusinessTransaction rows
+    with business_referral_id = business.referral_code.
+    """
+    if not business or not business.referral_code:
+        return 0
+
+    count = (
+        BusinessTransaction.query
+        .filter_by(business_referral_id=business.referral_code)
+        .count()
+    )
+    return count or 0
+
 def get_featured_businesses(lat, lng):
     # 1. Find nearby businesses within 10 miles using the haversine formula
     RADIUS = 10  # miles
@@ -7017,11 +7033,15 @@ def view_listing(biz_id):
         balance < 250.0
     )
 
+    # NEW: finalized transaction count
+    finalized_tx_count = get_finalized_tx_count_for_business(biz)
+
     return render_template(
         "large_listing.html",
         business=biz,
         can_shop_online_listing=can_shop_online_listing,
         show_online_warning=show_online_warning,
+        finalized_tx_count=finalized_tx_count,
     )
 
 @app.route("/finance/combined-detailed-report", methods=["GET"])
