@@ -6123,6 +6123,21 @@ def business_dashboard():
         owner_id=biz.id
     ).order_by(TestimonialVideo.level_code, TestimonialVideo.created_at.desc()).all()
 
+    # --- website / e-commerce status for dashboard ---
+    has_website = bool(biz.website_url)
+    is_ecom = getattr(biz, "is_ecommerce_site", False)
+    allows_web = getattr(biz, "allow_website_purchases", False)
+    online_terms = getattr(biz, "online_terms_agreed", False)
+    verified = getattr(biz, "ecommerce_verified", False)
+
+    # only show status if first 3 flags are true
+    show_website_status = has_website and is_ecom and allows_web and online_terms
+
+    if show_website_status:
+        website_status = "Verified" if verified else "Pending Verification"
+    else:
+        website_status = None
+
     return render_template(
         "business_dashboard.html",
         form=form,
@@ -6153,6 +6168,10 @@ def business_dashboard():
         b2b_share_url=b2b_share_url,
         biz_level_code=biz_level_code,
         biz_testimonials=biz_testimonials,
+
+        # NEW: website status
+        show_website_status=show_website_status,
+        website_status=website_status,
     )
 
 @app.route("/business/logout")
@@ -9698,6 +9717,27 @@ def record_external_sale():
     db.session.commit()
 
     return jsonify({"status": "ok", "summary": summary}), 200
+
+@csrf.exempt
+@app.route("/api/ecommerce/verify-beacon", methods=["POST"])
+def ecommerce_verify_beacon():
+    data = request.get_json(silent=True) or {}
+    business_id = data.get("business_id")
+    secret = data.get("secret")
+
+    expected_secret = os.environ.get("ECOMMERCE_VERIFY_SECRET")
+    if not expected_secret or secret != expected_secret:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+
+    if not business_id:
+        return jsonify({"ok": False, "error": "missing business_id"}), 400
+
+    biz = Business.query.get(business_id)
+    if not biz:
+        return jsonify({"ok": False, "error": "unknown business"}), 404
+
+    # later: log a ping row if you want
+    return jsonify({"ok": True}), 200
 
 @app.errorhandler(500)
 def internal_server_error(error):
