@@ -1412,6 +1412,7 @@ class Business(db.Model):
     lifetime_net_gross = db.Column(db.Numeric(12, 2), default=0)
     lifetime_roi = db.Column(db.Numeric(6, 2), default=0)  # e.g., 900.00 for 900% ROI
     online_terms_agreed = db.Column(db.Boolean, default=False)
+    ecommerce_verified = db.Column(db.Boolean, default=False)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -6683,6 +6684,28 @@ def support_session(interaction_id):
         "support_session.html",
         interaction=interaction,
         messages=messages_with_labels
+    )
+
+@app.route("/admin/business/<int:biz_id>/verify-ecommerce", methods=["GET", "POST"])
+@admin_required
+def admin_verify_ecommerce(biz_id):
+    biz = Business.query.get_or_404(biz_id)
+
+    # only eligible if all 3 flags are true
+    if not (biz.is_ecommerce_site and biz.allow_website_purchases and biz.online_terms_agreed):
+        flash("This business is not eligible for e‑commerce verification yet.", "warning")
+        return redirect(url_for("admin_roles_landing"))  # or some admin list
+
+    if request.method == "POST":
+        # later we can add checks that the tracking script is seen, etc.
+        biz.ecommerce_verified = True
+        db.session.commit()
+        flash(f"{biz.business_name} has been marked as e‑commerce verified.", "success")
+        return redirect(url_for("admin_verify_ecommerce", biz_id=biz.id))
+
+    return render_template(
+        "admin_verify_ecommerce.html",
+        business=biz,
     )
 
 @app.route("/support-dashboard")
