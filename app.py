@@ -2044,6 +2044,17 @@ class Staff(db.Model):
         db.UniqueConstraint("business_id", "email", name="uniq_staff_per_biz"),
     )
 
+class EcommerceVerificationPing(db.Model):
+    __tablename__ = "ecommerce_verification_pings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_agent = db.Column(db.Text)
+    ip_address = db.Column(db.String(64))
+
+    business = db.relationship("Business", backref="ecommerce_verification_pings")
+
 class StaffRegisterForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     name = StringField("Name", validators=[DataRequired()])
@@ -6706,18 +6717,27 @@ def support_session(interaction_id):
         messages=messages_with_labels
     )
 
+from datetime import datetime, timedelta
+
 @app.route("/admin/business/<int:biz_id>/verify-ecommerce", methods=["GET", "POST"])
 @admin_required
 def admin_verify_ecommerce(biz_id):
     biz = Business.query.get_or_404(biz_id)
 
-    # only eligible if all 3 flags are true
     if not (biz.is_ecommerce_site and biz.allow_website_purchases and biz.online_terms_agreed):
         flash("This business is not eligible for e‑commerce verification yet.", "warning")
-        return redirect(url_for("admin_roles_landing"))  # or some admin list
+        return redirect(url_for("admin_roles_landing"))
+
+    # get last 5 pings
+    recent_pings = (
+        EcommerceVerificationPing.query
+        .filter_by(business_id=biz.id)
+        .order_by(EcommerceVerificationPing.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
     if request.method == "POST":
-        # later we can add checks that the tracking script is seen, etc.
         biz.ecommerce_verified = True
         db.session.commit()
         flash(f"{biz.business_name} has been marked as e‑commerce verified.", "success")
@@ -6726,6 +6746,7 @@ def admin_verify_ecommerce(biz_id):
     return render_template(
         "admin_verify_ecommerce.html",
         business=biz,
+        recent_pings=recent_pings,
     )
 
 @app.route("/admin/ecommerce-verifications")
@@ -9739,7 +9760,15 @@ def ecommerce_verify_beacon():
     if not biz:
         return jsonify({"ok": False, "error": "unknown business"}), 404
 
-    # later: log a ping row if you want
+    # log the ping
+    ping = EcommerceVerificationPing(
+        business_id=biz.id,
+        user_agent=request.headers.get("User-Agent"),
+        ip_address=request.remote_addr,
+    )
+    db.session.add(ping)
+    db.session.commit()
+
     return jsonify({"ok": True}), 200
 
 @app.errorhandler(500)
