@@ -6708,6 +6708,28 @@ def admin_verify_ecommerce(biz_id):
         business=biz,
     )
 
+@app.route("/admin/ecommerce-verifications")
+@admin_required
+def admin_ecommerce_verifications():
+    # businesses that are eligible but not yet verified
+    pending_biz = Business.query.filter(
+        Business.is_ecommerce_site.is_(True),
+        Business.allow_website_purchases.is_(True),
+        Business.online_terms_agreed.is_(True),
+        Business.ecommerce_verified.is_(False)
+    ).order_by(Business.business_name.asc()).all()
+
+    # already verified businesses (optional)
+    verified_biz = Business.query.filter(
+        Business.ecommerce_verified.is_(True)
+    ).order_by(Business.business_name.asc()).all()
+
+    return render_template(
+        "admin_ecommerce_verifications.html",
+        pending_biz=pending_biz,
+        verified_biz=verified_biz,
+    )
+
 @app.route("/support-dashboard")
 @role_required("customer_support")
 def support_dashboard():

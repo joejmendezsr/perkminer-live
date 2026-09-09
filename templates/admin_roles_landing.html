@@ -59,9 +59,10 @@
         {% endif %}
 
         {% if current_user.has_role('ecommerce') %}
-          <a href="{{ url_for('admin_verify_ecommerce') }}" class="list-group-item list-group-item-action">
-                <i class="bi bi-chat-left-text"></i> Verify E-Commerce
-            </a>
+          <a href="{{ url_for('admin_ecommerce_verifications') }}"
+             class="list-group-item list-group-item-action">
+            <i class="bi bi-chat-left-text"></i> E‑commerce verifications
+          </a>
         {% endif %}
 
         {% if current_user.has_role('super_admin') %}
