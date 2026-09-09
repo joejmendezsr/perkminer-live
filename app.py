@@ -2029,6 +2029,7 @@ class Invite(db.Model):
 class Staff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+    name = db.Column(db.String(255)),
     email = db.Column(db.String(255), unique=True, nullable=False)
     hashed_password = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default="staff")  # Future roles possible
@@ -7962,8 +7963,10 @@ def staff_new():
 
         temp_password = secrets.token_urlsafe(10)
         hashed_pw = bcrypt.generate_password_hash(temp_password).decode('utf-8')
+
         staff = Staff(
             business_id=session["business_id"],
+            name=name,
             email=email,
             hashed_password=hashed_pw,
             role="staff",
