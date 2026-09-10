@@ -9503,6 +9503,8 @@ def online_marketplace():
         Business.website_url != "",
         Business.is_ecommerce_site.is_(True),
         Business.allow_website_purchases.is_(True),
+        Business.online_terms_agreed.is_(True),   # NEW
+        Business.ecommerce_verified.is_(True),    # NEW
         Business.account_balance >= 250.0
     )
 
@@ -9540,6 +9542,8 @@ def online_marketplace_results():
         Business.website_url != "",
         Business.is_ecommerce_site.is_(True),
         Business.allow_website_purchases.is_(True),
+        Business.online_terms_agreed.is_(True),   # NEW
+        Business.ecommerce_verified.is_(True),    # NEW
         Business.account_balance >= 250.0
     )
 
