@@ -2534,8 +2534,9 @@ def can_instant_payout(account_id: str, amount_cents: int):
 
         instant_available_cents = 0
         for b in balance.instant_available:
-            if b.get("currency") == "usd":
-                instant_available_cents += int(b.get("amount", 0))
+            data = b.to_dict()  # convert resource to plain dict
+            if data.get("currency") == "usd":
+                instant_available_cents += int(data.get("amount", 0))
 
         if instant_available_cents < amount_cents:
             return (
@@ -8582,7 +8583,7 @@ def press_release():
 
 @app.route("/new-featured-businesses")
 def new_featured_businesses():
-    return render_template('your_template.html', business=business)
+    return render_template('your_template.html')
 
 @app.route('/onboard/stripe')
 @login_required
