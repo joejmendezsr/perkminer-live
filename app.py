@@ -1289,6 +1289,8 @@ class User(db.Model, UserMixin):
     profile_photo = db.Column(db.String(200))
     roles = db.relationship('Role', secondary='user_roles', backref='users')
     is_suspended = db.Column(db.Boolean, default=False)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
     investor_share = db.Column(db.Numeric(5, 4), default=0)
     investor_total_earnings = db.Column(db.Numeric(12, 6), default=0)
     investor_withdrawn_total = db.Column(db.Numeric(12, 2), default=0)
@@ -9455,6 +9457,79 @@ def stats():
     }
     return jsonify(data), 200
 
+from flask import request, jsonify
+from sqlalchemy import func
+
+@app.route("/api/search/nearby-stats", methods=["GET"])
+def nearby_stats():
+    """
+    Returns counts of members and businesses within a given distance
+    of the provided lat/lng.
+    - distance in miles (default 10)
+    - if category is provided, business count is restricted to that category
+    """
+
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    distance = request.args.get("distance", type=float)  # miles
+    category = request.args.get("category", type=str)
+
+    # basic validation
+    if lat is None or lng is None:
+        return jsonify({"error": "lat and lng are required"}), 400
+
+    # default distance if missing/invalid
+    if not distance or distance <= 0:
+        distance = 10.0
+
+    # haversine in miles, same pattern you already use
+    def haversine_expr(model_lat, model_lng):
+        return (
+            3959 * func.acos(
+                func.least(
+                    1.0,
+                    func.cos(func.radians(lat)) *
+                    func.cos(func.radians(model_lat)) *
+                    func.cos(func.radians(model_lng) - func.radians(lng)) +
+                    func.sin(func.radians(lat)) *
+                    func.sin(func.radians(model_lat))
+                )
+            )
+        )
+
+    # ---- members within distance (using User.latitude/longitude) ----
+    user_haversine = haversine_expr(User.latitude, User.longitude)
+
+    member_query = (
+        User.query
+        .filter(User.email_confirmed.is_(True))
+        .filter(User.latitude.isnot(None), User.longitude.isnot(None))
+        .filter(user_haversine <= distance)
+    )
+
+    members_within = member_query.count()
+
+    # ---- businesses within distance (optionally by category) ----
+    biz_haversine = haversine_expr(Business.latitude, Business.longitude)
+
+    biz_query = (
+        Business.query
+        .filter(Business.status == "approved")
+        .filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
+        .filter(biz_haversine <= distance)
+    )
+
+    if category:
+        biz_query = biz_query.filter(Business.category == category)
+
+    businesses_within = biz_query.count()
+
+    return jsonify({
+        "distance": distance,
+        "membersWithin": members_within,
+        "businessesWithin": businesses_within
+    })
+
 @app.route("/shop/link/<int:interaction_id>")
 @login_required
 def shop_link(interaction_id):
@@ -9683,6 +9758,35 @@ def testimonial_detail_page(testimonial_id):
 @login_required
 def video_testimonials_dashboard():
     return render_template("video_testimonials_dashboard.html")
+
+from flask_login import login_required, current_user
+from flask import request, jsonify
+
+@csrf.exempt
+@app.route("/api/me/location", methods=["POST"])
+@login_required
+def update_my_location():
+    data = request.get_json() or {}
+
+    lat = data.get("lat")
+    lng = data.get("lng")
+
+    # basic validation
+    try:
+        lat = float(lat)
+        lng = float(lng)
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid lat/lng"}), 400
+
+    # optional: sanity bounds
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"error": "lat/lng out of range"}), 400
+
+    current_user.latitude = lat
+    current_user.longitude = lng
+    db.session.commit()
+
+    return jsonify({"ok": True})
 
 @csrf.exempt
 @app.route("/api/record_external_sale", methods=["POST"])
