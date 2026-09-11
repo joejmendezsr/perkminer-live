@@ -2289,14 +2289,6 @@ def get_finalized_tx_count_for_business(business: Business) -> int:
     return count or 0
 
 def get_stripe_payout_status(user):
-    """
-    Returns a dict like:
-    {
-      "connected": False/True,
-      "payouts_status": "not_connected" | "active" | "pending_requirements" | "disabled",
-      "requirements_due": [...],
-    }
-    """
     if not user.stripe_account_id:
         return {
             "connected": False,
@@ -2307,7 +2299,6 @@ def get_stripe_payout_status(user):
     try:
         acct = stripe.Account.retrieve(user.stripe_account_id)
 
-        # DEBUG: log what we actually get back from Stripe
         logging.info(
             "Stripe acct %s capabilities=%s requirements.currently_due=%s",
             user.stripe_account_id,
@@ -2316,29 +2307,14 @@ def get_stripe_payout_status(user):
             if getattr(acct, "requirements", None) else None,
         )
 
-        # primary capability we *intended* to use
-        primary_cap = getattr(
-            acct.capabilities,
-            "merchant_outbound_transfers_external_account",
-            None
-        )
-
-        # fallback: standard transfers capability
         transfers_cap = getattr(acct.capabilities, "transfers", None)
 
-        # decide payouts_status
-        if primary_cap == "active":
+        if transfers_cap == "active":
             payouts_status = "active"
-        elif primary_cap == "pending":
+        elif transfers_cap == "pending":
             payouts_status = "pending_requirements"
         else:
-            # if primary_cap is inactive/None, fall back to transfers
-            if transfers_cap == "active":
-                payouts_status = "active"
-            elif transfers_cap == "pending":
-                payouts_status = "pending_requirements"
-            else:
-                payouts_status = "disabled"
+            payouts_status = "disabled"
 
         requirements_due = acct.requirements.currently_due or []
 
@@ -2357,14 +2333,6 @@ def get_stripe_payout_status(user):
         }
 
 def get_business_stripe_payout_status(business):
-    """
-    Returns a dict like:
-    {
-      "connected": False/True,
-      "payouts_status": "not_connected" | "active" | "pending_requirements" | "disabled",
-      "requirements_due": [...],
-    }
-    """
     if not business.stripe_account_id:
         return {
             "connected": False,
@@ -2375,7 +2343,6 @@ def get_business_stripe_payout_status(business):
     try:
         acct = stripe.Account.retrieve(business.stripe_account_id)
 
-        # DEBUG: log what we actually get back from Stripe for this business
         logging.info(
             "Stripe biz acct %s capabilities=%s requirements.currently_due=%s",
             business.stripe_account_id,
@@ -2384,29 +2351,14 @@ def get_business_stripe_payout_status(business):
             if getattr(acct, "requirements", None) else None,
         )
 
-        # primary capability we *intended* to use
-        primary_cap = getattr(
-            acct.capabilities,
-            "merchant_outbound_transfers_external_account",
-            None
-        )
-
-        # fallback: standard transfers capability
         transfers_cap = getattr(acct.capabilities, "transfers", None)
 
-        # decide payouts_status
-        if primary_cap == "active":
+        if transfers_cap == "active":
             payouts_status = "active"
-        elif primary_cap == "pending":
+        elif transfers_cap == "pending":
             payouts_status = "pending_requirements"
         else:
-            # if primary_cap is inactive/None, fall back to transfers
-            if transfers_cap == "active":
-                payouts_status = "active"
-            elif transfers_cap == "pending":
-                payouts_status = "pending_requirements"
-            else:
-                payouts_status = "disabled"
+            payouts_status = "disabled"
 
         requirements_due = acct.requirements.currently_due or []
 
@@ -2432,7 +2384,7 @@ def ensure_business_payout_capability(business: Business):
         stripe.Account.modify(
             business.stripe_account_id,
             capabilities={
-                "merchant_outbound_transfers_external_account": {"requested": True},
+                "transfers": {"requested": True},
             },
         )
     except Exception as e:
@@ -8655,7 +8607,6 @@ def onboard_stripe():
             capabilities={
                 "card_payments": {"requested": True},
                 "transfers": {"requested": True},
-                "merchant_outbound_transfers_external_account": {"requested": True},
             },
         )
 
@@ -8705,7 +8656,6 @@ def onboard_business_stripe():
             capabilities={
                 "card_payments": {"requested": True},
                 "transfers": {"requested": True},
-                "merchant_outbound_transfers_external_account": {"requested": True},
             },
         )
         business.stripe_account_id = account.id
