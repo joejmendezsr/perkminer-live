@@ -2294,7 +2294,7 @@ def get_stripe_payout_status(user):
     {
       "connected": False/True,
       "payouts_status": "not_connected" | "active" | "pending_requirements" | "disabled",
-      "requirements_due": [...],  # list of fields, maybe empty
+      "requirements_due": [...],
     }
     """
     if not user.stripe_account_id:
@@ -2307,21 +2307,38 @@ def get_stripe_payout_status(user):
     try:
         acct = stripe.Account.retrieve(user.stripe_account_id)
 
-        cap = getattr(
+        # DEBUG: log what we actually get back from Stripe
+        logging.info(
+            "Stripe acct %s capabilities=%s requirements.currently_due=%s",
+            user.stripe_account_id,
+            getattr(acct, "capabilities", None),
+            getattr(acct, "requirements", None).currently_due
+            if getattr(acct, "requirements", None) else None,
+        )
+
+        # primary capability we *intended* to use
+        primary_cap = getattr(
             acct.capabilities,
             "merchant_outbound_transfers_external_account",
             None
         )
 
-        # Stripe returns: "active", "inactive", "pending", or None
-        if cap == "active":
+        # fallback: standard transfers capability
+        transfers_cap = getattr(acct.capabilities, "transfers", None)
+
+        # decide payouts_status
+        if primary_cap == "active":
             payouts_status = "active"
-        elif cap == "pending":
+        elif primary_cap == "pending":
             payouts_status = "pending_requirements"
-        elif cap in ("inactive", None):
-            payouts_status = "disabled"
         else:
-            payouts_status = "disabled"
+            # if primary_cap is inactive/None, fall back to transfers
+            if transfers_cap == "active":
+                payouts_status = "active"
+            elif transfers_cap == "pending":
+                payouts_status = "pending_requirements"
+            else:
+                payouts_status = "disabled"
 
         requirements_due = acct.requirements.currently_due or []
 
@@ -2332,7 +2349,6 @@ def get_stripe_payout_status(user):
         }
 
     except Exception as e:
-        # log, but don't crash dashboard
         logging.error("Error fetching Stripe account for user %s: %s", user.id, e)
         return {
             "connected": True,
@@ -2341,6 +2357,14 @@ def get_stripe_payout_status(user):
         }
 
 def get_business_stripe_payout_status(business):
+    """
+    Returns a dict like:
+    {
+      "connected": False/True,
+      "payouts_status": "not_connected" | "active" | "pending_requirements" | "disabled",
+      "requirements_due": [...],
+    }
+    """
     if not business.stripe_account_id:
         return {
             "connected": False,
@@ -2351,20 +2375,38 @@ def get_business_stripe_payout_status(business):
     try:
         acct = stripe.Account.retrieve(business.stripe_account_id)
 
-        cap = getattr(
+        # DEBUG: log what we actually get back from Stripe for this business
+        logging.info(
+            "Stripe biz acct %s capabilities=%s requirements.currently_due=%s",
+            business.stripe_account_id,
+            getattr(acct, "capabilities", None),
+            getattr(acct, "requirements", None).currently_due
+            if getattr(acct, "requirements", None) else None,
+        )
+
+        # primary capability we *intended* to use
+        primary_cap = getattr(
             acct.capabilities,
             "merchant_outbound_transfers_external_account",
             None
         )
 
-        if cap == "active":
+        # fallback: standard transfers capability
+        transfers_cap = getattr(acct.capabilities, "transfers", None)
+
+        # decide payouts_status
+        if primary_cap == "active":
             payouts_status = "active"
-        elif cap == "pending":
+        elif primary_cap == "pending":
             payouts_status = "pending_requirements"
-        elif cap in ("inactive", None):
-            payouts_status = "disabled"
         else:
-            payouts_status = "disabled"
+            # if primary_cap is inactive/None, fall back to transfers
+            if transfers_cap == "active":
+                payouts_status = "active"
+            elif transfers_cap == "pending":
+                payouts_status = "pending_requirements"
+            else:
+                payouts_status = "disabled"
 
         requirements_due = acct.requirements.currently_due or []
 
