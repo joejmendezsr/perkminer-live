@@ -2521,33 +2521,39 @@ def calculate_investor_earnings_split(user, delay_days=7):
     pending = total - available
     return total, available, pending
 
-def can_instant_payout(account_id: str, amount_cents: int):
+def platform_has_funds(amount_cents: int, currency: str = "usd") -> bool:
+    """
+    Check if the PLATFORM Stripe account has at least amount_cents available
+    in the given currency.
+    """
     try:
-        balance = stripe.Balance.retrieve(stripe_account=account_id)
+        balance = stripe.Balance.retrieve()  # platform balance
 
-        # log Stripe's actual buckets
+        available_cents = 0
+        for b in balance.available:
+            data = b.to_dict()
+            if data.get("currency") == currency:
+                available_cents += int(data.get("amount", 0))
+
         logging.info(
-            "Stripe balance for %s: available=%s instant_available=%s pending=%s",
-            account_id,
-            balance.available,
-            balance.instant_available,
-            balance.pending,
+            "Platform balance: available=%s cents in %s",
+            available_cents,
+            currency,
         )
 
-        instant_available_cents = 0
-        for b in balance.instant_available:
-            data = b.to_dict()
-            if data.get("currency") == "usd":
-                instant_available_cents += int(data.get("amount", 0))
+        return available_cents >= amount_cents
 
-        if instant_available_cents < amount_cents:
-            return (
-                False,
-                "Your instant-available balance is too low for this payout. "
-                "You can try a smaller instant withdrawal or use the standard payout.",
-            )
+    except Exception as e:
+        logging.error("Error checking platform balance: %r", e)
+        # be safe and return False on error
+        return False
 
-        # 2) check for at least one card external account
+def connected_account_has_debit_card(account_id: str) -> (bool, str):
+    """
+    Returns (ok, message).
+    ok == True if the connected account has at least one card external account.
+    """
+    try:
         external_accounts = stripe.Account.list_external_accounts(
             account_id,
             object="card"
@@ -2562,8 +2568,7 @@ def can_instant_payout(account_id: str, amount_cents: int):
         return True, "ok"
 
     except Exception as e:
-        # log full error, but show a generic message to the user
-        print("DEBUG: can_instant_payout failed:", repr(e))
+        logging.error("Error checking debit card for account %s: %r", account_id, e)
         return (
             False,
             "We couldn't verify your instant payout setup. "
@@ -8925,14 +8930,6 @@ def withdraw():
 @app.route('/withdraw_instant', methods=['POST'])
 @login_required
 def withdraw_instant():
-    """
-    Instant member withdrawal.
-    Flow:
-      1) check DB (7-day delay + $10 min)
-      2) transfer platform -> member connected account
-      3) instant payout from connected account
-      4) update withdrawn_total / earnings_balance
-    """
     print("DEBUG: /withdraw_instant (member instant) called for user", current_user.id)
 
     MIN_PAYOUT = Decimal("10.00")
@@ -9001,10 +8998,20 @@ def withdraw_instant():
 
     amount_cents = int(payout_amount * 100)
 
-    # pre-check for instant payouts (balance + debit card)
-    ok, reason = can_instant_payout(user.stripe_account_id, amount_cents)
+    # 1) check platform has enough funds
+    if not platform_has_funds(amount_cents):
+        print("DEBUG: withdraw_instant blocked – platform balance too low for", amount_cents, "cents")
+        flash(
+            "We are temporarily unable to process instant payouts. "
+            "Please try again later or use a standard payout.",
+            "warning"
+        )
+        return redirect(url_for('dashboard'))
+
+    # 2) check connected account has a debit card
+    ok, reason = connected_account_has_debit_card(user.stripe_account_id)
     if not ok:
-        print("DEBUG: can_instant_payout blocked member instant payout:", reason)
+        print("DEBUG: withdraw_instant blocked – no debit card:", reason)
         flash(reason, "warning")
         return redirect(url_for('dashboard'))
 
@@ -9028,6 +9035,7 @@ def withdraw_instant():
             stripe_account=user.stripe_account_id
         )
 
+        # update DB
         user.withdrawn_total = (user.withdrawn_total or Decimal("0")) + balance_to_withdraw
 
         user.grand_total_earnings = total_earnings
@@ -9046,7 +9054,6 @@ def withdraw_instant():
             "success"
         )
     except Exception as e:
-        # here you could also inspect e for specific Stripe error codes if desired
         print("DEBUG: withdraw_instant failed with exception:", repr(e))
         flash(
             "Instant withdrawal failed. Please make sure you have a debit card added "
@@ -9171,9 +9178,6 @@ def business_withdraw():
 
 @app.route('/business/withdraw_instant', methods=['POST'])
 def business_withdraw_instant():
-    """
-    Instant business withdrawal.
-    """
     print("DEBUG: /business/withdraw_instant (instant) called")
 
     MIN_PAYOUT = Decimal("10.00")
@@ -9226,7 +9230,6 @@ def business_withdraw_instant():
 
     print("DEBUG: business balance_to_withdraw (instant) =", balance_to_withdraw)
 
-    # instant payout fee: 1.1% + $0.50
     fee = (balance_to_withdraw * Decimal("0.011") + Decimal("0.50")).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
@@ -9242,10 +9245,20 @@ def business_withdraw_instant():
 
     amount_cents = int(payout_amount * 100)
 
-    # pre-check for instant payouts (balance + debit card)
-    ok, reason = can_instant_payout(biz.stripe_account_id, amount_cents)
+    # 1) platform funds check
+    if not platform_has_funds(amount_cents):
+        print("DEBUG: business_withdraw_instant blocked – platform balance too low for", amount_cents, "cents")
+        flash(
+            "We are temporarily unable to process instant payouts. "
+            "Please try again later or use a standard payout.",
+            "warning"
+        )
+        return redirect(url_for('business_dashboard'))
+
+    # 2) debit card check
+    ok, reason = connected_account_has_debit_card(biz.stripe_account_id)
     if not ok:
-        print("DEBUG: can_instant_payout blocked business instant payout:", reason)
+        print("DEBUG: business_withdraw_instant blocked – no debit card:", reason)
         flash(reason, "warning")
         return redirect(url_for('business_dashboard'))
 
@@ -9403,9 +9416,6 @@ def withdraw_investor():
 @app.route('/withdraw_investor_instant', methods=['POST'])
 @login_required
 def withdraw_investor_instant():
-    """
-    Instant silent investor withdrawal.
-    """
     print("DEBUG: /withdraw_investor_instant (instant) called for user", current_user.id)
 
     MIN_PAYOUT = Decimal("10.00")
@@ -9465,10 +9475,20 @@ def withdraw_investor_instant():
 
     amount_cents = int(payout_amount * 100)
 
-    # pre-check for instant payouts (balance + debit card)
-    ok, reason = can_instant_payout(user.stripe_account_id, amount_cents)
+    # 1) platform funds check
+    if not platform_has_funds(amount_cents):
+        print("DEBUG: withdraw_investor_instant blocked – platform balance too low for", amount_cents, "cents")
+        flash(
+            "We are temporarily unable to process instant payouts. "
+            "Please try again later or use a standard payout.",
+            "warning"
+        )
+        return redirect(url_for('dashboard'))
+
+    # 2) debit card check
+    ok, reason = connected_account_has_debit_card(user.stripe_account_id)
     if not ok:
-        print("DEBUG: can_instant_payout blocked investor instant payout:", reason)
+        print("DEBUG: withdraw_investor_instant blocked – no debit card:", reason)
         flash(reason, "warning")
         return redirect(url_for('dashboard'))
 
