@@ -2522,19 +2522,21 @@ def calculate_investor_earnings_split(user, delay_days=7):
     return total, available, pending
 
 def can_instant_payout(account_id: str, amount_cents: int):
-    """
-    Safety checks before attempting an instant payout:
-      1) confirm instant-available balance in USD is >= amount_cents
-      2) confirm at least one debit-card external account exists
-    Returns: (ok: bool, message: str)
-    """
     try:
-        # 1) get balance for this connected account
         balance = stripe.Balance.retrieve(stripe_account=account_id)
+
+        # log Stripe's actual buckets
+        logging.info(
+            "Stripe balance for %s: available=%s instant_available=%s pending=%s",
+            account_id,
+            balance.available,
+            balance.instant_available,
+            balance.pending,
+        )
 
         instant_available_cents = 0
         for b in balance.instant_available:
-            data = b.to_dict()  # convert resource to plain dict
+            data = b.to_dict()
             if data.get("currency") == "usd":
                 instant_available_cents += int(data.get("amount", 0))
 
@@ -2542,7 +2544,7 @@ def can_instant_payout(account_id: str, amount_cents: int):
             return (
                 False,
                 "Your instant-available balance is too low for this payout. "
-                "You can try a smaller instant withdrawal or use the standard payout."
+                "You can try a smaller instant withdrawal or use the standard payout.",
             )
 
         # 2) check for at least one card external account
