@@ -9767,9 +9767,10 @@ from flask import request, jsonify
 @login_required
 def update_my_location():
     data = request.get_json() or {}
-
     lat = data.get("lat")
     lng = data.get("lng")
+
+    print("DEBUG /api/me/location payload:", data)  # or logging.info(...)
 
     # basic validation
     try:
