@@ -1281,6 +1281,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(200), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     name = db.Column(db.String(100))
+    country = db.Column(db.String(2), default="US")  # NEW: 2-letter ISO code: US, CA, MX
     referral_code = db.Column(db.String(32), unique=True)
     sponsor_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     business_referral_id = db.Column(db.String(32))
@@ -1414,6 +1415,7 @@ class Business(db.Model):
     lifetime_net_gross = db.Column(db.Numeric(12, 2), default=0)
     lifetime_roi = db.Column(db.Numeric(6, 2), default=0)  # e.g., 900.00 for 900% ROI
     online_terms_agreed = db.Column(db.Boolean, default=False)
+    country = db.Column(db.String(2), default="US")
     ecommerce_verified = db.Column(db.Boolean, default=False)
     theme_type = db.Column(db.String(50))
 
@@ -2285,6 +2287,114 @@ def get_finalized_tx_count_for_business(business: Business) -> int:
         .count()
     )
     return count or 0
+
+def get_stripe_payout_status(user):
+    """
+    Returns a dict like:
+    {
+      "connected": False/True,
+      "payouts_status": "not_connected" | "active" | "pending_requirements" | "disabled",
+      "requirements_due": [...],  # list of fields, maybe empty
+    }
+    """
+    if not user.stripe_account_id:
+        return {
+            "connected": False,
+            "payouts_status": "not_connected",
+            "requirements_due": [],
+        }
+
+    try:
+        acct = stripe.Account.retrieve(user.stripe_account_id)
+
+        cap = getattr(
+            acct.capabilities,
+            "merchant_outbound_transfers_external_account",
+            None
+        )
+
+        # Stripe returns: "active", "inactive", "pending", or None
+        if cap == "active":
+            payouts_status = "active"
+        elif cap == "pending":
+            payouts_status = "pending_requirements"
+        elif cap in ("inactive", None):
+            payouts_status = "disabled"
+        else:
+            payouts_status = "disabled"
+
+        requirements_due = acct.requirements.currently_due or []
+
+        return {
+            "connected": True,
+            "payouts_status": payouts_status,
+            "requirements_due": requirements_due,
+        }
+
+    except Exception as e:
+        # log, but don't crash dashboard
+        logging.error("Error fetching Stripe account for user %s: %s", user.id, e)
+        return {
+            "connected": True,
+            "payouts_status": "disabled",
+            "requirements_due": [],
+        }
+
+def get_business_stripe_payout_status(business):
+    if not business.stripe_account_id:
+        return {
+            "connected": False,
+            "payouts_status": "not_connected",
+            "requirements_due": [],
+        }
+
+    try:
+        acct = stripe.Account.retrieve(business.stripe_account_id)
+
+        cap = getattr(
+            acct.capabilities,
+            "merchant_outbound_transfers_external_account",
+            None
+        )
+
+        if cap == "active":
+            payouts_status = "active"
+        elif cap == "pending":
+            payouts_status = "pending_requirements"
+        elif cap in ("inactive", None):
+            payouts_status = "disabled"
+        else:
+            payouts_status = "disabled"
+
+        requirements_due = acct.requirements.currently_due or []
+
+        return {
+            "connected": True,
+            "payouts_status": payouts_status,
+            "requirements_due": requirements_due,
+        }
+
+    except Exception as e:
+        logging.error("Error fetching Stripe account for business %s: %s", business.id, e)
+        return {
+            "connected": True,
+            "payouts_status": "disabled",
+            "requirements_due": [],
+        }
+
+def ensure_business_payout_capability(business: Business):
+    if not business.stripe_account_id:
+        return
+
+    try:
+        stripe.Account.modify(
+            business.stripe_account_id,
+            capabilities={
+                "merchant_outbound_transfers_external_account": {"requested": True},
+            },
+        )
+    except Exception as e:
+        logging.error("Error requesting payout capability for business %s: %s", business.id, e)
 
 def get_featured_businesses(lat, lng):
     # 1. Find nearby businesses within 10 miles using the haversine formula
@@ -4234,6 +4344,8 @@ def dashboard():
         owner_id=user.id
     ).order_by(TestimonialVideo.level_code, TestimonialVideo.created_at.desc()).all()
 
+    stripe_status = get_stripe_payout_status(current_user)
+
     return render_template(
         "dashboard.html",
         form=form,
@@ -4269,6 +4381,7 @@ def dashboard():
 
         share_url=share_url,
         business_share_url=business_share_url,
+        stripe_status=stripe_status,
         member_level_code=member_level_code,
         member_testimonials=member_testimonials,
     )
@@ -6152,6 +6265,8 @@ def business_dashboard():
     else:
         website_status = None
 
+    stripe_status = get_business_stripe_payout_status(biz)
+
     return render_template(
         "business_dashboard.html",
         form=form,
@@ -6182,6 +6297,8 @@ def business_dashboard():
         b2b_share_url=b2b_share_url,
         biz_level_code=biz_level_code,
         biz_testimonials=biz_testimonials,
+
+        stripe_status=stripe_status,
 
         # NEW: website status
         show_website_status=show_website_status,
@@ -8476,27 +8593,45 @@ def new_featured_businesses():
 @app.route('/onboard/stripe')
 @login_required
 def onboard_stripe():
-    # Check if user has a Stripe Connect account
+    def get_country_for_user(user):
+        """
+        Return a valid 2-letter country code for Stripe Connect.
+        Allowed: US, CA, MX. Fallback: US.
+        """
+        code = (user.country or "").upper()
+        if code in ("US", "CA", "MX"):
+            return code
+        return "US"
+
     if not current_user.stripe_account_id:
-        # Create a new Express account
+        country_code = get_country_for_user(current_user)
+
         account = stripe.Account.create(
             type="express",
             email=current_user.email,
+            country=country_code,
+            capabilities={
+                "card_payments": {"requested": True},
+                "transfers": {"requested": True},
+                "merchant_outbound_transfers_external_account": {"requested": True},
+            },
         )
+
         current_user.stripe_account_id = account.id
         db.session.commit()
-    # Create Stripe onboarding link
+
     account_link = stripe.AccountLink.create(
         account=current_user.stripe_account_id,
         refresh_url=url_for('onboard_stripe', _external=True),
-        return_url=url_for('dashboard', _external=True),  # or any page you want after onboarding
-        type='account_onboarding'
+        return_url=url_for('dashboard', _external=True),
+        type='account_onboarding',
     )
+
     return redirect(account_link.url)
 
 @app.route('/onboard/business/stripe')
 def onboard_business_stripe():
-    # Check business login (adjust logic if you use something else)
+    # Check business login
     business_id = session.get('business_id')
     if not business_id:
         flash("Please log in as a business.")
@@ -8507,21 +8642,39 @@ def onboard_business_stripe():
         flash("Business not found.")
         return redirect(url_for('business_login'))
 
+    def get_country_for_business(biz):
+        """
+        Return a valid 2-letter country code for Stripe Connect.
+        Allowed: US, CA, MX. Fallback: US.
+        """
+        code = (getattr(biz, "country", None) or "").upper()
+        if code in ("US", "CA", "MX"):
+            return code
+        return "US"
+
     # Create Stripe Express account if not already created
     if not business.stripe_account_id:
+        country_code = get_country_for_business(business)
+
         account = stripe.Account.create(
             type="express",
-            email=business.business_email  # or use business's admin email
+            email=business.business_email,
+            country=country_code,
+            capabilities={
+                "card_payments": {"requested": True},
+                "transfers": {"requested": True},
+                "merchant_outbound_transfers_external_account": {"requested": True},
+            },
         )
         business.stripe_account_id = account.id
         db.session.commit()
 
-    # Create onboarding link
+    # Create onboarding link (works to complete requirements too)
     account_link = stripe.AccountLink.create(
         account=business.stripe_account_id,
         refresh_url=url_for('onboard_business_stripe', _external=True),
-        return_url=url_for('business_dashboard', _external=True),  # Or wherever you want to redirect after onboarding
-        type='account_onboarding'
+        return_url=url_for('business_dashboard', _external=True),
+        type='account_onboarding',
     )
     return redirect(account_link.url)
 

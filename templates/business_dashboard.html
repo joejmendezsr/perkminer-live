@@ -910,12 +910,48 @@
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
   </div>
 
-  <div>
-    {% if not business.stripe_account_id %}
-      <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-primary w-100">
-        Set Up Payouts (Bank Transfer)
-      </a>
-    {% else %}
+<div>
+  {% if not business.stripe_account_id %}
+    <!-- No Stripe account yet -->
+    <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-primary w-100">
+      Set Up Payouts (Bank Transfer)
+    </a>
+
+  {% else %}
+    <!-- Stripe account exists: show payout status -->
+    <div class="mb-2">
+      {% if not stripe_status.connected %}
+        <span class="badge bg-secondary">Stripe not connected</span>
+
+      {% elif stripe_status.payouts_status == 'active' %}
+        <span class="badge bg-success">Stripe payouts active</span>
+
+      {% elif stripe_status.payouts_status == 'pending_requirements' %}
+        <span class="badge bg-warning text-dark">Stripe action required</span>
+        <div class="text-muted small mt-1">
+          Stripe needs more information before enabling payouts.
+        </div>
+        <div class="mt-1">
+          <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-sm btn-warning w-100">
+            Finish Stripe setup
+          </a>
+        </div>
+
+      {% else %}
+        <span class="badge bg-danger">Stripe payouts disabled</span>
+        <div class="text-muted small mt-1">
+          Your Stripe account is not ready for payouts. Please review your details in Stripe.
+        </div>
+        <div class="mt-1">
+          <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-sm btn-danger w-100">
+            Update Stripe account
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    {# only show withdrawal options if payouts are actually active #}
+    {% if stripe_status.payouts_status == 'active' %}
       {% set biz_net = business.earnings_balance|float %}
       {% if biz_net >= 10 %}
         {# Standard business payout #}
@@ -954,8 +990,13 @@
           You need at least $10 in available business earnings to withdraw.
         </small>
       {% endif %}
+    {% else %}
+      {# payouts not active: show info instead of withdraw form #}
+      <small class="text-muted">
+        Once your Stripe payouts are active, you’ll be able to withdraw your business earnings here.
+      </small>
     {% endif %}
-  </div>
+  {% endif %}
 </div>
 
 <div class="card p-4 mb-4">
