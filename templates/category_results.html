@@ -327,14 +327,13 @@ document.addEventListener('DOMContentLoaded', function() {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
 
-        // NEW: send last-known member location (if logged in)
+        // NEW: save member location
         fetch("/api/me/location", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lat: lat, lng: lng })
         }).catch(function(err) {
-          // optional: ignore errors silently
-          console.error("location update failed", err);
+          console.error("category: location update failed", err);
         });
 
         var category = "{{ category|urlencode }}";

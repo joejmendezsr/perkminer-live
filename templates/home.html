@@ -1039,5 +1039,28 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (!navigator.geolocation) {
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+
+    fetch("/api/me/location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat: lat, lng: lng })
+    }).catch(function(err) {
+      console.error("home: location update failed", err);
+    });
+  }, function(error) {
+    // user denied or error; ignore
+  });
+});
+</script>
+
 </body>
 </html>
