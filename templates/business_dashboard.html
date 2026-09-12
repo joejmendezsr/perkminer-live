@@ -908,125 +908,93 @@
     Earnings Balance: ${{ "{:,.2f}".format(business.earnings_balance or 0) }}
   </div>
 
-  <div>
-    {% if not business.stripe_account_id %}
-      <!-- No Stripe account yet -->
-      <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-primary w-100">
-        Set Up Payouts (Bank Transfer)
-      </a>
+<div>
+  {% if not business.stripe_account_id %}
+    <!-- No Stripe account yet -->
+    <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-primary w-100">
+      Set Up Payouts (Bank Transfer)
+    </a>
 
-    {% else %}
-      <!-- Stripe account exists: show payout status -->
-      <div class="mb-2">
-        {% if not stripe_status.connected %}
-          <span class="badge bg-secondary">Stripe not connected</span>
+  {% else %}
+    <!-- Stripe account exists: show payout status -->
+    <div class="mb-2">
+      {% if not stripe_status.connected %}
+        <span class="badge bg-secondary">Stripe not connected</span>
 
-        {% elif stripe_status.payouts_status == 'active' %}
-          <span class="badge bg-success">Stripe payouts active</span>
+      {% elif stripe_status.payouts_status == 'active' %}
+        <span class="badge bg-success">Stripe payouts active</span>
 
-        {% elif stripe_status.payouts_status == 'pending_requirements' %}
-          <span class="badge bg-warning text-dark">Stripe action required</span>
-          <div class="text-muted small mt-1">
-            Stripe needs more information before enabling payouts.
+      {% elif stripe_status.payouts_status == 'pending_requirements' %}
+        <span class="badge bg-warning text-dark">Stripe action required</span>
+        <div class="text-muted small mt-1">
+          Stripe needs more information before enabling payouts.
+        </div>
+        <div class="mt-1">
+          <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-sm btn-warning w-100">
+            Finish Stripe setup
+          </a>
+        </div>
+
+      {% else %}
+        <span class="badge bg-danger">Stripe payouts disabled</span>
+        <div class="text-muted small mt-1">
+          Your Stripe account is not ready for payouts. Please review your details in Stripe.
+        </div>
+        <div class="mt-1">
+          <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-sm btn-danger w-100">
+            Update Stripe account
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    {# only show withdrawal options if payouts are actually active #}
+    {% if stripe_status.payouts_status == 'active' %}
+      {% set biz_net = business.earnings_balance|float %}
+      {% if biz_net >= 10 %}
+        {# Standard business payout #}
+        {% set std_fee_biz = biz_net * 0.0025 + 0.35 %}
+        {% set std_net_biz = biz_net - std_fee_biz %}
+        <div class="mb-3 border rounded p-3">
+          <div class="fw-bold mb-1">
+            <i class="bi bi-bank"></i> Standard Payout (1-10 business days)
           </div>
-          <div class="mt-1">
-            <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-sm btn-warning w-100">
-              Finish Stripe setup
-            </a>
+          <div class="text-muted mb-1" style="font-size:0.97em;">
+            Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_biz) }} (0.25% + $0.35)<br>
+            If you withdraw full balance, you would receive:
+            <b>${{ '{:,.2f}'.format(std_net_biz) }}</b>
           </div>
-
-        {% else %}
-          <span class="badge bg-danger">Stripe payouts disabled</span>
-          <div class="text-muted small mt-1">
-            Your Stripe account is not ready for payouts. Please review your details in Stripe.
-          </div>
-          <div class="mt-1">
-            <a href="{{ url_for('onboard_business_stripe') }}" class="btn btn-sm btn-danger w-100">
-              Update Stripe account
-            </a>
-          </div>
-        {% endif %}
-      </div>
-
-      {# only show withdrawal options if payouts are actually active #}
-      {% if stripe_status.payouts_status == 'active' %}
-        {% set biz_net = business.earnings_balance|float %}
-        {% if biz_net >= 10 %}
-          {# Standard business payout #}
-          {% set std_fee_biz = biz_net * 0.0025 + 0.35 %}
-          {% set std_net_biz = biz_net - std_fee_biz %}
-          <div class="mb-3 border rounded p-3">
-            <div class="fw-bold mb-1">
-              <i class="bi bi-bank"></i> Standard Payout (1-10 business days)
+          <form action="{{ url_for('business_withdraw') }}" method="POST" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="input-group mb-2">
+              <span class="input-group-text">$</span>
+              <input
+                type="number"
+                name="amount"
+                class="form-control"
+                step="0.01"
+                min="10"
+                max="{{ '{:.2f}'.format(biz_net) }}"
+                placeholder="Amount (leave blank for full)"
+              >
             </div>
-            <div class="text-muted mb-1" style="font-size:0.97em;">
-              Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_biz) }} (0.25% + $0.35)<br>
-              If you withdraw full balance, you would receive:
-              <b>${{ '{:,.2f}'.format(std_net_biz) }}</b>
-            </div>
-            <form action="{{ url_for('business_withdraw') }}" method="POST" class="d-inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <div class="input-group mb-2">
-                <span class="input-group-text">$</span>
-                <input
-                  type="number"
-                  name="amount"
-                  class="form-control"
-                  step="0.01"
-                  min="10"
-                  max="{{ '{:.2f}'.format(biz_net) }}"
-                  placeholder="Amount (leave blank for full)"
-                >
-              </div>
-              <button type="submit" class="btn btn-success w-100">
-                Withdraw to Bank (Standard)
-              </button>
-            </form>
-          </div>
-
-          {# Instant business payout #}
-          {% set inst_fee = biz_net * 0.011 + 0.50 %}
-          {% set inst_net = biz_net - inst_fee %}
-          <div class="border rounded p-3 bg-warning-subtle">
-            <div class="fw-bold mb-1">
-              <i class="bi bi-lightning-fill text-warning"></i> Instant Payout (Instant, 24/7)
-            </div>
-            <div class="text-muted mb-1" style="font-size:0.97em;">
-              Stripe instant payout fee: ${{ '{:,.2f}'.format(inst_fee) }} (1.1% + $0.50)<br>
-              If you withdraw full balance, you would receive:
-              <b>${{ '{:,.2f}'.format(inst_net) }}</b>
-            </div>
-            <form action="{{ url_for('business_withdraw_instant') }}" method="POST" class="d-inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <div class="input-group mb-2">
-                <span class="input-group-text">$</span>
-                <input
-                  type="number"
-                  name="amount"
-                  class="form-control"
-                  step="0.01"
-                  min="10"
-                  max="{{ '{:.2f}'.format(biz_net) }}"
-                  placeholder="Amount (leave blank for full)"
-                >
-              </div>
-              <button type="submit" class="btn btn-warning w-100">
-                Withdraw Instantly <i class="bi bi-lightning-charge-fill"></i>
-              </button>
-            </form>
-          </div>
-        {% else %}
-          <small class="text-muted">
-            You need at least $10 in available business earnings to withdraw.
-          </small>
-        {% endif %}
+            <button type="submit" class="btn btn-success w-100">
+              Withdraw to Bank (Standard)
+            </button>
+          </form>
+        </div>
       {% else %}
         <small class="text-muted">
-          Once your Stripe payouts are active, you’ll be able to withdraw your business earnings here.
+          You need at least $10 in available business earnings to withdraw.
         </small>
       {% endif %}
+    {% else %}
+      <small class="text-muted">
+        Once your Stripe payouts are active, you'll be able to withdraw your business earnings here.
+      </small>
     {% endif %}
-  </div>
+  {% endif %}
+</div>
 </div>
 
 <div class="card p-4 mb-4">

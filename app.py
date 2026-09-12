@@ -8856,17 +8856,28 @@ def withdraw():
     amount_cents = int(payout_amount * 100)
 
     try:
+        # Optional: check connected account status
+        acct = stripe.Account.retrieve(user.stripe_account_id)
+        print("DEBUG: member connected account flags:", {
+            "id": acct.id,
+            "payouts_enabled": acct.get("payouts_enabled"),
+            "charges_enabled": acct.get("charges_enabled"),
+            "capabilities": acct.get("capabilities"),
+            "requirements_currently_due": acct.get("requirements", {}).get("currently_due"),
+        })
+
         # 5) transfer from platform -> member connected account
-        print("DEBUG: creating Transfer for", amount_cents, "cents to", user.stripe_account_id)
+        print("DEBUG: creating Member Transfer (standard) for", amount_cents, "cents to", user.stripe_account_id)
         transfer = stripe.Transfer.create(
             amount=amount_cents,
             currency='usd',
             destination=user.stripe_account_id,
             description=f"PerkMiner member earnings transfer for user {user.id}"
         )
+        print("DEBUG: Member Transfer created:", transfer.id, "status:", transfer.status)
 
-        # 6) standard payout from connected account to bank
-        print("DEBUG: creating Payout for", amount_cents, "cents from", user.stripe_account_id)
+        # 6) standard payout from connected account to bank/debit
+        print("DEBUG: creating Member Payout (standard) for", amount_cents, "cents from", user.stripe_account_id)
         payout = stripe.Payout.create(
             amount=amount_cents,
             currency='usd',
@@ -8874,6 +8885,7 @@ def withdraw():
             statement_descriptor="PerkMiner Payout",
             stripe_account=user.stripe_account_id,
         )
+        print("DEBUG: Member Payout created:", payout.id, payout.status, payout.destination)
 
         # 7) mark withdrawn on our side using the *gross* we removed from their earnings
         user.withdrawn_total = (user.withdrawn_total or Decimal("0")) + balance_to_withdraw
@@ -9113,8 +9125,10 @@ def business_withdraw():
             currency='usd',
             method='standard',
             statement_descriptor="PerkMiner Biz Payout",
-            stripe_account=biz.stripe_account_id
+            stripe_account=biz.stripe_account_id,
         )
+
+        print("DEBUG: Business Payout created:", payout.id, payout.status, payout.destination)
 
         biz.withdrawn_total = (biz.withdrawn_total or Decimal("0")) + balance_to_withdraw
 
@@ -9265,6 +9279,11 @@ def business_withdraw_instant():
 def withdraw_investor():
     """
     Standard silent investor withdrawal (bank transfer, 1–3 business days).
+    Flow:
+      1) check DB (7-day delay + $10 min)
+      2) transfer platform -> investor connected account
+      3) standard payout from connected account
+      4) update investor_withdrawn_total / investor balances
     """
     print("DEBUG: /withdraw_investor (standard) called for user", current_user.id)
 
@@ -9326,13 +9345,24 @@ def withdraw_investor():
     amount_cents = int(payout_amount * 100)
 
     try:
-        print("DEBUG: creating Investor Transfer for", amount_cents, "cents to", user.stripe_account_id)
+        # Optional: check connected account flags
+        acct = stripe.Account.retrieve(user.stripe_account_id)
+        print("DEBUG: investor connected account flags:", {
+            "id": acct.id,
+            "payouts_enabled": acct.get("payouts_enabled"),
+            "charges_enabled": acct.get("charges_enabled"),
+            "capabilities": acct.get("capabilities"),
+            "requirements_currently_due": acct.get("requirements", {}).get("currently_due"),
+        })
+
+        print("DEBUG: creating Investor Transfer (standard) for", amount_cents, "cents to", user.stripe_account_id)
         transfer = stripe.Transfer.create(
             amount=amount_cents,
             currency='usd',
             destination=user.stripe_account_id,
             description="PerkMiner Silent Investor Withdrawal (standard)"
         )
+        print("DEBUG: Investor Transfer created:", transfer.id, "status:", transfer.status)
 
         print("DEBUG: creating Investor Payout (standard) for", amount_cents, "cents from", user.stripe_account_id)
         payout = stripe.Payout.create(
@@ -9342,6 +9372,7 @@ def withdraw_investor():
             statement_descriptor="PerkMiner Investor Payout",
             stripe_account=user.stripe_account_id
         )
+        print("DEBUG: Investor Payout created:", payout.id, payout.status, payout.destination)
 
         user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal("0")) + balance_to_withdraw
 
