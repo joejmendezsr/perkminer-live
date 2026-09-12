@@ -8858,12 +8858,13 @@ def withdraw():
     try:
         # Optional: check connected account status
         acct = stripe.Account.retrieve(user.stripe_account_id)
+        acct_dict = acct.to_dict()
         print("DEBUG: member connected account flags:", {
-            "id": acct.id,
-            "payouts_enabled": acct.get("payouts_enabled"),
-            "charges_enabled": acct.get("charges_enabled"),
-            "capabilities": acct.get("capabilities"),
-            "requirements_currently_due": acct.get("requirements", {}).get("currently_due"),
+            "id": acct_dict.get("id"),
+            "payouts_enabled": acct_dict.get("payouts_enabled"),
+            "charges_enabled": acct_dict.get("charges_enabled"),
+            "capabilities": acct_dict.get("capabilities"),
+            "requirements_currently_due": (acct_dict.get("requirements") or {}).get("currently_due"),
         })
 
         # 5) transfer from platform -> member connected account
@@ -9347,12 +9348,13 @@ def withdraw_investor():
     try:
         # Optional: check connected account flags
         acct = stripe.Account.retrieve(user.stripe_account_id)
-        print("DEBUG: investor connected account flags:", {
-            "id": acct.id,
-            "payouts_enabled": acct.get("payouts_enabled"),
-            "charges_enabled": acct.get("charges_enabled"),
-            "capabilities": acct.get("capabilities"),
-            "requirements_currently_due": acct.get("requirements", {}).get("currently_due"),
+        acct_dict = acct.to_dict()
+        print("DEBUG: member connected account flags:", {
+            "id": acct_dict.get("id"),
+            "payouts_enabled": acct_dict.get("payouts_enabled"),
+            "charges_enabled": acct_dict.get("charges_enabled"),
+            "capabilities": acct_dict.get("capabilities"),
+            "requirements_currently_due": (acct_dict.get("requirements") or {}).get("currently_due"),
         })
 
         print("DEBUG: creating Investor Transfer (standard) for", amount_cents, "cents to", user.stripe_account_id)
