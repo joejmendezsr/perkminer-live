@@ -8781,18 +8781,24 @@ import uuid
 @login_required
 def withdraw():
     """
-    Member withdrawal (currently instant payout).
-    Adds:
-      - withdrawal_in_progress lock on User
-      - Stripe idempotency key to Payout
+    Standard member withdrawal (1–3 business days).
+    Fee: 0.5% + $0.35
+    Flow:
+      1) lock via user.withdrawal_in_progress
+      2) recompute earnings (7-day delay)
+      3) standard payout from connected account
+      4) update withdrawn_total / earnings_balance
     """
-    print("DEBUG: /withdraw (member) called for user", current_user.id)
+    print("DEBUG: /withdraw (member standard) called for user", current_user.id)
 
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("10.00")
+    FEE_RATE = Decimal("0.005")   # 0.5%
+    FIXED_FEE = Decimal("0.35")
+
     user = current_user
 
     if not user.stripe_account_id:
-        flash("Please set up your Stripe payouts first.")
+        flash("Please set up your Stripe payouts first.", "warning")
         return redirect(url_for('onboard_stripe'))
 
     # prevent concurrent withdrawals
@@ -8809,7 +8815,7 @@ def withdraw():
         total_earnings, available_earnings, pending_earnings = calculate_user_earnings_split(
             user, delay_days=7
         )
-        net_available = available_earnings - (user.withdrawn_total or Decimal(0))
+        net_available = available_earnings - (user.withdrawn_total or Decimal("0"))
 
         print("DEBUG: member net_available =", net_available,
               "total_earnings =", total_earnings,
@@ -8817,28 +8823,62 @@ def withdraw():
               "pending_earnings =", pending_earnings)
 
         if net_available < MIN_PAYOUT:
-            flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
+            flash(
+                f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.",
+                "warning"
+            )
             return redirect(url_for('dashboard'))
 
-        balance_to_withdraw = net_available
+        # allow optional amount from form, else full net_available
+        amt_str = request.form.get("amount", "").strip()
+        if amt_str:
+            try:
+                requested = Decimal(amt_str)
+            except Exception:
+                print("DEBUG: withdraw blocked – invalid amount:", amt_str)
+                flash("Invalid withdrawal amount.", "warning")
+                return redirect(url_for('dashboard'))
 
-        # instant payout fee (your existing logic)
-        fee = balance_to_withdraw * Decimal("0.011")  # 1.1% instant payout fee
-        payout_amount = balance_to_withdraw - fee
+            if requested < MIN_PAYOUT:
+                print("DEBUG: withdraw blocked – requested", requested, "<", MIN_PAYOUT)
+                flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+                return redirect(url_for('dashboard'))
+
+            if requested > net_available:
+                print("DEBUG: withdraw blocked – requested", requested, ">", net_available)
+                flash("You cannot withdraw more than your available balance.", "warning")
+                return redirect(url_for('dashboard'))
+
+            balance_to_withdraw = requested
+        else:
+            balance_to_withdraw = net_available
+
+        print("DEBUG: member balance_to_withdraw =", balance_to_withdraw)
+
+        # standard payout fee: 0.5% + $0.35
+        fee = (balance_to_withdraw * FEE_RATE + FIXED_FEE).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        payout_amount = (balance_to_withdraw - fee).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+
+        print("DEBUG: member fee =", fee, "payout_amount =", payout_amount)
 
         if payout_amount <= 0:
-            flash("Insufficient balance after the instant payout fee is deducted.", "warning")
+            flash("Insufficient balance after the payout fee is deducted.", "warning")
             return redirect(url_for('dashboard'))
 
         amount_cents = int(payout_amount * 100)
 
+        # idempotency key to protect against duplicate charges at Stripe level
         idem_key = f"member_withdraw_{user.id}_{int(time.time())}_{amount_cents}_{uuid.uuid4().hex}"
         print("DEBUG: member withdraw idempotency_key =", idem_key)
 
         payout = stripe.Payout.create(
             amount=amount_cents,
             currency='usd',
-            method='instant',
+            method='standard',
             statement_descriptor="PerkMiner Payout",
             stripe_account=user.stripe_account_id,
             idempotency_key=idem_key,
@@ -8846,12 +8886,20 @@ def withdraw():
         payout_dict = payout.to_dict()
         print("DEBUG: Member Payout created:", payout_dict.get("id"), payout_dict.get("status"))
 
-        # mark the withdrawn funds
-        user.withdrawn_total = (user.withdrawn_total or Decimal(0)) + balance_to_withdraw
+        # mark withdrawn funds
+        user.withdrawn_total = (user.withdrawn_total or Decimal("0")) + balance_to_withdraw
         user.earnings_balance = available_earnings - user.withdrawn_total
 
         db.session.commit()
-        flash(f"Withdrawal of ${payout_amount:.2f} initiated! Stripe instant payout fee: ${fee:.2f} deducted.", "success")
+
+        print("DEBUG: member withdraw success – withdrawn_total now", user.withdrawn_total,
+              "earnings_balance now", user.earnings_balance)
+
+        flash(
+            f"Withdrawal of ${payout_amount:.2f} initiated! "
+            f"Payout fee: ${fee:.2f} deducted.",
+            "success"
+        )
     except Exception as e:
         print("DEBUG: member withdraw failed with exception:", repr(e))
         flash(f"Failed to withdraw: {e}", "danger")
@@ -8861,17 +8909,25 @@ def withdraw():
 
     return redirect(url_for('dashboard'))
 
+
 @app.route('/business/withdraw', methods=['POST'])
 def business_withdraw():
     """
     Standard business withdrawal (bank transfer).
-    Protects against duplicate submissions using:
-      - withdrawal_in_progress flag in DB
-      - Stripe idempotency key
+    Fee: 0.5% + $0.35
+    Flow:
+      1) lock via biz.withdrawal_in_progress
+      2) recompute business earnings (7-day delay)
+      3) transfer platform -> business connected account
+      4) standard payout from connected account
+      5) update withdrawn_total / earnings_balance
     """
     print("DEBUG: /business/withdraw (standard) called")
 
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("10.00")
+    FEE_RATE = Decimal("0.005")   # 0.5%
+    FIXED_FEE = Decimal("0.35")
+
     business_id = session.get('business_id')
     if not business_id:
         flash("Please log in as a business.", "warning")
@@ -8887,13 +8943,12 @@ def business_withdraw():
         flash("Please set up your Stripe payouts first.", "warning")
         return redirect(url_for('onboard_business_stripe'))
 
-    # prevent concurrent / duplicate withdrawals
+    # prevent concurrent withdrawals
     if getattr(biz, "withdrawal_in_progress", False):
         print("DEBUG: business_withdraw blocked – withdrawal already in progress for biz", biz.id)
         flash("A withdrawal is already being processed. Please wait a moment and refresh.", "warning")
         return redirect(url_for('business_dashboard'))
 
-    # lock it
     biz.withdrawal_in_progress = True
     db.session.commit()
 
@@ -8907,6 +8962,7 @@ def business_withdraw():
             flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
             return redirect(url_for('business_dashboard'))
 
+        # optional amount
         amt_str = request.form.get("amount", "").strip()
         if amt_str:
             try:
@@ -8932,25 +8988,27 @@ def business_withdraw():
 
         print("DEBUG: business balance_to_withdraw =", balance_to_withdraw)
 
-        fee = (balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")).quantize(
+        # 0.5% + $0.35 fee
+        fee = (balance_to_withdraw * FEE_RATE + FIXED_FEE).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
         payout_amount = (balance_to_withdraw - fee).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
 
-        print("DEBUG: business standard fee =", fee, "payout_amount =", payout_amount)
+        print("DEBUG: business fee =", fee, "payout_amount =", payout_amount)
 
         if payout_amount <= 0:
-            flash("Insufficient balance after the standard payout fee is deducted.", "warning")
+            flash("Insufficient balance after the payout fee is deducted.", "warning")
             return redirect(url_for('business_dashboard'))
 
         amount_cents = int(payout_amount * 100)
 
-        # Stripe idempotency key: one per (biz, timestamp, amount)
+        # idempotency key
         idem_key = f"biz_withdraw_{biz.id}_{int(time.time())}_{amount_cents}_{uuid.uuid4().hex}"
         print("DEBUG: business withdraw idempotency_key =", idem_key)
 
+        # 1) Transfer platform -> business connected account
         print("DEBUG: creating Business Transfer for", amount_cents, "cents to", biz.stripe_account_id)
         transfer = stripe.Transfer.create(
             amount=amount_cents,
@@ -8961,6 +9019,18 @@ def business_withdraw():
         )
         transfer_dict = transfer.to_dict()
         print("DEBUG: Business Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
+
+        # 2) standard payout from connected account to bank/debit
+        print("DEBUG: creating Business Payout (standard) for", amount_cents, "cents from", biz.stripe_account_id)
+        payout = stripe.Payout.create(
+            amount=amount_cents,
+            currency='usd',
+            method='standard',
+            statement_descriptor="PerkMiner Biz Payout",
+            stripe_account=biz.stripe_account_id,
+        )
+        payout_dict = payout.to_dict()
+        print("DEBUG: Business Payout created:", payout_dict.get("id"), payout_dict.get("status"), payout_dict.get("destination"))
 
         # update DB
         biz.withdrawn_total = (biz.withdrawn_total or Decimal("0")) + balance_to_withdraw
@@ -8976,35 +9046,42 @@ def business_withdraw():
 
         flash(
             f"Business withdrawal of ${payout_amount:.2f} initiated! "
-            f"Stripe fee: ${fee:.2f} deducted.",
+            f"Payout fee: ${fee:.2f} deducted.",
             "success"
         )
     except Exception as e:
         print("DEBUG: business_withdraw failed with exception:", repr(e))
         flash(f"Failed to withdraw: {e}", "danger")
     finally:
-        # always unlock
         biz.withdrawal_in_progress = False
         db.session.commit()
 
     return redirect(url_for('business_dashboard'))
+
 
 @app.route('/withdraw_investor', methods=['POST'])
 @login_required
 def withdraw_investor():
     """
     Standard silent investor withdrawal (bank transfer).
-    Adds:
-      - withdrawal_in_progress lock on User
-      - Stripe idempotency key on Transfer
+    Fee: 0.5% + $0.35
+    Flow:
+      1) lock via user.withdrawal_in_progress
+      2) recompute investor earnings (7-day delay)
+      3) transfer platform -> investor connected account
+      4) standard payout from connected account
+      5) update investor_withdrawn_total / investor balances
     """
     print("DEBUG: /withdraw_investor (standard) called for user", current_user.id)
 
-    MIN_PAYOUT = Decimal("10")
+    MIN_PAYOUT = Decimal("10.00")
+    FEE_RATE = Decimal("0.005")   # 0.5%
+    FIXED_FEE = Decimal("0.35")
+
     user = current_user
 
     if not user.stripe_account_id:
-        flash("Please set up your Stripe payouts first.")
+        flash("Please set up your Stripe payouts first.", "warning")
         return redirect(url_for('onboard_stripe'))
 
     if getattr(user, "withdrawal_in_progress", False):
@@ -9025,15 +9102,49 @@ def withdraw_investor():
               "total =", investor_total, "available =", investor_available, "pending =", investor_pending)
 
         if net_available < MIN_PAYOUT:
-            flash(f"You need at least ${MIN_PAYOUT} in silent investor earnings (after the 7-day delay) to withdraw.", "warning")
+            flash(
+                f"You need at least ${MIN_PAYOUT} in silent investor earnings (after the 7-day delay) to withdraw.",
+                "warning"
+            )
             return redirect(url_for('dashboard'))
 
-        balance_to_withdraw = net_available
-        fee = balance_to_withdraw * Decimal("0.0025") + Decimal("0.35")
-        payout_amount = (balance_to_withdraw - fee).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        amt_str = request.form.get("amount", "").strip()
+        if amt_str:
+            try:
+                requested = Decimal(amt_str)
+            except Exception:
+                print("DEBUG: withdraw_investor blocked – invalid amount:", amt_str)
+                flash("Invalid withdrawal amount.", "warning")
+                return redirect(url_for('dashboard'))
+
+            if requested < MIN_PAYOUT:
+                print("DEBUG: withdraw_investor blocked – requested", requested, "<", MIN_PAYOUT)
+                flash(f"Minimum withdrawal amount is ${MIN_PAYOUT}.", "warning")
+                return redirect(url_for('dashboard'))
+
+            if requested > net_available:
+                print("DEBUG: withdraw_investor blocked – requested", requested, ">", net_available)
+                flash("You cannot withdraw more than your available balance.", "warning")
+                return redirect(url_for('dashboard'))
+
+            balance_to_withdraw = requested
+        else:
+            balance_to_withdraw = net_available
+
+        print("DEBUG: investor balance_to_withdraw =", balance_to_withdraw)
+
+        # 0.5% + $0.35 fee
+        fee = (balance_to_withdraw * FEE_RATE + FIXED_FEE).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        payout_amount = (balance_to_withdraw - fee).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+
+        print("DEBUG: investor fee =", fee, "payout_amount =", payout_amount)
 
         if payout_amount <= 0:
-            flash("Insufficient balance after the transfer fee is deducted.", "warning")
+            flash("Insufficient balance after the payout fee is deducted.", "warning")
             return redirect(url_for('dashboard'))
 
         amount_cents = int(payout_amount * 100)
@@ -9041,6 +9152,7 @@ def withdraw_investor():
         idem_key = f"investor_withdraw_{user.id}_{int(time.time())}_{amount_cents}_{uuid.uuid4().hex}"
         print("DEBUG: investor withdraw idempotency_key =", idem_key)
 
+        print("DEBUG: creating Investor Transfer (standard) for", amount_cents, "cents to", user.stripe_account_id)
         transfer = stripe.Transfer.create(
             amount=amount_cents,
             currency='usd',
@@ -9051,11 +9163,30 @@ def withdraw_investor():
         transfer_dict = transfer.to_dict()
         print("DEBUG: Investor Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
 
+        print("DEBUG: creating Investor Payout (standard) for", amount_cents, "cents from", user.stripe_account_id)
+        payout = stripe.Payout.create(
+            amount=amount_cents,
+            currency='usd',
+            method='standard',
+            statement_descriptor="PerkMiner Investor Payout",
+            stripe_account=user.stripe_account_id
+        )
+        payout_dict = payout.to_dict()
+        print("DEBUG: Investor Payout created:", payout_dict.get("id"), payout_dict.get("status"), payout_dict.get("destination"))
+
         user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal("0")) + balance_to_withdraw
         user.investor_earnings_balance = investor_available - user.investor_withdrawn_total
 
         db.session.commit()
-        flash(f"Silent investor withdrawal of ${payout_amount:.2f} initiated! Stripe fee: ${fee:.2f} deducted.", "success")
+
+        print("DEBUG: withdraw_investor success – withdrawn_total now", user.investor_withdrawn_total,
+              "investor_earnings_balance now", user.investor_earnings_balance)
+
+        flash(
+            f"Silent investor withdrawal of ${payout_amount:.2f} initiated! "
+            f"Payout fee: ${fee:.2f} deducted.",
+            "success"
+        )
     except Exception as e:
         print("DEBUG: withdraw_investor failed with exception:", repr(e))
         flash(f"Silent investor withdrawal failed: {e}", "danger")

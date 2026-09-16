@@ -953,14 +953,14 @@
       {% set biz_net = business.earnings_balance|float %}
       {% if biz_net >= 10 %}
         {# Standard business payout #}
-        {% set std_fee_biz = biz_net * 0.0025 + 0.35 %}
+        {% set std_fee_biz = biz_net * 0.005 + 0.35 %}
         {% set std_net_biz = biz_net - std_fee_biz %}
         <div class="mb-3 border rounded p-3">
           <div class="fw-bold mb-1">
             <i class="bi bi-bank"></i> Standard Payout (1-10 business days)
           </div>
           <div class="text-muted mb-1" style="font-size:0.97em;">
-            Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_biz) }} (0.25% + $0.35)<br>
+            Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_biz) }} (0.5% + $0.35)<br>
             If you withdraw full balance, you would receive:
             <b>${{ '{:,.2f}'.format(std_net_biz) }}</b>
           </div>

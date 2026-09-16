@@ -720,14 +720,14 @@
       {% set earnings = current_user.earnings_balance|float %}
       {% if earnings >= 10 %}
         <!-- Standard Payout (Regular Earnings) -->
-        {% set std_fee = earnings * 0.0025 + 0.35 %}
+        {% set std_fee = earnings * 0.005 + 0.35 %}
         {% set std_net = earnings - std_fee %}
         <div class="mb-3 border rounded p-3">
           <div class="fw-bold mb-1">
             <i class="bi bi-bank"></i> Standard Payout (1-3 business days)
           </div>
           <div class="text-muted mb-1" style="font-size:0.97em;">
-            Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee) }} (0.25% + $0.35)<br>
+            Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee) }} (0.5% + $0.35)<br>
             You will receive: <b>${{ '{:,.2f}'.format(std_net) }}</b>
           </div>
           <form action="{{ url_for('withdraw') }}" method="POST" class="d-inline">
@@ -805,14 +805,14 @@
           {% set inv_net = current_user.investor_earnings_balance|float %}
           {% if inv_net >= 10 %}
             <!-- standard investor payout -->
-            {% set std_fee_inv = inv_net * 0.0025 + 0.35 %}
+            {% set std_fee_inv = inv_net * 0.005 + 0.35 %}
             {% set std_net_inv = inv_net - std_fee_inv %}
             <div class="mb-3 border rounded p-3">
               <div class="fw-bold mb-1">
                 <i class="bi bi-bank"></i> Investor Standard Payout (1-3 business days) - Note: If you withdraw regular earnings, you must wait for regular earnings to clear in order to withdraw silent investor earnings.
               </div>
               <div class="text-muted mb-1" style="font-size:0.95em;">
-                Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_inv) }} (0.25% + $0.35)<br>
+                Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_inv) }} (0.5% + $0.35)<br>
                 If you withdraw full balance, you would receive: <b>${{ '{:,.2f}'.format(std_net_inv) }}</b>
               </div>
               <form action="{{ url_for('withdraw_investor') }}" method="POST" class="d-inline">
