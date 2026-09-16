@@ -978,9 +978,10 @@
                 placeholder="Amount (leave blank for full)"
               >
             </div>
-            <button type="submit" class="btn btn-success w-100">
-              Withdraw to Bank (Standard)
-            </button>
+              <button type="submit" class="btn btn-success w-100"
+                      onclick="this.disabled=true; this.form.submit();">
+                Withdraw (Standard)
+              </button>
           </form>
         </div>
       {% else %}

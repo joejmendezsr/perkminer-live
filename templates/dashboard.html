@@ -744,9 +744,10 @@
                 placeholder="Amount (leave blank for full)"
               >
             </div>
-            <button type="submit" class="btn btn-success w-100">
-              Withdraw (Standard)
-            </button>
+              <button type="submit" class="btn btn-success w-100"
+                      onclick="this.disabled=true; this.form.submit();">
+                Withdraw (Standard)
+              </button>
           </form>
         </div>
       {% else %}
@@ -808,7 +809,7 @@
             {% set std_net_inv = inv_net - std_fee_inv %}
             <div class="mb-3 border rounded p-3">
               <div class="fw-bold mb-1">
-                <i class="bi bi-bank"></i> Investor Standard Payout (1-3 business days)
+                <i class="bi bi-bank"></i> Investor Standard Payout (1-3 business days) - Note: If you withdraw regular earnings, you must wait for regular earnings to clear in order to withdraw silent investor earnings.
               </div>
               <div class="text-muted mb-1" style="font-size:0.95em;">
                 Stripe transfer fee: ${{ '{:,.2f}'.format(std_fee_inv) }} (0.25% + $0.35)<br>
@@ -828,9 +829,10 @@
                     placeholder="Amount (leave blank for full)"
                   >
                 </div>
-                <button type="submit" class="btn btn-success w-100">
-                  Withdraw Investor Earnings (Standard)
-                </button>
+                  <button type="submit" class="btn btn-success w-100"
+                          onclick="this.disabled=true; this.form.submit();">
+                    Withdraw (Standard)
+                  </button>
               </form>
             </div>
           {% else %}
