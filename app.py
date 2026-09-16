@@ -8875,8 +8875,9 @@ def withdraw():
             destination=user.stripe_account_id,
             description=f"PerkMiner member earnings transfer for user {user.id}"
         )
-        transfer_id = transfer.get("id")
-        transfer_status = transfer.get("status")
+        transfer_dict = transfer.to_dict()
+        transfer_id = transfer_dict.get("id")
+        transfer_status = transfer_dict.get("status")
         print("DEBUG: Member Transfer created:", transfer_id, "status:", transfer_status)
 
         # 6) standard payout from connected account to bank/debit
@@ -8888,9 +8889,10 @@ def withdraw():
             statement_descriptor="PerkMiner Payout",
             stripe_account=user.stripe_account_id,
         )
-        payout_id = payout.get("id")
-        payout_status = payout.get("status")
-        payout_destination = payout.get("destination")
+        payout_dict = payout.to_dict()
+        payout_id = payout_dict.get("id")
+        payout_status = payout_dict.get("status")
+        payout_destination = payout_dict.get("destination")
         print("DEBUG: Member Payout created:", payout_id, payout_status, payout_destination)
 
         # 7) mark withdrawn on our side using the *gross* we removed from their earnings
