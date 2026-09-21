@@ -604,6 +604,70 @@
         <textarea class="form-control" id="perks" name="perks" rows="2" maxlength="500" placeholder="List your business perks here">{{ form_data.perks or '' }}</textarea>
         <div class="form-text">At least one perk required. Separate with commas or new lines.</div>
       </div>
+
+      <!-- Photos from Social Media -->
+      <div class="col-12 mt-3">
+        <button
+          class="btn btn-outline-primary mb-2"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#photosCollapse"
+          aria-expanded="false"
+          aria-controls="photosCollapse">
+          Add Photos from Social Media or Web
+          <br>(click to add image URLs for your gallery)
+        </button>
+
+        <div class="collapse mt-2" id="photosCollapse">
+          <small class="text-muted d-block mb-2">
+            Paste direct image URLs (for example from Facebook, Instagram, or other hosts).  
+            Recommended size: 800 × 800 pixels (square) for best display.
+          </small>
+
+          <div id="photos-list">
+            {# prepare up to 6 current values from draft/live #}
+            {% set photos = [
+              business.draft_photo1_url or business.photo1_url,
+              business.draft_photo2_url or business.photo2_url,
+              business.draft_photo3_url or business.photo3_url,
+              business.draft_photo4_url or business.photo4_url,
+              business.draft_photo5_url or business.photo5_url,
+              business.draft_photo6_url or business.photo6_url
+            ] %}
+
+            {# always show at least 3 fields; show more if there is data #}
+            {% for i in range(0, 6) %}
+              {% if photos[i] or i < 3 %}
+                <div class="input-group mb-2 photo-field" data-index="{{ i }}">
+                  <span class="input-group-text">Photo {{ i+1 }}</span>
+                  <input
+                    type="url"
+                    class="form-control"
+                    name="photo_url_{{ i+1 }}"
+                    placeholder="https://example.com/your-image.jpg"
+                    value="{{ photos[i] or '' }}">
+                  <button
+                    class="btn btn-outline-danger photo-remove"
+                    type="button"
+                    onclick="removePhotoField(this)"
+                    {% if i < 3 %}disabled{% endif %}>
+                    &minus;
+                  </button>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <button
+            class="btn btn-outline-primary"
+            type="button"
+            id="addPhotoBtn">
+            + Add Photo
+          </button>
+          <small class="text-muted d-block mt-1">Max 6 photos.</small>
+        </div>
+      </div>
+
       <div class="col-12 mb-3">
         <label class="form-label">Listing Type <span class="text-danger">*</span></label>
         <select class="form-select" name="listing_type" required>
@@ -1437,6 +1501,62 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
+});
+</script>
+
+<script>
+  // existing window.addEventListener('DOMContentLoaded', function() { ... }) is already there.
+  // we’ll extend it, not replace it.
+
+window.addEventListener('DOMContentLoaded', function() {
+  // ... your existing previewListingBtn code is here ...
+
+  // ---- photos dynamic fields (3–6) ----
+  const photosList = document.getElementById('photos-list');
+  const addPhotoBtn = document.getElementById('addPhotoBtn');
+
+  function currentPhotoCount() {
+    return photosList ? photosList.querySelectorAll('.photo-field').length : 0;
+  }
+
+  window.removePhotoField = function (btn) {
+    const field = btn.closest('.photo-field');
+    if (!field) return;
+    const idx = parseInt(field.getAttribute('data-index'), 10);
+    // only allow removing fields 4–6 (index >= 3)
+    if (idx >= 3) {
+      field.remove();
+    }
+  };
+
+  if (addPhotoBtn && photosList) {
+    addPhotoBtn.addEventListener('click', function () {
+      let count = currentPhotoCount();
+      if (count >= 6) return;
+
+      const index = count; // next index
+      const wrapper = document.createElement('div');
+      wrapper.className = 'input-group mb-2 photo-field';
+      wrapper.setAttribute('data-index', index);
+
+      wrapper.innerHTML = `
+        <span class="input-group-text">Photo ${index + 1}</span>
+        <input
+          type="url"
+          class="form-control"
+          name="photo_url_${index + 1}"
+          placeholder="https://example.com/your-image.jpg">
+        <button
+          class="btn btn-outline-danger photo-remove"
+          type="button"
+          onclick="removePhotoField(this)">
+          &minus;
+        </button>
+      `;
+
+      photosList.appendChild(wrapper);
+    });
+  }
 });
 </script>
 
