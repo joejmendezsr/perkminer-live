@@ -6081,6 +6081,26 @@ def business_dashboard():
                 upload_result = cloudinary.uploader.upload(file)
                 biz.draft_profile_photo = upload_result.get('secure_url')
                 updated = True
+
+            # --- photos: save to draft_* when approved ---
+            for i in range(1, 7):
+                form_val = (request.form.get(f"photo_url_{i}", "") or "").strip()
+                draft_attr = f"draft_photo{i}_url"
+                live_attr = f"photo{i}_url"
+
+                # if the value is unchanged vs existing draft/live, skip
+                current_val = getattr(biz, draft_attr) or getattr(biz, live_attr)
+                if form_val == current_val:
+                    continue
+
+                # store new value in draft; clear draft if empty
+                if form_val:
+                    setattr(biz, draft_attr, form_val)
+                else:
+                    setattr(biz, draft_attr, None)
+
+                updated = True
+
         else:
             for field in editable_fields:
                 val = request.form.get(field)
@@ -6098,6 +6118,19 @@ def business_dashboard():
             if file and allowed_file(file.filename):
                 upload_result = cloudinary.uploader.upload(file)
                 biz.profile_photo = upload_result.get('secure_url')
+                updated = True
+
+            # --- photos: save directly to live fields when not yet approved ---
+            for i in range(1, 7):
+                form_val = (request.form.get(f"photo_url_{i}", "") or "").strip()
+                live_attr = f"photo{i}_url"
+
+                # if unchanged, skip
+                current_val = getattr(biz, live_attr)
+                if form_val == (current_val or ""):
+                    continue
+
+                setattr(biz, live_attr, form_val if form_val else None)
                 updated = True
 
         # --- NEW: online purchase flags (e‑commerce + allow website purchases) ---
