@@ -1332,6 +1332,7 @@ window.addEventListener('DOMContentLoaded', function() {
       if(input.value.trim()!="") services.push(input.value.trim());
     });
     let img = {{ (profile_img_url if profile_img_url else "") | tojson }};
+    let galleryPhotos = {{ preview_photos | tojson }};
     let lat = document.getElementById('latitude')?.value || "0";
     let lng = document.getElementById('longitude')?.value || "0";
     if (!lat || isNaN(Number(lat))) lat = "";
@@ -1403,6 +1404,29 @@ let largeListing = `
       </a>
     </div>
   ` : '<div class="text-muted mb-2">Map unavailable</div>'}
+
+
+  ${galleryPhotos.length ? `
+    <hr class="mt-4 mb-3">
+    <div class="text-center mb-2">
+      <h4 style="color: var(--pm-primary); font-weight: 700; margin-bottom: 0.25rem;">
+        Gallery
+      </h4>
+      <div style="font-size: 0.9em; color: #555;">
+        (Click on image to view full size - opens in new window)
+      </div>
+    </div>
+    <div class="listing-photo-strip">
+      ${galleryPhotos.map(url => `
+        <div class="listing-photo-item">
+          <a href="${url}" target="_blank" rel="noopener noreferrer">
+            <img src="${url}" alt="Photo of ${name}">
+          </a>
+        </div>
+      `).join('')}
+    </div>
+  ` : ''}
+
 `;
 
     let html = `

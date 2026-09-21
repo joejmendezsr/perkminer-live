@@ -6289,6 +6289,18 @@ def business_dashboard():
 
     stripe_status = get_business_stripe_payout_status(biz)
 
+    # photos for preview (prefer draft over live)
+    preview_photos = [
+        biz.draft_photo1_url or biz.photo1_url,
+        biz.draft_photo2_url or biz.photo2_url,
+        biz.draft_photo3_url or biz.photo3_url,
+        biz.draft_photo4_url or biz.photo4_url,
+        biz.draft_photo5_url or biz.photo5_url,
+        biz.draft_photo6_url or biz.photo6_url,
+    ]
+    # remove Nones/empty strings
+    preview_photos = [p for p in preview_photos if p]
+
     return render_template(
         "business_dashboard.html",
         form=form,
@@ -6324,6 +6336,7 @@ def business_dashboard():
 
         # NEW: website status
         show_website_status=show_website_status,
+        preview_photos=preview_photos,   # NEW
         website_status=website_status,
     )
 
@@ -7022,13 +7035,18 @@ def approve_listing(listing_id):
     biz = Business.query.get_or_404(listing_id)
     if biz.status in ["pending", "in_review", "approved"]:
         # Promote draft fields to live fields if needed; this block is unchanged
+
         promote_fields = [
             "business_name", "listing_type", "category", "finalization", "phone_number", "address", "latitude", "longitude",
             "website_url", "about_us", "hours_of_operation", "search_keywords",
             "service_1", "service_2", "service_3", "service_4", "service_5",
             "service_6", "service_7", "service_8", "service_9", "service_10",
-            "profile_photo"
+            "profile_photo",
+            # NEW: gallery photos
+            "photo1_url", "photo2_url", "photo3_url",
+            "photo4_url", "photo5_url", "photo6_url",
         ]
+
         if biz.draft_category == "Other" and biz.category not in [None, "", "Other"]:
             biz.draft_category = biz.category
         for field in promote_fields:
