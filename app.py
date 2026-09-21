@@ -1419,6 +1419,18 @@ class Business(db.Model):
     country = db.Column(db.String(2), default="US")
     withdrawal_in_progress = db.Column(db.Boolean, default=False, nullable=False)
     ecommerce_verified = db.Column(db.Boolean, default=False)
+    photo1_url = db.Column(db.Text)
+    photo2_url = db.Column(db.Text)
+    photo3_url = db.Column(db.Text)
+    photo4_url = db.Column(db.Text)
+    photo5_url = db.Column(db.Text)
+    photo6_url = db.Column(db.Text)
+    draft_photo1_url = db.Column(db.Text)
+    draft_photo2_url = db.Column(db.Text)
+    draft_photo3_url = db.Column(db.Text)
+    draft_photo4_url = db.Column(db.Text)
+    draft_photo5_url = db.Column(db.Text)
+    draft_photo6_url = db.Column(db.Text)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -7212,12 +7224,24 @@ def view_listing(biz_id):
     # NEW: finalized transaction count
     finalized_tx_count = get_finalized_tx_count_for_business(biz)
 
+    # >>> NEW: collect only non-empty photo URLs from live fields <<<
+    raw_photos = [
+        biz.photo1_url,
+        biz.photo2_url,
+        biz.photo3_url,
+        biz.photo4_url,
+        biz.photo5_url,
+        biz.photo6_url,
+    ]
+    photos = [url for url in raw_photos if url]  # filters out None and ""
+
     return render_template(
         "large_listing.html",
         business=biz,
         can_shop_online_listing=can_shop_online_listing,
         show_online_warning=show_online_warning,
         finalized_tx_count=finalized_tx_count,
+        photos=photos,  # <<< pass to template
     )
 
 @app.route("/finance/combined-detailed-report", methods=["GET"])

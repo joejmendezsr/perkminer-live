@@ -41,6 +41,23 @@
         margin-top: .35rem;
         display: block;
     }
+
+    .listing-photo-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+        margin-bottom: 12px;
+    }
+
+    .listing-photo-item img {
+        max-width: 150px;
+        max-height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
     .distance-badge {
         margin-bottom: 8px;
         display: block;
@@ -406,6 +423,21 @@
         <div class="text-muted">Map unavailable</div>
       {% endif %}
     </div>
+
+{% if photos %}
+  <hr class="mt-4 mb-3">
+  <h4 style="color: var(--pm-primary); font-weight: 700; margin-bottom: 0.75rem;">
+    Gallery
+  </h4>
+
+  <div class="listing-photo-strip">
+    {% for url in photos %}
+      <div class="listing-photo-item">
+        <img src="{{ url }}" alt="Photo of {{ business.business_name }}">
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 
 <div class="mt-1" style="font-size: 0.98em; color:#314655;">
   <strong>Finalized transactions:</strong>
