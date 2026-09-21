@@ -432,19 +432,17 @@
     <h4 style="color: var(--pm-primary); font-weight: 700; margin-bottom: 0.25rem;">
       Gallery
     </h4>
-    <div style="font-size: 0.9em; color: #555;">
-      Recommended size: 800 × 800 pixels (square images work best)
-    </div>
   </div>
 
-  <div class="listing-photo-strip">
-    {% for url in photos %}
-      <div class="listing-photo-item">
+<div class="listing-photo-strip">
+  {% for url in photos %}
+    <div class="listing-photo-item">
+      <a href="{{ url }}" target="_blank" rel="noopener noreferrer">
         <img src="{{ url }}" alt="Photo of {{ business.business_name }}">
-      </div>
-    {% endfor %}
-  </div>
-{% endif %}
+      </a>
+    </div>
+  {% endfor %}
+</div>
 
 <div class="mt-1 text-center" style="font-size: 0.98em; color:#314655;">
   <strong>Finalized transactions:</strong>
