@@ -52,9 +52,9 @@
     }
 
     .listing-photo-item img {
-        max-width: 150px;
-        max-height: 150px;
-        object-fit: cover;
+        width: 180px;          /* fixed width */
+        height: 180px;         /* fixed height */
+        object-fit: cover;     /* crop to fill the box */
         border-radius: 8px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
@@ -427,9 +427,15 @@
 
 {% if photos %}
   <hr class="mt-4 mb-3">
-  <h4 style="color: var(--pm-primary); font-weight: 700; margin-bottom: 0.75rem;">
-    Gallery
-  </h4>
+
+  <div class="text-center mb-2">
+    <h4 style="color: var(--pm-primary); font-weight: 700; margin-bottom: 0.25rem;">
+      Gallery
+    </h4>
+    <div style="font-size: 0.9em; color: #555;">
+      Recommended size: 800 × 800 pixels (square images work best)
+    </div>
+  </div>
 
   <div class="listing-photo-strip">
     {% for url in photos %}
@@ -440,7 +446,7 @@
   </div>
 {% endif %}
 
-<div class="mt-1" style="font-size: 0.98em; color:#314655;">
+<div class="mt-1 text-center" style="font-size: 0.98em; color:#314655;">
   <strong>Finalized transactions:</strong>
   {% set tx_count = finalized_tx_count or 0 %}
   {% if tx_count == 0 %}
