@@ -98,43 +98,36 @@
         }
 
         /* Modern small preview card */
-        .small-listing-modern {
-          border: 1px solid #d9ece7;
-          border-radius: 14px;
-          background: #fafefe;
-          box-shadow: 0 1px 5px #e6f9f4;
-          margin-bottom: 1.2rem;
-          padding: 10px 12px 10px 0;
-          display: flex;
-          align-items: center;
-          gap: 1.2rem;
-          max-width: 380px;
-        }
-        .small-listing-modern-img {
-          width: 180px;
-          height: 180px;
-          object-fit: cover;
-          border-radius:12px;
-          box-shadow: 0 2px 8px #ddebe8;
-          margin-right: 8px;
-          background: #f7f7f7;
-        }
-        @media (max-width:600px) {
-          .small-listing-modern { flex-direction: column; align-items: flex-start; max-width: 99vw;}
-          .small-listing-modern-img { width:120px; height:120px;}
-        }
-        .small-listing-info { font-size: 0.98em;}
-        .small-listing-title { font-weight: 700; margin-bottom: 6px; font-size:1.06em; }
-        .small-listing-category-badge {
-          font-size:.95em;
-          font-weight:500;
-          border-radius:10px;
-          background: #e6f6f5;
-          color: #2a5859;
-          padding:4px 10px;
-          margin-bottom:4px;
-          display:inline-block;
-        }
+          .small-listing-modern {
+            border: 1px solid #d9ece7;
+            border-radius: 14px;
+            background: #fafefe;
+            box-shadow: 0 1px 5px #e6f9f4;
+            margin-bottom: 1.2rem;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;   /* stack logo on top, text below */
+            align-items: center;      /* center the logo + text */
+            gap: 0.6rem;
+            max-width: 380px;
+          }
+
+          .small-listing-modern-img {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #ddebe8;
+            background: #f7f7f7;
+            margin: 0 auto;
+          }
+
+          .small-listing-info {
+            font-size: 0.98em;
+            text-align: center;       /* center text under logo */
+            width: 100%;
+          }
+
         /* Large listing preview */
         .listing-pic-wrap {
           display: flex;
