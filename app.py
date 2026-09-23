@@ -10143,6 +10143,37 @@ def ecommerce_verify_beacon():
 
     return jsonify({"ok": True}), 200
 
+@app.route("/onboarding")
+@login_required
+def user_onboarding():
+    # you already compute stripe_status on dashboard; reuse that helper
+    stripe_status = get_stripe_status_for_user(current_user)
+
+    user_onboard_video_url = "https://res.cloudinary.com/your_cloud/video/upload/...mp4"
+
+    return render_template(
+        "onboarding_user.html",
+        stripe_status=stripe_status,
+        user_onboard_video_url=user_onboard_video_url,
+    )
+
+
+@app.route("/business/onboarding")
+@login_required
+def business_onboarding():
+    biz_id = session.get("business_id")
+    biz = Business.query.get_or_404(biz_id)
+
+    stripe_status = get_business_stripe_status(biz)  # same type of object you use in business_dashboard
+    biz_onboard_video_url = "https://res.cloudinary.com/your_cloud/video/upload/...mp4"
+
+    return render_template(
+        "onboarding_business.html",
+        business=biz,
+        stripe_status=stripe_status,
+        biz_onboard_video_url=biz_onboard_video_url,
+    )
+
 @app.errorhandler(500)
 def internal_server_error(error):
     # Log the full error + traceback for debugging

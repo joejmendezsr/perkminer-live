@@ -677,9 +677,8 @@
 <div>
   {% if not current_user.stripe_account_id %}
     <!-- No Stripe account yet -->
-    <a href="{{ url_for('onboard_stripe') }}" class="btn btn-primary w-100">
-      Set Up Payouts (Bank Transfer)</br>
-      <b>(IMPORTANT: Must Select Professional Services Industry, Other Marketing Services, and perkminer.com for website during onboarding)</b>
+    <a href="{{ url_for('user_onboarding') }}" class="btn btn-primary w-100">
+      Set Up Payouts (Bank Transfer)
     </a>
 
   {% else %}
