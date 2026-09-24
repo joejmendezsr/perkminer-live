@@ -1431,6 +1431,9 @@ class Business(db.Model):
     draft_photo4_url = db.Column(db.Text)
     draft_photo5_url = db.Column(db.Text)
     draft_photo6_url = db.Column(db.Text)
+    live_gps_lat = db.Column(db.Float)
+    live_gps_long = db.Column(db.Float)
+    location_varies = db.Column(db.Boolean, default=False)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -6133,6 +6136,13 @@ def business_dashboard():
                 setattr(biz, live_attr, form_val if form_val else None)
                 updated = True
 
+        # --- NEW: location_varies flag ---
+        # checkbox sends "1" when checked, nothing when unchecked
+        location_varies_form = request.form.get("location_varies") == "1"
+        if biz.location_varies != location_varies_form:
+            biz.location_varies = location_varies_form
+            updated = True
+
         # --- NEW: online purchase flags (e‑commerce + allow website purchases) ---
         website_url = request.form.get("website_url", "").strip()
         has_website = bool(website_url)
@@ -10159,7 +10169,6 @@ def user_onboarding():
         user_onboard_video_url=user_onboard_video_url,
     )
 
-
 @app.route("/business/onboarding")
 @login_required
 def business_onboarding():
@@ -10175,6 +10184,25 @@ def business_onboarding():
         stripe_status=stripe_status,
         biz_onboard_video_url=biz_onboard_video_url,
     )
+
+@app.route("/business/update_live_location", methods=["POST"])
+@login_required
+def update_live_location():
+    biz_id = session.get("business_id")
+    biz = Business.query.get_or_404(biz_id)
+
+    data = request.get_json() or {}
+    lat = data.get("lat")
+    lng = data.get("lng")
+
+    try:
+        biz.live_gps_lat = float(lat)
+        biz.live_gps_long = float(lng)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+    except Exception:
+        db.session.rollback()
+        return jsonify({"status": "error"}), 400
 
 @app.errorhandler(500)
 def internal_server_error(error):
