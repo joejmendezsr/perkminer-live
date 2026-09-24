@@ -10186,9 +10186,12 @@ def business_onboarding():
     )
 
 @app.route("/business/update_live_location", methods=["POST"])
-@login_required
 def update_live_location():
     biz_id = session.get("business_id")
+    if not biz_id:
+        # not in a business session – redirect or 401
+        return jsonify({"status": "unauthorized"}), 401
+
     biz = Business.query.get_or_404(biz_id)
 
     lat = request.form.get("lat")
