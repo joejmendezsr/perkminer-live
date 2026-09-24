@@ -2138,6 +2138,33 @@ class ConversationParticipant(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     # Optionally add role ("member", "business", "admin")
 
+class SimplePagination:
+    def __init__(self, page, per_page, total):
+        self.page = page
+        self.per_page = per_page
+        self.total = total
+
+    @property
+    def pages(self):
+        from math import ceil
+        return ceil(self.total / float(self.per_page)) if self.per_page else 0
+
+    @property
+    def has_prev(self):
+        return self.page > 1
+
+    @property
+    def has_next(self):
+        return self.page < self.pages
+
+    @property
+    def prev_num(self):
+        return self.page - 1 if self.has_prev else None
+
+    @property
+    def next_num(self):
+        return self.page + 1 if self.has_next else None
+
 def calculate_user_grand_total(user):
     ref_code = user.referral_code
     all_txns = UserTransaction.query.all()
@@ -3782,9 +3809,8 @@ def search():
             biz.distance_mi = round(d, 2)
             listings.append(biz)
 
-        # create lightweight pagination-like object
-        from flask_sqlalchemy import Pagination
-        pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=page_items)
+        # simple pagination object for template
+        pagination = SimplePagination(page=page, per_page=per_page, total=total)
 
     else:
         # No lat/lng: paginate plain business query (by rank/name)
@@ -3863,8 +3889,7 @@ def category_browse(name):
             biz.distance_mi = round(d, 2)
             listings.append(biz)
 
-        from flask_sqlalchemy import Pagination
-        pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=page_items)
+        pagination = SimplePagination(page=page, per_page=per_page, total=total)
 
     else:
         # No lat/lng: just paginate all in this category
