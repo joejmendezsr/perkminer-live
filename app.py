@@ -10191,17 +10191,17 @@ def update_live_location():
     biz_id = session.get("business_id")
     biz = Business.query.get_or_404(biz_id)
 
-    data = request.get_json() or {}
-    lat = data.get("lat")
-    lng = data.get("lng")
+    lat = request.form.get("lat")
+    lng = request.form.get("lng")
 
     try:
         biz.live_gps_lat = float(lat)
         biz.live_gps_long = float(lng)
         db.session.commit()
         return jsonify({"status": "ok"})
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"update_live_location error: {e}")
         return jsonify({"status": "error"}), 400
 
 @app.errorhandler(500)

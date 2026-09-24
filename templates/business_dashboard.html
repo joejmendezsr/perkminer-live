@@ -1734,30 +1734,38 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 
     liveBtn.disabled = true;
-    liveBtn.textContent = "updating location...";
+    liveBtn.textContent = "getting location...";
 
     navigator.geolocation.getCurrentPosition(
       function (pos) {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
+        // simple form-style POST instead of JSON, to avoid any CSRF header issues
+        const formData = new FormData();
+        formData.append("lat", lat);
+        formData.append("lng", lng);
+        formData.append("csrf_token", "{{ csrf_token() }}");
+
+        liveBtn.textContent = "updating location...";
+
         fetch("{{ url_for('update_live_location') }}", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token() }}"
-          },
-          body: JSON.stringify({ lat: lat, lng: lng })
+          body: formData,
         })
         .then(res => {
-          if (!res.ok) throw new Error("request failed");
+          if (!res.ok) throw new Error("request failed with " + res.status);
           return res.json();
         })
         .then(data => {
-          alert("live location updated on your listing.");
+          if (data.status === "ok") {
+            alert("live location updated on your listing.");
+          } else {
+            alert("server could not update location. please try again.");
+          }
         })
         .catch(err => {
-          console.error(err);
+          console.error("update_live_location error:", err);
           alert("could not update location. please try again.");
         })
         .finally(() => {
@@ -1766,9 +1774,15 @@ window.addEventListener('DOMContentLoaded', function () {
         });
       },
       function (err) {
+        console.error("geolocation error:", err);
         alert("could not get your location: " + err.message);
         liveBtn.disabled = false;
         liveBtn.textContent = "use live location (update now)";
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
       }
     );
   });
