@@ -784,11 +784,17 @@
               <div class="mb-1 small" style="font-weight:500;">
                 <span class="badge bg-success">{{ biz.category }}</span>
               </div>
+
               {% if biz.distance_mi is defined and biz.distance_mi is not none %}
                 <span class="small-listing-mile-badge">
                   <i class="bi bi-geo-alt-fill"></i>
                   {{ biz.distance_mi|round(2) }} mi away
                 </span>
+                {% if biz.location_varies and biz.live_gps_lat and biz.live_gps_long %}
+                  <span class="badge bg-info text-dark ms-1" style="font-size:0.75rem;">
+                    live location
+                  </span>
+                {% endif %}
               {% endif %}
 
               <div class="mb-1">

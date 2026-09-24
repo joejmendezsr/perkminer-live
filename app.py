@@ -3604,80 +3604,112 @@ def home():
     search_radius = 10  # miles
 
     if lat is not None and lng is not None:
-        haversine = (
-            3959 * func.acos(
-                func.least(
-                    1.0,
-                    func.cos(func.radians(lat)) *
-                    func.cos(func.radians(Business.latitude)) *
-                    func.cos(func.radians(Business.longitude) - func.radians(lng)) +
-                    func.sin(func.radians(lat)) *
-                    func.sin(func.radians(Business.latitude))
-                )
+        # get approved businesses that have either static or live coords
+        candidates = (
+            Business.query
+            .filter_by(status="approved")
+            .filter(
+                (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+                (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
             )
+            .all()
         )
 
-        # Businesses in range
-        all_nearby = Business.query.filter_by(status="approved") \
-            .filter(Business.latitude.isnot(None), Business.longitude.isnot(None)) \
-            .add_columns(haversine.label('distance')) \
-            .filter(haversine <= search_radius) \
-            .all()
-        nearby_businesses = [b for b, d in all_nearby]
-        business_ids = [b.id for b in nearby_businesses]
+        # compute distance in Python using live vs static coords
+        nearby = []
+        for biz in candidates:
+            biz_lat, biz_lng = get_business_coords_for_distance(biz)
+            if biz_lat is None or biz_lng is None:
+                continue
+            try:
+                d = haversine_py(lat, lng, biz_lat, biz_lng)
+            except ValueError:
+                continue
+            if d <= search_radius:
+                nearby.append((biz, d))
 
-        # Manual featured first
-        manual_featured = [b for b, d in all_nearby if b.manual_feature]
-        if len(manual_featured) >= N_FEATURED:
-            featured_listings = manual_featured[:N_FEATURED]
+        nearby_businesses = [b for (b, d) in nearby]
+
+        # if nothing nearby, just fall back to no-location logic
+        if not nearby_businesses:
+            manual_featured = Business.query.filter_by(status="approved", manual_feature=True) \
+                                            .order_by(Business.rank.desc()) \
+                                            .limit(N_FEATURED).all()
+            needed = N_FEATURED - len(manual_featured)
+            if needed > 0:
+                ranked = Business.query.filter_by(status="approved", manual_feature=False) \
+                                       .order_by(Business.rank.desc()) \
+                                       .limit(needed).all()
+                for b in manual_featured + ranked:
+                    b.distance_mi = None
+                featured_listings = manual_featured + ranked
+            else:
+                for b in manual_featured:
+                    b.distance_mi = None
+                featured_listings = manual_featured[:N_FEATURED]
         else:
-            # --- Calculate rank dynamically for each business in range ---
-            # 1. Transactions
-            tx_counts = {
-                b.id: BusinessTransaction.query.filter_by(business_referral_id=b.referral_code).count()
-                for b in nearby_businesses
-            }
-            max_tx = max(tx_counts.values() or [1])
+            # manual featured first within nearby group
+            manual_featured = [b for (b, d) in nearby if b.manual_feature]
 
-            # 2. Ad fees
-            ad_fees = {
-                b.id: float(db.session.query(func.coalesce(func.sum(BusinessTransaction.ad_fee), 0))
-                    .filter_by(business_referral_id=b.referral_code).scalar())
-                for b in nearby_businesses
-            }
-            max_ad_fee = max(ad_fees.values() or [1])
+            # map for distances
+            dist_lookup = {b.id: d for (b, d) in nearby}
 
-            # 3. Direct referrals
-            referrals = {
-                b.id: Business.query.filter_by(sponsor_id=b.id).count()
-                for b in nearby_businesses
-            }
-            max_ref = max(referrals.values() or [1])
+            if len(manual_featured) >= N_FEATURED:
+                # sort manuals by distance and pick closest 10
+                manuals_with_dist = [(b, dist_lookup.get(b.id)) for b in manual_featured]
+                manuals_with_dist.sort(key=lambda x: x[1] if x[1] is not None else 999999)
+                featured_listings = [b for (b, d) in manuals_with_dist[:N_FEATURED]]
+            else:
+                # --- Calculate rank dynamically for each business in range ---
+                tx_counts = {
+                    b.id: BusinessTransaction.query.filter_by(business_referral_id=b.referral_code).count()
+                    for b in nearby_businesses
+                }
+                max_tx = max(tx_counts.values() or [1])
 
-            # Calculate rank for all non-manual-featured
-            not_manual = [b for b in nearby_businesses if not b.manual_feature]
-            for b in not_manual:
-                tx_score = (tx_counts[b.id] / max_tx) * 250 if max_tx else 0
-                ad_score = (ad_fees[b.id] / max_ad_fee) * 150 if max_ad_fee else 0
-                ref_score = (referrals[b.id] / max_ref) * 600 if max_ref else 0
-                b.rank = round(tx_score + ad_score + ref_score, 2)
-            # Fill up with highest rank
-            n_needed = N_FEATURED - len(manual_featured)
-            ranked = sorted(not_manual, key=lambda b: b.rank, reverse=True)
-            featured_listings = manual_featured + ranked[:n_needed]
-            # Set distance_mi for display
-            dist_lookup = {b.id: d for b, d in all_nearby}
+                ad_fees = {
+                    b.id: float(
+                        db.session.query(func.coalesce(func.sum(BusinessTransaction.ad_fee), 0))
+                        .filter_by(business_referral_id=b.referral_code)
+                        .scalar()
+                    )
+                    for b in nearby_businesses
+                }
+                max_ad_fee = max(ad_fees.values() or [1])
+
+                referrals = {
+                    b.id: Business.query.filter_by(sponsor_id=b.id).count()
+                    for b in nearby_businesses
+                }
+                max_ref = max(referrals.values() or [1])
+
+                not_manual = [b for b in nearby_businesses if not b.manual_feature]
+                for b in not_manual:
+                    tx_score = (tx_counts[b.id] / max_tx) * 250 if max_tx else 0
+                    ad_score = (ad_fees[b.id] / max_ad_fee) * 150 if max_ad_fee else 0
+                    ref_score = (referrals[b.id] / max_ref) * 600 if max_ref else 0
+                    b.rank = round(tx_score + ad_score + ref_score, 2)
+
+                n_needed = N_FEATURED - len(manual_featured)
+                ranked = sorted(not_manual, key=lambda b: b.rank, reverse=True)
+                featured_listings = manual_featured + ranked[:n_needed]
+
+            # set distance_mi for display using live/static coords
             for b in featured_listings:
-                b.distance_mi = round(dist_lookup.get(b.id, 0) or 0, 2)
+                d = dist_lookup.get(b.id)
+                b.distance_mi = round(d, 2) if d is not None else None
+
     else:
         # No location: show 10, manual first, then highest rank
-        manual_featured = Business.query.filter_by(status="approved", manual_feature=True).order_by(Business.rank.desc()).limit(N_FEATURED).all()
+        manual_featured = Business.query.filter_by(status="approved", manual_feature=True) \
+                                        .order_by(Business.rank.desc()) \
+                                        .limit(N_FEATURED).all()
         needed = N_FEATURED - len(manual_featured)
         if needed > 0:
-            ranked = Business.query.filter_by(status="approved", manual_feature=False).order_by(Business.rank.desc()).limit(needed).all()
-            for b in manual_featured:
-                b.distance_mi = None
-            for b in ranked:
+            ranked = Business.query.filter_by(status="approved", manual_feature=False) \
+                                   .order_by(Business.rank.desc()) \
+                                   .limit(needed).all()
+            for b in manual_featured + ranked:
                 b.distance_mi = None
             featured_listings = manual_featured + ranked
         else:
@@ -3685,7 +3717,7 @@ def home():
                 b.distance_mi = None
             featured_listings = manual_featured[:N_FEATURED]
 
-    # ------------ Totals ------------
+    # ------------ Totals ------------ (unchanged)
     user_transactions = UserTransaction.query.all()
     total_user_tier1 = sum(t.cash_back or 0 for t in user_transactions)
     total_user_commission = sum(
