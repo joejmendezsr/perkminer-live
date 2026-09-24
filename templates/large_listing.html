@@ -231,6 +231,15 @@
       {% endif %}
       <h2 class="listing-title">{{ business.business_name }}</h2>
       <span class="biz-category-badge mb-2">{{ business.category }}</span>
+
+{% if business.location_varies and business.live_gps_lat and business.live_gps_long %}
+  <div class="mt-1 mb-2 text-center">
+    <span class="badge bg-info text-dark">
+      live location enabled
+    </span>
+  </div>
+{% endif %}
+
       <span class="biz-finalization-badge mb-2">
         <b>Finalization: {{ business.finalization }}</b><br>
         {% if business.account_balance >= 250 %}

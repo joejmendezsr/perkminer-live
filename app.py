@@ -2407,69 +2407,116 @@ def ensure_business_payout_capability(business: Business):
     except Exception as e:
         logging.error("Error requesting payout capability for business %s: %s", business.id, e)
 
-def get_featured_businesses(lat, lng):
-    # 1. Find nearby businesses within 10 miles using the haversine formula
-    RADIUS = 10  # miles
-    N_FEATURED = 10
+from math import radians, sin, cos, acos
 
-    haversine = (
-        3959 * func.acos(
-            func.least(
-                1.0,
-                func.cos(func.radians(lat)) *
-                func.cos(func.radians(Business.latitude)) *
-                func.cos(func.radians(Business.longitude) - func.radians(lng)) +
-                func.sin(func.radians(lat)) *
-                func.sin(func.radians(Business.latitude))
-            )
+def get_business_coords_for_distance(biz):
+    """
+    Returns (lat, lng) for distance/map calculations.
+    - if location_varies and live_gps is set → use live_gps_lat/long
+    - else → use static latitude/longitude
+    """
+    if getattr(biz, "location_varies", False) and biz.live_gps_lat is not None and biz.live_gps_long is not None:
+        return biz.live_gps_lat, biz.live_gps_long
+    return biz.latitude, biz.longitude
+
+
+def haversine_py(lat1, lon1, lat2, lon2):
+    """Haversine distance in miles."""
+    return 3959 * acos(
+        min(
+            1.0,
+            cos(radians(lat1)) * cos(radians(lat2)) * cos(radians(lon2) - radians(lon1)) +
+            sin(radians(lat1)) * sin(radians(lat2))
         )
     )
 
-    # 2. Filter all approved businesses within radius
-    all_nearby = Business.query \
-        .filter(Business.status == "approved") \
-        .filter(Business.latitude.isnot(None), Business.longitude.isnot(None)) \
-        .add_columns(haversine.label('distance')) \
-        .filter(haversine <= RADIUS) \
+def get_featured_businesses(lat, lng):
+    RADIUS = 10  # miles
+    N_FEATURED = 10
+
+    # 1. get all approved businesses that have *some* coords (static or live)
+    candidates = (
+        Business.query
+        .filter(Business.status == "approved")
+        .filter(
+            (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+            (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
+        )
         .all()
+    )
 
-    # Pull the Business objects only
-    businesses = [b for (b, d) in all_nearby]
+    # 2. compute distance in Python using live vs static coords
+    nearby = []
+    for biz in candidates:
+        biz_lat, biz_lng = get_business_coords_for_distance(biz)
+        if biz_lat is None or biz_lng is None:
+            continue
+        try:
+            d = haversine_py(lat, lng, biz_lat, biz_lng)
+        except ValueError:
+            continue
+        if d <= RADIUS:
+            nearby.append((biz, d))
 
-    # 3. Manually featured businesses in this group
-    manual_featured = [b for (b, d) in all_nearby if b.manual_feature]
+    # pull the Business objects only
+    businesses = [b for (b, d) in nearby]
 
-    # If 10 or more manuals, use only those
+    # no nearby businesses at all
+    if not businesses:
+        return []
+
+    # 3. manually featured within nearby group
+    manual_featured = [b for (b, d) in nearby if b.manual_feature]
+
+    # if 10 or more manuals, use only those (closest first)
     if len(manual_featured) >= N_FEATURED:
-        featured = manual_featured[:N_FEATURED]
-        return featured
+        # sort manuals by distance so we pick the closest 10
+        manuals_with_dist = [(b, d) for (b, d) in nearby if b.manual_feature]
+        manuals_with_dist.sort(key=lambda x: x[1])
+        return [b for (b, d) in manuals_with_dist[:N_FEATURED]]
 
-    # 4. Calculate rank for the rest
-    # Metrics for all in range
-    tx_counts = {b.id: BusinessTransaction.query.filter_by(business_referral_id=b.referral_code).count() for b in businesses}
-    max_tx = max(tx_counts.values() or [1])  # default to 1 if empty
+    # 4. rank the rest
+    tx_counts = {
+        b.id: BusinessTransaction.query.filter_by(business_referral_id=b.referral_code).count()
+        for b in businesses
+    }
+    max_tx = max(tx_counts.values() or [1])
 
-    ad_fees = {b.id: float(db.session.query(func.coalesce(func.sum(BusinessTransaction.ad_fee), 0)).filter_by(business_referral_id=b.referral_code).scalar()) for b in businesses}
+    ad_fees = {
+        b.id: float(
+            db.session.query(func.coalesce(func.sum(BusinessTransaction.ad_fee), 0))
+            .filter_by(business_referral_id=b.referral_code)
+            .scalar()
+        )
+        for b in businesses
+    }
     max_ad_fee = max(ad_fees.values() or [1])
 
-    # Direct referrals: count how many businesses have this biz as sponsor
-    referrals = {b.id: Business.query.filter_by(sponsor_id=b.id).count() for b in businesses}
+    referrals = {
+        b.id: Business.query.filter_by(sponsor_id=b.id).count()
+        for b in businesses
+    }
     max_referrals = max(referrals.values() or [1])
 
-    # Compute rank (1,000 pt scale)
     for b in businesses:
         tx_score = (tx_counts[b.id] / max_tx) * 250 if max_tx else 0
         ad_score = (ad_fees[b.id] / max_ad_fee) * 150 if max_ad_fee else 0
         ref_score = (referrals[b.id] / max_referrals) * 600 if max_referrals else 0
         b.rank = round(tx_score + ad_score + ref_score, 2)
 
-    # 5. Exclude manuals, sort all others by rank (desc), fill up to 10
-    remaining = [b for b in businesses if not b.manual_feature]
-    ranked = sorted(remaining, key=lambda b: b.rank, reverse=True)
-    n_needed = N_FEATURED - len(manual_featured)
-    featured = manual_featured + ranked[:n_needed]
+    # 5. exclude manuals, sort others by rank (desc), then by distance (asc)
+    manual_ids = {b.id for b in manual_featured}
+    remaining = [(b, d) for (b, d) in nearby if b.id not in manual_ids]
 
-    # Always max 10
+    # sort remaining by rank desc, then distance asc
+    remaining.sort(key=lambda bd: (-bd[0].rank, bd[1]))
+
+    n_needed = N_FEATURED - len(manual_featured)
+    featured_extra = [b for (b, d) in remaining[:n_needed]]
+
+    featured = manual_featured + featured_extra
+
+    # ensure max 10
     return featured[:N_FEATURED]
 
 def add_monthly_investor_earnings(user, year, month, investment_amount, rate):
@@ -3692,47 +3739,55 @@ def search():
     use_location = lat is not None and lng is not None
 
     if use_location:
-        haversine = (
-            3959 * func.acos(
-                func.least(
-                    1.0,
-                    func.cos(func.radians(lat)) *
-                    func.cos(func.radians(Business.latitude)) *
-                    func.cos(func.radians(Business.longitude) - func.radians(lng)) +
-                    func.sin(func.radians(lat)) *
-                    func.sin(func.radians(Business.latitude))
-                )
-            )
-        ).label('distance_mi')
-
-        query = (
+        # fetch all candidates that have either static or live coords
+        candidates = (
             base_query
-            .filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
-            .add_columns(haversine)
+            .filter(
+                (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+                (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
+            )
+            .all()
         )
+
+        listings_with_dist = []
+        for biz in candidates:
+            biz_lat, biz_lng = get_business_coords_for_distance(biz)
+            if biz_lat is None or biz_lng is None:
+                continue
+            try:
+                d = haversine_py(lat, lng, biz_lat, biz_lng)
+            except ValueError:
+                continue
+            listings_with_dist.append((biz, d))
 
         # Filter by distance if set and not "all"
         if distance and distance != "all":
             try:
                 dist_num = float(distance)
-                query = query.filter(haversine <= dist_num)
+                listings_with_dist = [(b, d) for (b, d) in listings_with_dist if d <= dist_num]
             except ValueError:
                 pass
 
         # Order by distance
-        query = query.order_by(haversine)
+        listings_with_dist.sort(key=lambda x: x[1])
 
-        # paginate on the combined (Business, distance) rows
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        results_raw = pagination.items  # list of (Business, distance)
+        # Manual pagination
+        total = len(listings_with_dist)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_items = listings_with_dist[start:end]
 
         listings = []
-        for biz, d in results_raw:
-            biz.distance_mi = round(d, 2) if d is not None else None
+        for biz, d in page_items:
+            biz.distance_mi = round(d, 2)
             listings.append(biz)
 
+        # create lightweight pagination-like object
+        from flask_sqlalchemy import Pagination
+        pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=page_items)
+
     else:
-        # No lat/lng: paginate plain business query (by rank/name or however you like)
+        # No lat/lng: paginate plain business query (by rank/name)
         pagination = (
             base_query
             .order_by(Business.rank.desc(), Business.business_name.asc())
@@ -3767,44 +3822,50 @@ def category_browse(name):
     use_location = lat is not None and lng is not None
 
     if use_location:
-        haversine = (
-            3959 * func.acos(
-                func.least(
-                    1.0,
-                    func.cos(func.radians(lat)) *
-                    func.cos(func.radians(Business.latitude)) *
-                    func.cos(func.radians(Business.longitude) - func.radians(lng)) +
-                    func.sin(func.radians(lat)) *
-                    func.sin(func.radians(Business.latitude))
-                )
-            )
-        ).label("distance_mi")
-
-        query = (
+        candidates = (
             base_query
-            .filter(Business.latitude.isnot(None), Business.longitude.isnot(None))
-            .add_columns(haversine)
+            .filter(
+                (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+                (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
+            )
+            .all()
         )
+
+        listings_with_dist = []
+        for biz in candidates:
+            biz_lat, biz_lng = get_business_coords_for_distance(biz)
+            if biz_lat is None or biz_lng is None:
+                continue
+            try:
+                d = haversine_py(lat, lng, biz_lat, biz_lng)
+            except ValueError:
+                continue
+            listings_with_dist.append((biz, d))
 
         # If a max distance is set, limit results
         if distance and distance != "all":
             try:
                 dist_num = float(distance)
-                query = query.filter(haversine <= dist_num)
+                listings_with_dist = [(b, d) for (b, d) in listings_with_dist if d <= dist_num]
             except ValueError:
                 pass
 
         # Sort by nearest
-        query = query.order_by(haversine)
+        listings_with_dist.sort(key=lambda x: x[1])
 
-        # paginate combined (Business, distance) rows
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        results_raw = pagination.items  # list of (Business, distance)
+        total = len(listings_with_dist)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_items = listings_with_dist[start:end]
 
         listings = []
-        for biz, d in results_raw:
-            biz.distance_mi = round(d, 2) if d is not None else None
+        for biz, d in page_items:
+            biz.distance_mi = round(d, 2)
             listings.append(biz)
+
+        from flask_sqlalchemy import Pagination
+        pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=page_items)
+
     else:
         # No lat/lng: just paginate all in this category
         pagination = (
