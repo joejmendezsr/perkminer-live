@@ -2088,8 +2088,12 @@ class StaffRegisterForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
     role = SelectField(
         "Role",
-        choices=[("admin", "Admin"), ("service_provider", "Service Provider")],
-        validators=[DataRequired()]
+        choices=[
+            ("admin", "Admin"),
+            ("service_provider", "Service Provider"),
+        ],
+        validators=[DataRequired()],
+        default="admin",
     )
     submit = SubmitField("Add Staff")
 
@@ -8319,14 +8323,15 @@ def staff_new():
             name=name,
             email=email,
             hashed_password=hashed_pw,
-            role=role,
+            role=role,  # <-- use selected role
             is_active=True,
-            password_reset_required=True
+            password_reset_required=True,
+            # can_add_providers stays default False
         )
         db.session.add(staff)
         db.session.commit()
 
-        # Email temp password to staff
+        # email content unchanged...
         send_email(
             staff.email,
             "Your PerkMiner Staff Login",
@@ -8340,8 +8345,9 @@ def staff_new():
             """
         )
 
-        flash("Staff member created! Login instructions were emailed.", "success")
+        flash("Staff member created! Login instructions were emailed to the staff member.", "success")
         return redirect(url_for("business_dashboard"))
+
     return render_template("your_staff_form.html", form=form)
 
 @app.route("/staff/login", methods=["GET", "POST"])
