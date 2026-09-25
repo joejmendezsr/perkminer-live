@@ -1960,6 +1960,8 @@ class Interaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+    # NEW: assigned service provider (staff)
+    assigned_staff_id = db.Column(db.Integer, db.ForeignKey('staff.id'), nullable=True)
     service_type = db.Column(db.String(100), nullable=False)
     details = db.Column(db.Text, nullable=False)
     budget_low = db.Column(db.Float)
@@ -1972,6 +1974,8 @@ class Interaction(db.Model):
     awaiting_payment = db.Column(db.Boolean, default=False)
     # relationships for easier querying (optional)
     user = db.relationship('User', backref='interactions', lazy=True)
+    # NEW relationship
+    assigned_staff = db.relationship("Staff", backref="assigned_interactions", lazy=True)
     business = db.relationship('Business', backref='interactions', lazy=True)
 
 class Message(db.Model):
@@ -6054,13 +6058,63 @@ def business_invite():
 @app.route("/business/interactions")
 @business_login_required
 def biz_user_interactions():
-    # Make sure only a logged-in business can view this
     biz_id = session.get('business_id')
     if not biz_id:
         flash("You must be logged in as a business.")
         return redirect(url_for('business_login'))
-    interactions = Interaction.query.filter_by(business_id=biz_id, status='active').order_by(Interaction.created_at.desc()).all()
-    return render_template("biz_user_interactions.html", interactions=interactions)
+
+    interactions = (
+        Interaction.query
+        .filter_by(business_id=biz_id, status='active')
+        .order_by(Interaction.created_at.desc())
+        .all()
+    )
+
+    # all active service providers for this business
+    service_providers = (
+        Staff.query
+        .filter_by(business_id=biz_id, is_active=True, role="service_provider")
+        .all()
+    )
+
+    return render_template(
+        "biz_user_interactions.html",
+        interactions=interactions,
+        service_providers=service_providers,
+    )
+
+@app.route("/business/interactions/<int:interaction_id>/assign", methods=["POST"])
+@business_login_required
+def assign_interaction(interaction_id):
+    biz_id = session.get("business_id")
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    # make sure this session belongs to this business
+    if interaction.business_id != biz_id:
+        abort(403)
+
+    staff_id = request.form.get("staff_id")
+    if not staff_id:
+        flash("Please choose a service provider.", "danger")
+        return redirect(url_for('biz_user_interactions'))
+
+    # ensure the chosen staff is a service_provider of this business
+    staff = Staff.query.filter_by(
+        id=staff_id,
+        business_id=biz_id,
+        is_active=True,
+        role="service_provider",
+    ).first()
+
+    if not staff:
+        flash("Invalid service provider.", "danger")
+        return redirect(url_for('biz_user_interactions'))
+
+    interaction.assigned_staff_id = staff.id
+    db.session.commit()
+
+    flash(f"Session assigned to {staff.name}.", "success")
+    return redirect(url_for('biz_user_interactions'))
 
 @app.route("/business/interactions/<int:interaction_id>/details")
 @business_login_required
@@ -8434,9 +8488,23 @@ def staff_dashboard():
     staff_id = session.get("staff_id")
     if not staff_id:
         return redirect(url_for("staff_login"))
+
     staff = Staff.query.get(staff_id)
-    # Get sessions for this staff's business
-    interactions = Interaction.query.filter_by(business_id=staff.business_id, status="active").order_by(Interaction.created_at.desc()).all()
+
+    base_query = Interaction.query.filter_by(
+        business_id=staff.business_id,
+        status="active"
+    )
+
+    if staff.role == "admin":
+        # admins see all active sessions for the business
+        interactions = base_query.order_by(Interaction.created_at.desc()).all()
+    else:  # service_provider
+        # providers see only sessions assigned to them
+        interactions = base_query.filter(
+            Interaction.assigned_staff_id == staff.id
+        ).order_by(Interaction.created_at.desc()).all()
+
     return render_template("staff_dashboard.html", staff=staff, interactions=interactions)
 
 @app.route("/staff/logout")
