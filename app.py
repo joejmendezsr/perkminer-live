@@ -2053,12 +2053,19 @@ class Staff(db.Model):
     name = db.Column(db.String(255))
     email = db.Column(db.String(255), unique=True, nullable=False)
     hashed_password = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(20), default="staff")  # Future roles possible
+
+    # NEW
+    role = db.Column(db.String(20), default="admin", nullable=False)
+    can_add_providers = db.Column(db.Boolean, default=False, nullable=False)
+
+    # NEW (live location)
+    live_gps_lat = db.Column(db.Float)
+    live_gps_long = db.Column(db.Float)
+
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     password_reset_required = db.Column(db.Boolean, default=True)
 
-    # Relationships
     business = db.relationship("Business", backref="staff_members")
 
     __table_args__ = (
@@ -2079,6 +2086,11 @@ class EcommerceVerificationPing(db.Model):
 class StaffRegisterForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     name = StringField("Name", validators=[DataRequired()])
+    role = SelectField(
+        "Role",
+        choices=[("admin", "Admin"), ("service_provider", "Service Provider")],
+        validators=[DataRequired()]
+    )
     submit = SubmitField("Add Staff")
 
 class StaffLoginForm(FlaskForm):
@@ -8265,6 +8277,24 @@ def export_commissions_paid_csv():
     return Response(output, mimetype="text/csv",
                     headers={"Content-Disposition": "attachment; filename=commissions_paid.csv"})
 
+@app.route("/business/staff/<int:staff_id>/toggle_provider_permission", methods=["POST"])
+@business_login_required
+def toggle_provider_permission(staff_id):
+    biz_id = session.get("business_id")
+    staff = Staff.query.filter_by(id=staff_id, business_id=biz_id).first_or_404()
+
+    if staff.role != "admin":
+        flash("Only admin staff can be given provider-creation permission.", "danger")
+        return redirect(url_for("business_dashboard"))
+
+    # simple toggle based on form
+    can_add = request.form.get("can_add_providers") == "1"
+    staff.can_add_providers = can_add
+    db.session.commit()
+
+    flash("Admin permissions updated.", "success")
+    return redirect(url_for("business_dashboard"))
+
 # ---------------- STAFF ROUTES ----------------
 
 @app.route("/staff/new", methods=["GET", "POST"])
@@ -8274,8 +8304,8 @@ def staff_new():
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         name = form.name.data.strip()
+        role = form.role.data  # "admin" or "service_provider"
 
-        # --- UNIQUE EMAIL CHECK HERE ---
         existing_staff = Staff.query.filter_by(email=email).first()
         if existing_staff:
             flash("Email address already in use with another business advertiser!", "danger")
@@ -8289,7 +8319,7 @@ def staff_new():
             name=name,
             email=email,
             hashed_password=hashed_pw,
-            role="staff",
+            role=role,
             is_active=True,
             password_reset_required=True
         )
@@ -8310,7 +8340,7 @@ def staff_new():
             """
         )
 
-        flash("Staff member created! Login instructions were emailed to the staff member.", "success")
+        flash("Staff member created! Login instructions were emailed.", "success")
         return redirect(url_for("business_dashboard"))
     return render_template("your_staff_form.html", form=form)
 
@@ -8642,6 +8672,28 @@ def remove_staff(staff_id):
     db.session.commit()
     flash("Staff member removed.", "success")
     return redirect(url_for("business_dashboard"))
+
+@app.route("/staff/new-provider", methods=["GET", "POST"])
+def staff_new_provider():
+    staff_id = session.get("staff_id")
+    if not staff_id:
+        flash("Please log in as staff.", "danger")
+        return redirect(url_for("staff_login"))
+
+    admin = Staff.query.get(staff_id)
+    if not admin or admin.role != "admin" or not admin.can_add_providers:
+        abort(403)
+
+    form = StaffRegisterForm()
+    # we might pre-lock role="service_provider" for this flow:
+    form.role.data = "service_provider"
+
+    if form.validate_on_submit():
+        # same creation logic, but role forced to "service_provider"
+        # ...
+        pass
+
+    return render_template("staff_new_provider.html", form=form)
 
 @app.route("/owner/reports/finalized")
 @business_login_required
