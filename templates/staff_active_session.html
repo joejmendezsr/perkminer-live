@@ -75,6 +75,9 @@
                 Status:
                 {% if interaction.provider_status == 'on_the_way' %}On the way{% endif %}
                 {% if interaction.provider_status == 'arrived' %}Arrived{% endif %}
+                {% if interaction.provider_status == 'no show - charge fee - no finalization' %}No Show - charge fee - no finalization{% endif %}
+                {% if interaction.provider_status == 'no show - charge fee - finalization' %}No Show - charge fee - finalization{% endif %}
+                {% if interaction.provider_status == 'no show - no fee' %}No Show - No fee{% endif %}
                 {% if interaction.provider_status == 'contract_initial_paid' %}Contract signed - initial fee paid{% endif %}
                 {% if interaction.provider_status == 'contract_full_paid' %}Contract signed - full fee paid{% endif %}
                 {% if interaction.provider_status == 'service_fee_only' %}Service call fee only paid{% endif %}
@@ -105,7 +108,10 @@
       <!-- STATUS UPDATE – ONLY FOR ASSIGNED SERVICE PROVIDER -->
       {% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
       <div class="mb-4">
-        <h5 class="mb-2">Update service status</h5>
+<h5 class="mb-2">Update service status</h5>
+<small class="text-muted d-block mb-2" style="font-size:0.85rem;">
+  Set "On the way" only after you have saved the destination address.
+</small>
         <form method="post" action="{{ url_for('staff_update_status', interaction_id=interaction.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-2">
@@ -156,6 +162,32 @@
         </form>
       </div>
       {% endif %}
+
+      <!-- DESTINATION – ONLY FOR ASSIGNED SERVICE PROVIDER -->
+      {% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
+      <div class="mb-3">
+        <h5 class="mb-2">Destination address</h5>
+        <form method="post" action="{{ url_for('staff_set_destination', interaction_id=interaction.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-2">
+            <input
+              type="text"
+              name="destination_address"
+              class="form-control form-control-sm"
+              placeholder="Enter destination address"
+              value="{{ interaction.destination_address or '' }}"
+            >
+          </div>
+          <small class="text-muted d-block mb-2" style="font-size:0.85rem;">
+            Enter the address you are going to before setting status to "On the way".
+          </small>
+          <button type="submit" class="btn btn-outline-primary btn-sm">
+            Save destination
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
 
       <!-- MESSAGES -->
       <h5 class="mb-2">Secure messages</h5>

@@ -1979,6 +1979,9 @@ class Interaction(db.Model):
     provider_status = db.Column(db.String(50))
     provider_status_note = db.Column(db.Text)
     provider_status_updated_at = db.Column(db.DateTime)
+    destination_address = db.Column(db.Text)
+    destination_lat = db.Column(db.Float)
+    destination_lng = db.Column(db.Float)
     business = db.relationship('Business', backref='interactions', lazy=True)
 
 class Message(db.Model):
@@ -10648,8 +10651,16 @@ def provider_status_location(interaction_id):
         })
 
     # ETA: member destination = business address coords (or maybe member coords if you add those)
-    dest_lat = interaction.business.latitude
-    dest_lng = interaction.business.longitude
+    dest_lat = None
+    dest_lng = None
+
+    # prefer destination_lat/lng if set (future), else fall back to business coords
+    if interaction.destination_lat is not None and interaction.destination_lng is not None:
+        dest_lat = interaction.destination_lat
+        dest_lng = interaction.destination_lng
+    elif interaction.business.latitude is not None and interaction.business.longitude is not None:
+        dest_lat = interaction.business.latitude
+        dest_lng = interaction.business.longitude
 
     distance_miles = None
     eta_minutes = None
@@ -10683,6 +10694,33 @@ def track_provider(interaction_id):
         abort(403)
 
     return render_template("track_provider.html", interaction=interaction)
+
+@app.route("/staff/session/<int:interaction_id>/destination", methods=["POST"])
+def staff_set_destination(interaction_id):
+    staff_id = session.get("staff_id")
+    if not staff_id:
+        flash("Please log in as staff.", "danger")
+        return redirect(url_for("staff_login"))
+
+    staff = Staff.query.get_or_404(staff_id)
+
+    # only service_providers can set destination, and only for their assigned session
+    if staff.role != "service_provider":
+        abort(403)
+
+    interaction = Interaction.query.filter_by(
+        id=interaction_id,
+        business_id=staff.business_id,
+        assigned_staff_id=staff.id
+    ).first_or_404()
+
+    address = request.form.get("destination_address", "").strip()
+    interaction.destination_address = address or None
+    # for now we leave destination_lat/destination_lng = NULL (no geocoding yet)
+
+    db.session.commit()
+    flash("Destination address saved.", "success")
+    return redirect(url_for("staff_active_session", interaction_id=interaction.id))
 
 @app.errorhandler(500)
 def internal_server_error(error):
