@@ -2099,6 +2099,7 @@ class StaffRegisterForm(FlaskForm):
         validators=[DataRequired()],
         default="admin",
     )
+    can_add_providers = BooleanField("Allow this admin to add service providers")  # NEW
     submit = SubmitField("Add Staff")
 
 class StaffLoginForm(FlaskForm):
@@ -8400,6 +8401,7 @@ def staff_new():
         email = form.email.data.strip().lower()
         name = form.name.data.strip()
         role = form.role.data  # "admin" or "service_provider"
+        can_add_providers = bool(form.can_add_providers.data)
 
         existing_staff = Staff.query.filter_by(email=email).first()
         if existing_staff:
@@ -8414,10 +8416,10 @@ def staff_new():
             name=name,
             email=email,
             hashed_password=hashed_pw,
-            role=role,  # <-- use selected role
+            role=role,
             is_active=True,
             password_reset_required=True,
-            # can_add_providers stays default False
+            can_add_providers=can_add_providers if role == "admin" else False,
         )
         db.session.add(staff)
         db.session.commit()

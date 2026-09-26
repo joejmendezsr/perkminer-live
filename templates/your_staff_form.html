@@ -34,7 +34,20 @@
 
   <div class="mb-3">
     {{ form.role.label(class="form-label") }}
-    {{ form.role(class="form-select") }}
+    {{ form.role(class="form-select", id="role-select") }}
+  </div>
+
+  <div class="mb-3" id="can-add-providers-wrapper">
+    <div class="form-check">
+      {{ form.can_add_providers(class="form-check-input", id="can-add-providers") }}
+      <label class="form-check-label" for="can-add-providers">
+        Allow this admin to add service providers
+      </label>
+    </div>
+    <small class="text-muted">
+      Only admins with this permission can create new service providers. 
+      Service providers cannot add other staff.
+    </small>
   </div>
 
   <button type="submit" class="btn btn-success w-100">
@@ -43,5 +56,31 @@
 </form>
     </div>
   </div>
+
+<script>
+  function updateCanAddProvidersVisibility() {
+    var roleSelect = document.getElementById('role-select');
+    var wrapper = document.getElementById('can-add-providers-wrapper');
+    if (!roleSelect || !wrapper) return;
+
+    if (roleSelect.value === 'admin') {
+      wrapper.style.display = '';
+    } else {
+      wrapper.style.display = 'none';
+      // optional: uncheck when hidden
+      var checkbox = document.getElementById('can-add-providers');
+      if (checkbox) checkbox.checked = false;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    updateCanAddProvidersVisibility();
+    var roleSelect = document.getElementById('role-select');
+    if (roleSelect) {
+      roleSelect.addEventListener('change', updateCanAddProvidersVisibility);
+    }
+  });
+</script>
+
 </body>
 </html>
