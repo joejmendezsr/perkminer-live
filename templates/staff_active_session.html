@@ -338,7 +338,7 @@ function openDrivingDirections() {
 let watchId = null;
 
 function startLocationSharing() {
-  console.log("startLocationSharing called");  // NEW
+  console.log("startLocationSharing called");
 
   if (!navigator.geolocation) {
     console.warn("Geolocation not supported");
@@ -351,11 +351,13 @@ function startLocationSharing() {
   }
 
   watchId = navigator.geolocation.watchPosition(function(pos) {
-    console.log("Got position:", pos.coords.latitude, pos.coords.longitude);  // NEW
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    console.log("Got position:", lat, lng, "at", new Date().toISOString());
 
     const data = new FormData();
-    data.append('lat', pos.coords.latitude);
-    data.append('lng', pos.coords.longitude);
+    data.append('lat', lat);
+    data.append('lng', lng);
 
     fetch("{{ url_for('staff_update_live_location') }}", {
       method: "POST",
@@ -374,7 +376,7 @@ function startLocationSharing() {
     alert("Error getting your location: " + err.message);
   }, {
     enableHighAccuracy: true,
-    maximumAge: 5000,
+    maximumAge: 3000,  // keep cache small
     timeout: 10000,
   });
 }
