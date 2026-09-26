@@ -92,6 +92,14 @@
             <a href="{{ url_for('staff_finalize_transaction', interaction_id=ia.id) }}" class="btn btn-outline-primary btn-sm">
               Finalize Manually
             </a>
+  <form method="post"
+        action="{{ url_for('end_session', interaction_id=ia.id) }}"
+        class="d-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-sm">
+      End Session
+    </button>
+  </form>
           </div>
         </li>
         {% else %}
