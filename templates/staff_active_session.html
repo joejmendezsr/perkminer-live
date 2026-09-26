@@ -136,6 +136,17 @@
       </div>
       {% endif %}
 
+{% if interaction.destination_lat is not none and interaction.destination_lng is not none %}
+  <div class="mt-3">
+    <button
+      type="button"
+      class="btn btn-outline-success btn-sm"
+      onclick="openDrivingDirections()">
+      Open driving directions
+    </button>
+  </div>
+{% endif %}
+
       <!-- STATUS UPDATE – ONLY FOR ASSIGNED SERVICE PROVIDER -->
       {% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
       <div class="mb-4">
@@ -280,6 +291,22 @@
     async defer>
   </script>
   <script>
+function openDrivingDirections() {
+  // Use Google Maps directions with destination coordinates
+  const destLat = {{ interaction.destination_lat or 0 }};
+  const destLng = {{ interaction.destination_lng or 0 }};
+
+  if (!destLat || !destLng) {
+    alert("Destination location is not set yet.");
+    return;
+  }
+
+  // This uses "Current Location" as origin on mobile/desktop
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+
+  window.open(url, "_blank");
+}
+
     function initDestinationAutocomplete() {
       const input = document.getElementById('destination-address');
       const latInput = document.getElementById('destination-lat');
