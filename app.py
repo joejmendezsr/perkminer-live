@@ -10527,6 +10527,7 @@ def update_live_location():
         current_app.logger.error(f"update_live_location error: {e}")
         return jsonify({"status": "error"}), 400
 
+@csrf.exempt
 @app.route("/staff/update_live_location", methods=["POST"])
 def staff_update_live_location():
     staff_id = session.get("staff_id")
