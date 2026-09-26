@@ -59,21 +59,71 @@
 <body>
 <div class="container py-3">
   <div class="card p-3">
-    <div class="mb-2">
-      {% if is_user %}
-        <h5>Active Session with {{ interaction.business.business_name }}</h5>
-      {% elif is_biz %}
-        <h5>Active Session with {{ interaction.user.name or interaction.user.email }}</h5>
-      {% endif %}
-    </div>
+<div class="mb-2">
+  {% if is_user %}
+    <h5>Active Session with {{ interaction.business.business_name }}</h5>
+  {% elif is_biz %}
+    <h5>Active Session with {{ interaction.user.name or interaction.user.email }}</h5>
+  {% endif %}
+</div>
 
-    {% if is_user and interaction.destination_address %}
-      <div class="alert alert-info py-2 px-3 mb-3" style="font-size:0.9rem;">
-        <strong>Service destination:</strong><br>
-        {{ interaction.destination_address }}<br>
-        <span class="text-muted">Please confirm this address is correct.</span>
-      </div>
+{% if is_user and interaction.destination_address %}
+  <div class="alert alert-info py-2 px-3 mb-3" style="font-size:0.9rem;">
+    <strong>Service destination:</strong><br>
+    {{ interaction.destination_address }}<br>
+    {% if interaction.member_destination_confirmed is none %}
+      <span class="text-muted">Please confirm this address is correct.</span>
+    {% elif interaction.member_destination_confirmed %}
+      <span class="text-success fw-semibold d-block mt-1">
+        You confirmed this address is correct.
+      </span>
+    {% else %}
+      <span class="text-danger fw-semibold d-block mt-1">
+        You reported this address as incorrect.
+      </span>
+      {% if interaction.member_destination_note %}
+        <span class="text-muted" style="font-size:0.85rem;">
+          {{ interaction.member_destination_note }}
+        </span>
+      {% endif %}
     {% endif %}
+  </div>
+
+  {% if interaction.member_destination_confirmed is none %}
+    <div class="mb-3 d-flex flex-wrap gap-2">
+      <form method="post" action="{{ url_for('confirm_destination', interaction_id=interaction.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-success btn-sm">
+          Correct address
+        </button>
+      </form>
+
+<form id="member-destination-form"
+      method="post"
+      action="{{ url_for('update_destination_by_member', interaction_id=interaction.id) }}"
+      class="d-flex flex-wrap gap-2 align-items-center">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <input
+    type="text"
+    id="member-destination-address"
+    name="member_new_address"
+    class="form-control form-control-sm"
+    placeholder="Enter correct address"
+    style="min-width: 220px;"
+    autocomplete="off"
+  >
+
+  <input type="hidden" id="member-destination-lat" name="member_destination_lat">
+  <input type="hidden" id="member-destination-lng" name="member_destination_lng">
+
+  <button type="submit" class="btn btn-danger btn-sm">
+    Incorrect address – update
+  </button>
+</form>
+    </div>
+  {% endif %}
+{% endif %}
 
     {% if interaction.assigned_staff_id %}
       <!-- status bar for user -->
@@ -257,5 +307,55 @@
   checkForReceipt();
   {% endif %}
 </script>
+
+{% if is_user and interaction.destination_address and google_maps_api_key %}
+<script
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"
+  async defer>
+</script>
+<script>
+  function initMemberDestinationAutocomplete() {
+    const input = document.getElementById('member-destination-address');
+    const latInput = document.getElementById('member-destination-lat');
+    const lngInput = document.getElementById('member-destination-lng');
+    if (!input) return;
+
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['geocode']
+    });
+
+    autocomplete.addListener('place_changed', function () {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        console.warn("Selected place has no geometry");
+        return;
+      }
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+
+      latInput.value = lat;
+      lngInput.value = lng;
+
+      if (place.formatted_address) {
+        input.value = place.formatted_address;
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    let tries = 0;
+    const interval = setInterval(function () {
+      if (window.google && google.maps && google.maps.places) {
+        clearInterval(interval);
+        initMemberDestinationAutocomplete();
+      } else if (tries++ > 20) {
+        clearInterval(interval);
+        console.warn("Google Places API not loaded for member.");
+      }
+    }, 300);
+  });
+</script>
+{% endif %}
+
 </body>
 </html>

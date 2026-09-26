@@ -69,6 +69,26 @@
             <strong>{{ interaction.business.business_name }}</strong>
           </div>
 
+{% if interaction.destination_address %}
+  <div class="mt-2" style="font-size:0.85rem;">
+    <strong>Destination (member view):</strong> {{ interaction.destination_address }}<br>
+    {% if interaction.member_destination_confirmed is none %}
+      <span class="text-muted">Member has not confirmed the address yet.</span>
+    {% elif interaction.member_destination_confirmed %}
+      <span class="text-success fw-semibold">Member confirmed: Address Correct</span>
+    {% else %}
+      <span class="text-danger fw-semibold">
+        Member reported incorrect address.
+      </span>
+      {% if interaction.member_destination_note %}
+        <div class="text-muted">
+          {{ interaction.member_destination_note }}
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endif %}
+
           {% if interaction.provider_status %}
             <div class="mt-2">
               <span class="badge bg-primary status-badge">
@@ -407,38 +427,44 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      // Initialize Places autocomplete
-      let tries = 0;
-      const interval = setInterval(function () {
-        if (window.google && google.maps && google.maps.places) {
-          clearInterval(interval);
-          initDestinationAutocomplete();
-        } else if (tries++ > 20) {
-          clearInterval(interval);
-          console.warn("Google Places API not loaded.");
-        }
-      }, 300);
+document.addEventListener('DOMContentLoaded', function () {
+  // Initialize Places autocomplete
+  let tries = 0;
+  const interval = setInterval(function () {
+    if (window.google && google.maps && google.maps.places) {
+      clearInterval(interval);
+      initDestinationAutocomplete();
+    } else if (tries++ > 20) {
+      clearInterval(interval);
+      console.warn("Google Places API not loaded.");
+    }
+  }, 300);
 
-      // auto-start GPS when status was already "on_the_way" on load
-      {% if interaction.provider_status == 'on_the_way' %}
+  // auto-start GPS when status was already "on_the_way" on load
+  {% if interaction.provider_status == 'on_the_way' %}
+    startLocationSharing();
+
+    // auto-refresh page every 20 seconds while on_the_way
+    setInterval(function () {
+      console.log("Auto-refreshing staff_active_session because status is on_the_way");
+      window.location.reload();
+    }, 20000);  // 20000 ms = 20 seconds; adjust to 15000 or 30000 if you prefer
+  {% endif %}
+
+  // start/stop GPS based on status when provider submits the form
+  const statusForm = document.getElementById('status-form');
+  const statusSelect = document.getElementById('provider-status-select');
+
+  if (statusForm && statusSelect) {
+    statusForm.addEventListener('submit', function () {
+      if (statusSelect.value === 'on_the_way') {
         startLocationSharing();
-      {% endif %}
-
-      // start/stop GPS based on status when provider submits the form
-      const statusForm = document.getElementById('status-form');
-      const statusSelect = document.getElementById('provider-status-select');
-
-      if (statusForm && statusSelect) {
-        statusForm.addEventListener('submit', function () {
-          if (statusSelect.value === 'on_the_way') {
-            startLocationSharing();
-          } else {
-            stopLocationSharing();
-          }
-        });
+      } else {
+        stopLocationSharing();
       }
     });
+  }
+});
   </script>
   {% endif %}
 

@@ -1983,6 +1983,8 @@ class Interaction(db.Model):
     destination_address = db.Column(db.Text)
     destination_lat = db.Column(db.Float)
     destination_lng = db.Column(db.Float)
+    member_destination_confirmed = db.Column(db.Boolean)  # True, False, or None (not responded yet)
+    member_destination_note = db.Column(db.Text)          # optional text or flag like "Incorrect Address - Address Updated by Member"
     business = db.relationship('Business', backref='interactions', lazy=True)
 
 class Message(db.Model):
@@ -10751,6 +10753,61 @@ def staff_set_destination(interaction_id):
     db.session.commit()
     flash("Destination address saved.", "success")
     return redirect(url_for("staff_active_session", interaction_id=interaction.id))
+
+@app.route("/session/<int:interaction_id>/confirm_destination", methods=["POST"])
+@login_required
+def confirm_destination(interaction_id):
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    # only the member who owns this session
+    if interaction.user_id != getattr(current_user, 'id', None):
+        abort(403)
+
+    interaction.member_destination_confirmed = True
+    interaction.member_destination_note = "Address Correct"
+    db.session.commit()
+
+    flash("You confirmed the destination address is correct.", "success")
+    return redirect(url_for('active_session', interaction_id=interaction.id))
+
+@app.route("/session/<int:interaction_id>/update_destination_by_member", methods=["POST"])
+@login_required
+def update_destination_by_member(interaction_id):
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    if interaction.user_id != getattr(current_user, 'id', None):
+        abort(403)
+
+    new_address = request.form.get("member_new_address", "").strip()
+    lat = request.form.get("member_destination_lat")
+    lng = request.form.get("member_destination_lng")
+
+    if not new_address:
+        flash("Please enter the correct address.", "danger")
+        return redirect(url_for('active_session', interaction_id=interaction.id))
+
+    # Replace destination address
+    interaction.destination_address = new_address
+
+    # Update destination_lat/lng from form if provided
+    try:
+        if lat and lng:
+            interaction.destination_lat = float(lat)
+            interaction.destination_lng = float(lng)
+        else:
+            interaction.destination_lat = None
+            interaction.destination_lng = None
+    except ValueError:
+        interaction.destination_lat = None
+        interaction.destination_lng = None
+
+    interaction.member_destination_confirmed = False
+    interaction.member_destination_note = "Incorrect Address - Address Updated by Member"
+
+    db.session.commit()
+
+    flash("You updated the destination address. The service provider will see this.", "success")
+    return redirect(url_for('active_session', interaction_id=interaction.id))
 
 @app.errorhandler(500)
 def internal_server_error(error):
