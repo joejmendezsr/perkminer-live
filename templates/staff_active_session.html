@@ -307,39 +307,49 @@
       });
     }
 
-    let watchId = null;
+let watchId = null;
 
-    function startLocationSharing() {
-      if (!navigator.geolocation) {
-        console.warn("Geolocation not supported");
-        return;
-      }
-      if (watchId !== null) return;
+function startLocationSharing() {
+  console.log("startLocationSharing called");  // NEW
 
-      watchId = navigator.geolocation.watchPosition(function(pos) {
-        const data = new FormData();
-        data.append('lat', pos.coords.latitude);
-        data.append('lng', pos.coords.longitude);
+  if (!navigator.geolocation) {
+    console.warn("Geolocation not supported");
+    alert("Geolocation is not supported by this browser.");
+    return;
+  }
+  if (watchId !== null) {
+    console.log("Already watching position, watchId:", watchId);
+    return;
+  }
 
-        fetch("{{ url_for('staff_update_live_location') }}", {
-          method: "POST",
-          body: data,
-        });
-      }, function(err) {
-        console.error("Geolocation error", err);
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 10000,
-      });
-    }
+  watchId = navigator.geolocation.watchPosition(function(pos) {
+    console.log("Got position:", pos.coords.latitude, pos.coords.longitude);  // NEW
 
-    function stopLocationSharing() {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-      }
-    }
+    const data = new FormData();
+    data.append('lat', pos.coords.latitude);
+    data.append('lng', pos.coords.longitude);
+
+    fetch("{{ url_for('staff_update_live_location') }}", {
+      method: "POST",
+      body: data,
+    }).then(r => {
+      console.log("Location POST status:", r.status);
+      return r.json().catch(() => ({}));
+    }).then(body => {
+      console.log("Location POST response:", body);
+    }).catch(err => {
+      console.error("Location POST failed:", err);
+    });
+
+  }, function(err) {
+    console.error("Geolocation error", err);
+    alert("Error getting your location: " + err.message);
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+    timeout: 10000,
+  });
+}
 
     document.addEventListener('DOMContentLoaded', function () {
       // Initialize Places autocomplete (after Google script loads)
