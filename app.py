@@ -2352,6 +2352,27 @@ def get_finalized_tx_count_for_business(business: Business) -> int:
     )
     return count or 0
 
+def staff_login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        staff_id = session.get('staff_id')
+        if not staff_id:
+            flash("Please log in as staff.", "warning")
+            return redirect(url_for('staff_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_staff_required(f):
+    @wraps(f)
+    @staff_login_required
+    def decorated_function(*args, **kwargs):
+        staff_id = session.get('staff_id')
+        staff = Staff.query.get(staff_id)
+        if not staff or staff.role != "admin":
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 def get_stripe_payout_status(user):
     if not user.stripe_account_id:
         return {
@@ -8353,6 +8374,22 @@ def toggle_provider_permission(staff_id):
     flash("Admin permissions updated.", "success")
     return redirect(url_for("business_dashboard"))
 
+@app.route("/business/staff/<int:staff_id>/provider-permission", methods=["POST"])
+@business_login_required
+def update_staff_provider_permission(staff_id):
+    biz_id = session.get("business_id")
+    staff = Staff.query.filter_by(id=staff_id, business_id=biz_id).first_or_404()
+
+    if staff.role != "admin":
+        flash("Only admin staff can be given provider-creation permission.", "danger")
+        return redirect(url_for("business_dashboard"))
+
+    staff.can_add_providers = (request.form.get("can_add_providers") == "1")
+    db.session.commit()
+
+    flash("Admin’s permissions updated.", "success")
+    return redirect(url_for("business_dashboard"))
+
 # ---------------- STAFF ROUTES ----------------
 
 @app.route("/staff/new", methods=["GET", "POST"])
@@ -8496,16 +8533,31 @@ def staff_dashboard():
         status="active"
     )
 
-    if staff.role == "admin":
-        # admins see all active sessions for the business
+    service_providers = []
+    is_admin = (staff.role == "admin")
+
+    if is_admin:
+        # admins see all sessions
         interactions = base_query.order_by(Interaction.created_at.desc()).all()
-    else:  # service_provider
-        # providers see only sessions assigned to them
+        # admins can assign to service providers
+        service_providers = Staff.query.filter_by(
+            business_id=staff.business_id,
+            is_active=True,
+            role="service_provider"
+        ).all()
+    else:
+        # service providers see only their sessions
         interactions = base_query.filter(
             Interaction.assigned_staff_id == staff.id
         ).order_by(Interaction.created_at.desc()).all()
 
-    return render_template("staff_dashboard.html", staff=staff, interactions=interactions)
+    return render_template(
+        "staff_dashboard.html",
+        staff=staff,
+        interactions=interactions,
+        service_providers=service_providers,
+        is_admin=is_admin,
+    )
 
 @app.route("/staff/logout")
 def staff_logout():
@@ -10450,6 +10502,39 @@ def update_live_location():
         db.session.rollback()
         current_app.logger.error(f"update_live_location error: {e}")
         return jsonify({"status": "error"}), 400
+
+@app.route("/staff/interactions/<int:interaction_id>/assign", methods=["POST"])
+@admin_staff_required
+def staff_assign_interaction(interaction_id):
+    staff_id = session.get("staff_id")
+    staff = Staff.query.get_or_404(staff_id)
+
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    if interaction.business_id != staff.business_id:
+        abort(403)
+
+    staff_id_to_assign = request.form.get("staff_id")
+    if not staff_id_to_assign:
+        flash("Please choose a service provider.", "danger")
+        return redirect(url_for('staff_dashboard'))
+
+    provider = Staff.query.filter_by(
+        id=staff_id_to_assign,
+        business_id=staff.business_id,
+        is_active=True,
+        role="service_provider",
+    ).first()
+
+    if not provider:
+        flash("Invalid service provider.", "danger")
+        return redirect(url_for('staff_dashboard'))
+
+    interaction.assigned_staff_id = provider.id
+    db.session.commit()
+
+    flash(f"Session assigned to {provider.name}.", "success")
+    return redirect(url_for('staff_dashboard'))
 
 @app.errorhandler(500)
 def internal_server_error(error):
