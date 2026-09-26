@@ -10542,6 +10542,10 @@ def staff_update_live_location():
         staff.live_gps_lat = float(lat)
         staff.live_gps_long = float(lng)
         db.session.commit()
+        current_app.logger.info(
+            "Updated live GPS for staff %s: lat=%s, lng=%s",
+            staff.id, lat, lng
+        )
         return jsonify({"status": "ok"})
     except Exception as e:
         db.session.rollback()
