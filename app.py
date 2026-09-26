@@ -10531,6 +10531,7 @@ def update_live_location():
 def staff_update_live_location():
     staff_id = session.get("staff_id")
     if not staff_id:
+        current_app.logger.warning("update_live_location unauthorized: no staff_id in session")
         return jsonify({"status": "unauthorized"}), 401
 
     staff = Staff.query.get_or_404(staff_id)
@@ -10539,9 +10540,12 @@ def staff_update_live_location():
     lng = request.form.get("lng")
 
     try:
+        current_app.logger.info("update_live_location raw input: lat=%r lng=%r", lat, lng)
+
         staff.live_gps_lat = float(lat)
         staff.live_gps_long = float(lng)
         db.session.commit()
+
         current_app.logger.info(
             "Updated live GPS for staff %s: lat=%s, lng=%s",
             staff.id, lat, lng
@@ -10549,8 +10553,11 @@ def staff_update_live_location():
         return jsonify({"status": "ok"})
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"staff_update_live_location error: {e}")
-        return jsonify({"status": "error"}), 400
+        current_app.logger.error(
+            "staff_update_live_location error for staff %s: %r",
+            staff_id, e
+        )
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/staff/interactions/<int:interaction_id>/assign", methods=["POST"])
 @admin_staff_required
