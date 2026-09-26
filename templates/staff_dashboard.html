@@ -83,7 +83,7 @@
           <div class="mt-2 mt-md-0 d-flex gap-2 flex-wrap">
             {% if ia.status == 'active' and ia.service_type and ia.service_type != 'Closed' %}
               <a href="{{ url_for('staff_active_session', interaction_id=ia.id) }}" class="btn btn-secondary btn-sm">
-                Open Secure Messaging Session
+                Open Active Session
               </a>
             {% endif %}
             <a href="{{ url_for('staff_scan_qr', interaction_id=ia.id) }}" class="btn btn-success btn-sm">
