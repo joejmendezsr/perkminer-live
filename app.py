@@ -10585,14 +10585,16 @@ def staff_update_status(interaction_id):
 
     staff = Staff.query.get_or_404(staff_id)
 
-    # base query: must belong to same business
-    q = Interaction.query.filter_by(id=interaction_id, business_id=staff.business_id)
+    # only service_providers can update status
+    if staff.role != "service_provider":
+        abort(403)
 
-    # if service_provider, must be assigned to this session
-    if staff.role == "service_provider":
-        q = q.filter(Interaction.assigned_staff_id == staff.id)
-
-    interaction = q.first_or_404()
+    # must be assigned to this session
+    interaction = Interaction.query.filter_by(
+        id=interaction_id,
+        business_id=staff.business_id,
+        assigned_staff_id=staff.id
+    ).first_or_404()
 
     new_status = request.form.get("provider_status")
     note = request.form.get("provider_status_note", "").strip()
@@ -10609,7 +10611,7 @@ def staff_update_status(interaction_id):
 
     if new_status not in allowed_statuses:
         flash("Invalid status.", "danger")
-        return redirect(url_for("staff_active_session", interaction_id=interaction.id))
+        return redirect(url_for('staff_active_session', interaction_id=interaction.id))
 
     interaction.provider_status = new_status
     interaction.provider_status_note = note or None
@@ -10617,7 +10619,7 @@ def staff_update_status(interaction_id):
 
     db.session.commit()
     flash("Status updated.", "success")
-    return redirect(url_for("staff_active_session", interaction_id=interaction.id))
+    return redirect(url_for('staff_active_session', interaction_id=interaction.id))
 
 @app.route("/session/<int:interaction_id>/provider_status_location")
 @login_required
