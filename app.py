@@ -12,7 +12,7 @@ from flask_login import (
 from flask_wtf import FlaskForm, CSRFProtect, RecaptchaField
 from wtforms import (
     StringField, PasswordField, SubmitField, DecimalField, SelectField, FileField,
-    TextAreaField, Form
+    TextAreaField, Form, BooleanField
 )
 from wtforms.validators import (
     DataRequired, Email, Length, EqualTo, Optional, NumberRange
