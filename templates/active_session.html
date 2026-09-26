@@ -69,7 +69,7 @@
 
     {% if interaction.assigned_staff_id %}
       <!-- status bar for user -->
-      {% set status_label = "Assigned" %}
+      {% set status_label = "Assigned to Service Provider" %}
       {% if interaction.provider_status == 'on_the_way' %}
         {% set status_label = "On the way" %}
       {% elif interaction.provider_status == 'arrived' %}
@@ -101,7 +101,7 @@
       <div class="mb-3">
         <button class="btn btn-outline-primary btn-sm"
                 onclick="window.open('{{ url_for('track_provider', interaction_id=interaction.id) }}', '_blank', 'width=420,height=700');">
-          Track service provider
+          Track on the way service provider
         </button>
       </div>
     {% endif %}
