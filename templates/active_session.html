@@ -58,40 +58,77 @@
 </head>
 <body>
 <div class="container py-3">
-    <div class="card p-3">
-        <div class="mb-2">
-            {% if is_user %}
-                <h5>Active Session with {{ interaction.business.business_name }}</h5>
-            {% elif is_biz %}
-                <h5>Active Session with {{ interaction.user.name or interaction.user.email }}</h5>
-            {% endif %}
-        </div>
+  <div class="card p-3">
+    <div class="mb-2">
+      {% if is_user %}
+        <h5>Active Session with {{ interaction.business.business_name }}</h5>
+      {% elif is_biz %}
+        <h5>Active Session with {{ interaction.user.name or interaction.user.email }}</h5>
+      {% endif %}
+    </div>
 
-{% if interaction.assigned_staff_id %}
-  <button class="btn btn-outline-primary btn-sm"
-          onclick="window.open('{{ url_for('track_provider', interaction_id=interaction.id) }}', '_blank', 'width=420,height=700');">
-    Track service provider
-  </button>
-{% endif %}
+    {% if interaction.assigned_staff_id %}
+      <!-- status bar for user -->
+      {% set status_label = "Assigned" %}
+      {% if interaction.provider_status == 'on_the_way' %}
+        {% set status_label = "On the way" %}
+      {% elif interaction.provider_status == 'arrived' %}
+        {% set status_label = "Arrived" %}
+      {% elif interaction.provider_status == 'contract_initial_paid' %}
+        {% set status_label = "Contract signed - initial fee paid" %}
+      {% elif interaction.provider_status == 'contract_full_paid' %}
+        {% set status_label = "Contract signed - full fee paid" %}
+      {% elif interaction.provider_status == 'service_fee_only' %}
+        {% set status_label = "Service call fee only paid" %}
+      {% elif interaction.provider_status == 'rejected_no_contract' %}
+        {% set status_label = "Rejected quote - no contract or fee" %}
+      {% elif interaction.provider_status == 'estimate_only' %}
+        {% set status_label = "Estimate only" %}
+      {% endif %}
 
-        {% if is_user and not interaction.awaiting_finalization %}
-          <div class="mb-3 text-center">
-            <form method="post" action="{{ url_for('active_session', interaction_id=interaction.id) }}">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="accept_and_pay" value="1">
-              <button type="submit" class="btn btn-success w-100">Accept & Pay (Show My QR Code)</button>
-            </form>
-          </div>
-        {% elif is_user and interaction.awaiting_finalization %}
-          <div class="mb-3 text-center">
-            <p class="mb-2 text-success fw-bold">Show this QR code to the business to complete payment:</p>
-            <img src="{{ url_for('user_qr_code') }}" alt="Your QR Code" style="max-width:160px; margin-top:10px;">
-            <div id="user-receipt-wait" class="alert alert-info mt-3 mb-0">
-              Waiting for business to finalize payment...<br>
-              <span class="spinner-border spinner-border-sm text-warning"></span>
-            </div>
+      <div class="mb-2">
+        <span class="badge bg-primary">
+          Status: {{ status_label }}
+        </span>
+        {% if interaction.provider_status_note %}
+          <div class="mt-1 text-muted" style="font-size:0.85rem;">
+            {{ interaction.provider_status_note }}
           </div>
         {% endif %}
+      </div>
+
+      <!-- tracking button with spacing -->
+      <div class="mb-3">
+        <button class="btn btn-outline-primary btn-sm"
+                onclick="window.open('{{ url_for('track_provider', interaction_id=interaction.id) }}', '_blank', 'width=420,height=700');">
+          Track service provider
+        </button>
+      </div>
+    {% endif %}
+
+    {% if is_user and not interaction.awaiting_finalization %}
+      <div class="mb-3 text-center">
+        <form method="post" action="{{ url_for('active_session', interaction_id=interaction.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="accept_and_pay" value="1">
+          <button type="submit" class="btn btn-success w-100">
+            Accept &amp; Pay (Show My QR Code)
+          </button>
+        </form>
+      </div>
+    {% elif is_user and interaction.awaiting_finalization %}
+      <div class="mb-3 text-center">
+        <p class="mb-2 text-success fw-bold">
+          Show this QR code to the business to complete payment:
+        </p>
+        <img src="{{ url_for('user_qr_code') }}" alt="Your QR Code"
+             style="max-width:160px; margin-top:10px;">
+        <div id="user-receipt-wait" class="alert alert-info mt-3 mb-0">
+          Waiting for business to finalize payment...<br>
+          <span class="spinner-border spinner-border-sm text-warning"></span>
+        </div>
+      </div>
+    {% endif %}
 
         {% if is_biz and interaction.awaiting_finalization %}
           <div class="mb-3 text-center">
