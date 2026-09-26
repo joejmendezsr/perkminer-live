@@ -191,6 +191,7 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['RECAPTCHA_PUBLIC_KEY'] = '6LdhAV8sAAAAABwITf0HytcbADISlcMd87NP-i2H'
 app.config['RECAPTCHA_PRIVATE_KEY'] = '6LdhAV8sAAAAAFi9YjxnZqFLUl3SlQjHc1g7IEOq'
+app.config['GOOGLE_MAPS_API_KEY'] = os.environ.get('GOOGLE_MAPS_API_KEY')
 
 SHOP_SECRET = os.environ.get("SHOP_SECRET", app.config['SECRET_KEY'])
 shop_serializer = URLSafeSerializer(SHOP_SECRET, salt="shop-redirect")
@@ -8671,10 +8672,13 @@ def staff_active_session(interaction_id):
             "file_name": msg.file_name,
         })
 
-    return render_template("staff_active_session.html",
-                           interaction=interaction,
-                           staff=staff,
-                           messages=messages_with_labels)
+    return render_template(
+        "staff_active_session.html",
+        interaction=interaction,
+        staff=staff,
+        messages=messages_with_labels,
+        google_maps_api_key=current_app.config.get('GOOGLE_MAPS_API_KEY')
+    )
 
 @app.route("/staff/session/<int:interaction_id>/messages")
 def staff_session_messages(interaction_id):
@@ -10715,8 +10719,22 @@ def staff_set_destination(interaction_id):
     ).first_or_404()
 
     address = request.form.get("destination_address", "").strip()
+    lat = request.form.get("destination_lat")
+    lng = request.form.get("destination_lng")
+
     interaction.destination_address = address or None
-    # for now we leave destination_lat/destination_lng = NULL (no geocoding yet)
+
+    # store lat/lng only if we got valid numbers
+    try:
+        if lat and lng:
+            interaction.destination_lat = float(lat)
+            interaction.destination_lng = float(lng)
+        else:
+            interaction.destination_lat = None
+            interaction.destination_lng = None
+    except ValueError:
+        interaction.destination_lat = None
+        interaction.destination_lng = None
 
     db.session.commit()
     flash("Destination address saved.", "success")

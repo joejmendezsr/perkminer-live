@@ -105,6 +105,42 @@
 
       <hr>
 
+      <!-- DESTINATION – ONLY FOR ASSIGNED SERVICE PROVIDER -->
+{% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
+<div class="mb-3">
+  <h5 class="mb-2">Destination address</h5>
+  <form method="post" action="{{ url_for('staff_set_destination', interaction_id=interaction.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- visible address input -->
+    <div class="mb-2">
+      <input
+        type="text"
+        id="destination-address"
+        name="destination_address"
+        class="form-control form-control-sm"
+        placeholder="Start typing an address..."
+        value="{{ interaction.destination_address or '' }}"
+        autocomplete="off"
+      >
+    </div>
+
+    <!-- hidden lat/lng fields -->
+    <input type="hidden" id="destination-lat" name="destination_lat"
+           value="{{ interaction.destination_lat if interaction.destination_lat is not none else '' }}">
+    <input type="hidden" id="destination-lng" name="destination_lng"
+           value="{{ interaction.destination_lng if interaction.destination_lng is not none else '' }}">
+
+    <small class="text-muted d-block mb-2" style="font-size:0.85rem;">
+      Choose the exact address you are going to before setting status to "On the way".
+    </small>
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+      Save destination
+    </button>
+  </form>
+</div>
+{% endif %}
+
       <!-- STATUS UPDATE – ONLY FOR ASSIGNED SERVICE PROVIDER -->
       {% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
       <div class="mb-4">
@@ -162,32 +198,6 @@
         </form>
       </div>
       {% endif %}
-
-      <!-- DESTINATION – ONLY FOR ASSIGNED SERVICE PROVIDER -->
-      {% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
-      <div class="mb-3">
-        <h5 class="mb-2">Destination address</h5>
-        <form method="post" action="{{ url_for('staff_set_destination', interaction_id=interaction.id) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="mb-2">
-            <input
-              type="text"
-              name="destination_address"
-              class="form-control form-control-sm"
-              placeholder="Enter destination address"
-              value="{{ interaction.destination_address or '' }}"
-            >
-          </div>
-          <small class="text-muted d-block mb-2" style="font-size:0.85rem;">
-            Enter the address you are going to before setting status to "On the way".
-          </small>
-          <button type="submit" class="btn btn-outline-primary btn-sm">
-            Save destination
-          </button>
-        </form>
-      </div>
-      {% endif %}
-
 
       <!-- MESSAGES -->
       <h5 class="mb-2">Secure messages</h5>
@@ -304,6 +314,56 @@
     });
   </script>
   {% endif %}
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"
+  async defer>
+</script>
+<script>
+  function initDestinationAutocomplete() {
+    const input = document.getElementById('destination-address');
+    const latInput = document.getElementById('destination-lat');
+    const lngInput = document.getElementById('destination-lng');
+    if (!input) return;
+
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['geocode'],
+      // optional: restrict to a country:
+      // componentRestrictions: { country: ['us'] }
+    });
+
+    autocomplete.addListener('place_changed', function () {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        console.warn("Selected place has no geometry");
+        return;
+      }
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+
+      latInput.value = lat;
+      lngInput.value = lng;
+
+      if (place.formatted_address) {
+        input.value = place.formatted_address;
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    let tries = 0;
+    const interval = setInterval(function () {
+      if (window.google && google.maps && google.maps.places) {
+        clearInterval(interval);
+        initDestinationAutocomplete();
+      } else if (tries++ > 20) {
+        clearInterval(interval);
+        console.warn("Google Places API not loaded.");
+      }
+    }, 300);
+  });
+</script>
+{% endif %}
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
