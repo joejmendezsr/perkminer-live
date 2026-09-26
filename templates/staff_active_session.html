@@ -150,62 +150,82 @@
       <hr>
 
       <!-- STATUS UPDATE – ONLY FOR ASSIGNED SERVICE PROVIDER -->
-      {% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
-      <div class="mb-4">
-        <h5 class="mb-2">Update service status</h5>
-        <small class="text-muted d-block mb-2" style="font-size:0.85rem;">
-          Set "On the way" only after you have saved the destination address.  "On the way" automatically starts sharing your live location with the member until you "End Session".
-        </small>
-        <form method="post" action="{{ url_for('staff_update_status', interaction_id=interaction.id) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="mb-2">
-            <label class="form-label">Current status</label>
-            <select name="provider_status" class="form-select form-select-sm">
-              <option value="">Select status...</option>
-              <option value="on_the_way"
-                {% if interaction.provider_status == 'on_the_way' %}selected{% endif %}>
-                On the way
-              </option>
-              <option value="arrived"
-                {% if interaction.provider_status == 'arrived' %}selected{% endif %}>
-                Arrived
-              </option>
-              <option value="contract_initial_paid"
-                {% if interaction.provider_status == 'contract_initial_paid' %}selected{% endif %}>
-                Contract signed - initial fee paid
-              </option>
-              <option value="contract_full_paid"
-                {% if interaction.provider_status == 'contract_full_paid' %}selected{% endif %}>
-                Contract signed - full fee paid
-              </option>
-              <option value="service_fee_only"
-                {% if interaction.provider_status == 'service_fee_only' %}selected{% endif %}>
-                Service call fee only paid
-              </option>
-              <option value="rejected_no_contract"
-                {% if interaction.provider_status == 'rejected_no_contract' %}selected{% endif %}>
-                Rejected quote - no contract or fee
-              </option>
-              <option value="estimate_only"
-                {% if interaction.provider_status == 'estimate_only' %}selected{% endif %}>
-                Estimate only
-              </option>
-            </select>
-          </div>
-          <div class="mb-2">
-            <label class="form-label">Notes (optional)</label>
-            <textarea
-              name="provider_status_note"
-              class="form-control form-control-sm"
-              rows="2"
-            >{{ interaction.provider_status_note or '' }}</textarea>
-          </div>
-          <button type="submit" class="btn btn-primary btn-sm">
-            Save status
-          </button>
-        </form>
-      </div>
-      {% endif %}
+
+{% if staff.role == 'service_provider' and interaction.assigned_staff_id == staff.id %}
+<div class="mb-4">
+  <h5 class="mb-2">Update service status</h5>
+  <small class="text-muted d-block mb-2" style="font-size:0.85rem;">
+    Set "On the way" only after you have saved the destination address.
+  </small>
+  <form id="status-form"
+        method="post"
+        action="{{ url_for('staff_update_status', interaction_id=interaction.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-2">
+      <label class="form-label">Current status</label>
+      <select id="provider-status-select"
+              name="provider_status"
+              class="form-select form-select-sm">
+        <option value="">Select status...</option>
+        <option value="on_the_way"
+          {% if interaction.provider_status == 'on_the_way' %}selected{% endif %}>
+          On the way
+        </option>
+        <option value="arrived"
+          {% if interaction.provider_status == 'arrived' %}selected{% endif %}>
+          Arrived
+        </option>
+        <!-- other status options unchanged -->
+        <option value="no show - charge fee - no finalization"
+          {% if interaction.provider_status == 'no show - charge fee - no finalization' %}selected{% endif %}>
+          No Show - Charge Fee - No Finalization
+        </option>
+        <option value="no show - charge fee - finalization"
+          {% if interaction.provider_status == 'no show - charge fee - finalization' %}selected{% endif %}>
+          No Show - Charge Fee - Finalization
+        </option>
+        <option value="no show - no fee"
+          {% if interaction.provider_status == 'no show - no fee' %}selected{% endif %}>
+          No Show - No Fee
+        </option>
+        <option value="contract_initial_paid"
+          {% if interaction.provider_status == 'contract_initial_paid' %}selected{% endif %}>
+          Contract signed - initial fee paid
+        </option>
+        <option value="contract_full_paid"
+          {% if interaction.provider_status == 'contract_full_paid' %}selected{% endif %}>
+          Contract signed - full fee paid
+        </option>
+        <option value="service_fee_only"
+          {% if interaction.provider_status == 'service_fee_only' %}selected{% endif %}>
+          Service call fee only paid
+        </option>
+        <option value="rejected_no_contract"
+          {% if interaction.provider_status == 'rejected_no_contract' %}selected{% endif %}>
+          Rejected quote - no contract or fee
+        </option>
+        <option value="estimate_only"
+          {% if interaction.provider_status == 'estimate_only' %}selected{% endif %}>
+          Estimate only
+        </option>
+      </select>
+    </div>
+    <div class="mb-2">
+      <label class="form-label">Notes (optional)</label>
+      <textarea
+        name="provider_status_note"
+        class="form-control form-control-sm"
+        rows="2"
+      >{{ interaction.provider_status_note or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">
+      Save status
+    </button>
+  </form>
+</div>
+{% endif %}
+
+      <hr>
 
       <!-- MESSAGES -->
       <h5 class="mb-2">Secure messages</h5>
@@ -383,26 +403,39 @@ function startLocationSharing() {
   });
 }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      // Initialize Places autocomplete (after Google script loads)
-      let tries = 0;
-      const interval = setInterval(function () {
-        if (window.google && google.maps && google.maps.places) {
-          clearInterval(interval);
-          initDestinationAutocomplete();
-        } else if (tries++ > 20) {
-          clearInterval(interval);
-          console.warn("Google Places API not loaded.");
-        }
-      }, 300);
+document.addEventListener('DOMContentLoaded', function () {
+  // Initialize Places autocomplete (after Google script loads)
+  let tries = 0;
+  const interval = setInterval(function () {
+    if (window.google && google.maps && google.maps.places) {
+      clearInterval(interval);
+      initDestinationAutocomplete();
+    } else if (tries++ > 20) {
+      clearInterval(interval);
+      console.warn("Google Places API not loaded.");
+    }
+  }, 300);
 
-      // auto-start GPS when status is "on_the_way"
-      {% if interaction.provider_status == 'on_the_way' %}
-        startLocationSharing();
-      {% endif %}
-    });
-  </script>
+  // auto-start GPS when status was already "on_the_way" on load
+  {% if interaction.provider_status == 'on_the_way' %}
+    startLocationSharing();
   {% endif %}
+
+  // start/stop GPS based on status when provider submits the form
+  const statusForm = document.getElementById('status-form');
+  const statusSelect = document.getElementById('provider-status-select');
+
+  if (statusForm && statusSelect) {
+    statusForm.addEventListener('submit', function () {
+      if (statusSelect.value === 'on_the_way') {
+        startLocationSharing();
+      } else {
+        // any status other than "on_the_way" -> stop sharing
+        stopLocationSharing();
+      }
+    });
+  }
+});
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
