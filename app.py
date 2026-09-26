@@ -1976,6 +1976,9 @@ class Interaction(db.Model):
     user = db.relationship('User', backref='interactions', lazy=True)
     # NEW relationship
     assigned_staff = db.relationship("Staff", backref="assigned_interactions", lazy=True)
+    provider_status = db.Column(db.String(50))
+    provider_status_note = db.Column(db.Text)
+    provider_status_updated_at = db.Column(db.DateTime)
     business = db.relationship('Business', backref='interactions', lazy=True)
 
 class Message(db.Model):
@@ -2498,6 +2501,18 @@ def haversine_py(lat1, lon1, lat2, lon2):
             sin(radians(lat1)) * sin(radians(lat2))
         )
     )
+
+import math
+
+def haversine_miles(lat1, lon1, lat2, lon2):
+    R = 3959  # Earth radius miles
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 def get_featured_businesses(lat, lng):
     RADIUS = 10  # miles
@@ -10505,6 +10520,27 @@ def update_live_location():
         current_app.logger.error(f"update_live_location error: {e}")
         return jsonify({"status": "error"}), 400
 
+@app.route("/staff/update_live_location", methods=["POST"])
+def staff_update_live_location():
+    staff_id = session.get("staff_id")
+    if not staff_id:
+        return jsonify({"status": "unauthorized"}), 401
+
+    staff = Staff.query.get_or_404(staff_id)
+
+    lat = request.form.get("lat")
+    lng = request.form.get("lng")
+
+    try:
+        staff.live_gps_lat = float(lat)
+        staff.live_gps_long = float(lng)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"staff_update_live_location error: {e}")
+        return jsonify({"status": "error"}), 400
+
 @app.route("/staff/interactions/<int:interaction_id>/assign", methods=["POST"])
 @admin_staff_required
 def staff_assign_interaction(interaction_id):
@@ -10537,6 +10573,114 @@ def staff_assign_interaction(interaction_id):
 
     flash(f"Session assigned to {provider.name}.", "success")
     return redirect(url_for('staff_dashboard'))
+
+from datetime import datetime
+
+@app.route("/staff/session/<int:interaction_id>/status", methods=["POST"])
+def staff_update_status(interaction_id):
+    staff_id = session.get("staff_id")
+    if not staff_id:
+        flash("Please log in as staff.", "danger")
+        return redirect(url_for("staff_login"))
+
+    staff = Staff.query.get_or_404(staff_id)
+
+    # base query: must belong to same business
+    q = Interaction.query.filter_by(id=interaction_id, business_id=staff.business_id)
+
+    # if service_provider, must be assigned to this session
+    if staff.role == "service_provider":
+        q = q.filter(Interaction.assigned_staff_id == staff.id)
+
+    interaction = q.first_or_404()
+
+    new_status = request.form.get("provider_status")
+    note = request.form.get("provider_status_note", "").strip()
+
+    allowed_statuses = {
+        "on_the_way",
+        "arrived",
+        "contract_initial_paid",
+        "contract_full_paid",
+        "service_fee_only",
+        "rejected_no_contract",
+        "estimate_only",
+    }
+
+    if new_status not in allowed_statuses:
+        flash("Invalid status.", "danger")
+        return redirect(url_for("staff_active_session", interaction_id=interaction.id))
+
+    interaction.provider_status = new_status
+    interaction.provider_status_note = note or None
+    interaction.provider_status_updated_at = datetime.utcnow()
+
+    db.session.commit()
+    flash("Status updated.", "success")
+    return redirect(url_for("staff_active_session", interaction_id=interaction.id))
+
+@app.route("/session/<int:interaction_id>/provider_status_location")
+@login_required
+def provider_status_location(interaction_id):
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    # who can see: user, business, assigned staff
+    is_user = interaction.user_id == getattr(current_user, 'id', None)
+    is_biz = session.get('business_id') == interaction.business_id
+
+    staff_id = session.get('staff_id')
+    is_assigned_staff = False
+    if staff_id:
+        s = Staff.query.get(staff_id)
+        is_assigned_staff = (s and s.id == interaction.assigned_staff_id)
+
+    if not (is_user or is_biz or is_assigned_staff):
+        abort(403)
+
+    staff = interaction.assigned_staff
+    if not staff or staff.live_gps_lat is None or staff.live_gps_long is None:
+        return jsonify({
+            "has_location": False,
+            "provider_status": interaction.provider_status,
+            "provider_status_note": interaction.provider_status_note,
+        })
+
+    # ETA: member destination = business address coords (or maybe member coords if you add those)
+    dest_lat = interaction.business.latitude
+    dest_lng = interaction.business.longitude
+
+    distance_miles = None
+    eta_minutes = None
+    if dest_lat is not None and dest_lng is not None:
+        distance_miles = haversine_miles(
+            staff.live_gps_lat, staff.live_gps_long,
+            dest_lat, dest_lng
+        )
+        # assume 25 mph average travel speed
+        if distance_miles is not None:
+            eta_hours = distance_miles / 25.0
+            eta_minutes = round(eta_hours * 60)
+
+    return jsonify({
+        "has_location": True,
+        "lat": staff.live_gps_lat,
+        "lng": staff.live_gps_long,
+        "provider_status": interaction.provider_status,
+        "provider_status_note": interaction.provider_status_note,
+        "distance_miles": round(distance_miles, 2) if distance_miles is not None else None,
+        "eta_minutes": eta_minutes,
+    })
+
+@app.route("/session/<int:interaction_id>/track")
+@login_required
+def track_provider(interaction_id):
+    interaction = Interaction.query.get_or_404(interaction_id)
+
+    # only the user for now
+    if interaction.user_id != getattr(current_user, 'id', None):
+        abort(403)
+
+    return render_template("track_provider.html", interaction=interaction)
 
 @app.errorhandler(500)
 def internal_server_error(error):

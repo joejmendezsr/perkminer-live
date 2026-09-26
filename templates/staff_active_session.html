@@ -34,6 +34,49 @@
         <a href="{{ url_for('staff_dashboard') }}" class="btn btn-outline-secondary w-100 mb-2">
           <i class="bi bi-arrow-left"></i> Return to Dashboard
         </a>
+
+
+{% if staff.role == 'admin' or (interaction.assigned_staff_id == staff.id) %}
+  <hr>
+  <h5>Update Service Status</h5>
+  <form method="post" action="{{ url_for('staff_update_status', interaction_id=interaction.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-2">
+      <label class="form-label">Current status</label>
+      <select name="provider_status" class="form-select form-select-sm">
+        <option value="">Select status...</option>
+        <option value="on_the_way" {% if interaction.provider_status == 'on_the_way' %}selected{% endif %}>
+          On the way
+        </option>
+        <option value="arrived" {% if interaction.provider_status == 'arrived' %}selected{% endif %}>
+          Arrived
+        </option>
+        <option value="contract_initial_paid" {% if interaction.provider_status == 'contract_initial_paid' %}selected{% endif %}>
+          Contract signed - initial fee paid
+        </option>
+        <option value="contract_full_paid" {% if interaction.provider_status == 'contract_full_paid' %}selected{% endif %}>
+          Contract signed - full fee paid
+        </option>
+        <option value="service_fee_only" {% if interaction.provider_status == 'service_fee_only' %}selected{% endif %}>
+          Service call fee only paid
+        </option>
+        <option value="rejected_no_contract" {% if interaction.provider_status == 'rejected_no_contract' %}selected{% endif %}>
+          Rejected quote - no contract or fee
+        </option>
+        <option value="estimate_only" {% if interaction.provider_status == 'estimate_only' %}selected{% endif %}>
+          Estimate only
+        </option>
+      </select>
+    </div>
+    <div class="mb-2">
+      <label class="form-label">Notes (optional)</label>
+      <textarea name="provider_status_note" class="form-control form-control-sm" rows="2">{{ interaction.provider_status_note or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Save status</button>
+  </form>
+{% endif %}
+
+
       </div>
 
       <hr>
@@ -74,5 +117,50 @@ function reloadMessages() {
 {% endif %}
 scrollToBottom();
 </script>
+
+<script>
+  let watchId = null;
+
+  function startLocationSharing() {
+    if (!navigator.geolocation) {
+      console.warn("Geolocation not supported");
+      return;
+    }
+    if (watchId !== null) return;
+
+    watchId = navigator.geolocation.watchPosition(function(pos) {
+      const data = new FormData();
+      data.append('lat', pos.coords.latitude);
+      data.append('lng', pos.coords.longitude);
+
+      fetch("{{ url_for('staff_update_live_location') }}", {
+        method: "POST",
+        body: data,
+      });
+    }, function(err) {
+      console.error("Geolocation error", err);
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000,
+    });
+  }
+
+  function stopLocationSharing() {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+  }
+
+  // simple example: auto-start when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    // optional: only start if status is currently "on_the_way"
+    {% if interaction.provider_status == 'on_the_way' and interaction.assigned_staff_id == staff.id %}
+      startLocationSharing();
+    {% endif %}
+  });
+</script>
+
 </body>
 </html>
