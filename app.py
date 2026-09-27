@@ -5484,6 +5484,7 @@ def active_session(interaction_id):
         is_biz=is_biz,
         messages=messages_with_labels,
         can_shop_online=can_shop_online,
+        google_maps_api_key=current_app.config.get('GOOGLE_MAPS_API_KEY'),
         business=business
     )
 
@@ -10786,10 +10787,10 @@ def update_destination_by_member(interaction_id):
         flash("Please enter the correct address.", "danger")
         return redirect(url_for('active_session', interaction_id=interaction.id))
 
-    # Always update the address text
+    # Always update address text
     interaction.destination_address = new_address
 
-    # Only update lat/lng if we actually got valid values
+    # Overwrite lat/lng ONLY if member actually selected a place
     try:
         if lat and lng:
             interaction.destination_lat = float(lat)
@@ -10799,9 +10800,10 @@ def update_destination_by_member(interaction_id):
                 interaction.destination_lat, interaction.destination_lng
             )
         else:
-            # keep existing coords if member didn't pick from autocomplete
+            # If member typed manually and didn't pick a suggestion,
+            # keep existing coords instead of wiping them.
             current_app.logger.info(
-                "Member updated destination text but no coords provided; keeping existing lat/lng."
+                "Member updated destination text but no coords sent; keeping existing lat/lng."
             )
     except ValueError:
         current_app.logger.warning(
