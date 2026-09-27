@@ -89,8 +89,11 @@
     {% endif %}
   </div>
 
-  {% if interaction.member_destination_confirmed is none %}
-    <div class="mb-3 d-flex flex-wrap gap-2">
+  <!-- buttons + optional address edit -->
+  <div class="mb-3">
+    <!-- row of two buttons -->
+    <div class="d-flex flex-wrap gap-2 mb-2">
+      <!-- correct address -->
       <form method="post" action="{{ url_for('confirm_destination', interaction_id=interaction.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-success btn-sm">
@@ -98,31 +101,46 @@
         </button>
       </form>
 
-<form id="member-destination-form"
-      method="post"
-      action="{{ url_for('update_destination_by_member', interaction_id=interaction.id) }}"
-      class="d-flex flex-wrap gap-2 align-items-center">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-  <input
-    type="text"
-    id="member-destination-address"
-    name="member_new_address"
-    class="form-control form-control-sm"
-    placeholder="Enter correct address"
-    style="min-width: 220px;"
-    autocomplete="off"
-  >
-
-  <input type="hidden" id="member-destination-lat" name="member_destination_lat">
-  <input type="hidden" id="member-destination-lng" name="member_destination_lng">
-
-  <button type="submit" class="btn btn-danger btn-sm">
-    Incorrect address – update
-  </button>
-</form>
+      <!-- show/hide incorrect/update form with JS -->
+      <button type="button"
+              class="btn btn-danger btn-sm"
+              id="show-member-update-form-btn">
+        Incorrect address
+      </button>
     </div>
-  {% endif %}
+
+    <!-- address update form (hidden by default, can be used multiple times) -->
+    <form id="member-destination-form"
+          method="post"
+          action="{{ url_for('update_destination_by_member', interaction_id=interaction.id) }}"
+          class="d-flex flex-wrap gap-2 align-items-center"
+          style="display: none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <input
+        type="text"
+        id="member-destination-address"
+        name="member_new_address"
+        class="form-control form-control-sm"
+        placeholder="Enter correct address"
+        style="min-width: 220px;"
+        autocomplete="off"
+      >
+
+      <input type="hidden" id="member-destination-lat" name="member_destination_lat">
+      <input type="hidden" id="member-destination-lng" name="member_destination_lng">
+
+      <button type="submit" class="btn btn-primary btn-sm">
+        Submit updated address
+      </button>
+    </form>
+
+    {% if interaction.member_destination_confirmed is not none %}
+      <small class="text-muted d-block mt-1" style="font-size:0.8rem;">
+        You can update this address again at any time if needed.
+      </small>
+    {% endif %}
+  </div>
 {% endif %}
 
     {% if interaction.assigned_staff_id %}
@@ -314,33 +332,55 @@
   async defer>
 </script>
 <script>
-  function initMemberDestinationAutocomplete() {
-    const input = document.getElementById('member-destination-address');
-    const latInput = document.getElementById('member-destination-lat');
-    const lngInput = document.getElementById('member-destination-lng');
-    if (!input) return;
+function initMemberDestinationAutocomplete() {
+  const input = document.getElementById('member-destination-address');
+  const latInput = document.getElementById('member-destination-lat');
+  const lngInput = document.getElementById('member-destination-lng');
+  if (!input) return;
 
-    const autocomplete = new google.maps.places.Autocomplete(input, {
-      types: ['geocode']
-    });
+  const autocomplete = new google.maps.places.Autocomplete(input, {
+    types: ['geocode']
+  });
 
-    autocomplete.addListener('place_changed', function () {
-      const place = autocomplete.getPlace();
-      if (!place.geometry || !place.geometry.location) {
-        console.warn("Selected place has no geometry");
-        return;
-      }
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
+  autocomplete.addListener('place_changed', function () {
+    const place = autocomplete.getPlace();
+    if (!place.geometry || !place.geometry.location) {
+      console.warn("Selected place has no geometry");
+      return;
+    }
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
 
-      latInput.value = lat;
-      lngInput.value = lng;
+    latInput.value = lat;
+    lngInput.value = lng;
 
-      if (place.formatted_address) {
-        input.value = place.formatted_address;
-      }
-    });
-  }
+    if (place.formatted_address) {
+      input.value = place.formatted_address;
+    }
+  });
+}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const showUpdateBtn = document.getElementById('show-member-update-form-btn');
+    const updateForm = document.getElementById('member-destination-form');
+    const addressInput = document.getElementById('member-destination-address');
+
+    if (showUpdateBtn && updateForm) {
+      showUpdateBtn.addEventListener('click', function () {
+        if (updateForm.style.display === 'none' || updateForm.style.display === '') {
+          updateForm.style.display = 'flex';
+          // optionally prefill with current destination to edit
+          addressInput.value = "{{ interaction.destination_address|escapejs }}";
+          addressInput.focus();
+        } else {
+          // hide again if you click the button a second time
+          updateForm.style.display = 'none';
+        }
+      });
+    }
+  });
+</script>
 
   document.addEventListener('DOMContentLoaded', function () {
     let tries = 0;

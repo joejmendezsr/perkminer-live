@@ -10786,20 +10786,27 @@ def update_destination_by_member(interaction_id):
         flash("Please enter the correct address.", "danger")
         return redirect(url_for('active_session', interaction_id=interaction.id))
 
-    # Replace destination address
+    # Always update the address text
     interaction.destination_address = new_address
 
-    # Update destination_lat/lng from form if provided
+    # Only update lat/lng if we actually got valid values
     try:
         if lat and lng:
             interaction.destination_lat = float(lat)
             interaction.destination_lng = float(lng)
+            current_app.logger.info(
+                "Member updated destination with new coords: %s, %s",
+                interaction.destination_lat, interaction.destination_lng
+            )
         else:
-            interaction.destination_lat = None
-            interaction.destination_lng = None
+            # keep existing coords if member didn't pick from autocomplete
+            current_app.logger.info(
+                "Member updated destination text but no coords provided; keeping existing lat/lng."
+            )
     except ValueError:
-        interaction.destination_lat = None
-        interaction.destination_lng = None
+        current_app.logger.warning(
+            "Member destination lat/lng invalid; leaving existing coords unchanged."
+        )
 
     interaction.member_destination_confirmed = False
     interaction.member_destination_note = "Incorrect Address - Address Updated by Member"
