@@ -2102,13 +2102,13 @@ class StaffRegisterForm(FlaskForm):
     role = SelectField(
         "Role",
         choices=[
+            ("", "Select one"),           # default, invalid choice
             ("admin", "Admin"),
             ("service_provider", "Service Provider"),
         ],
-        validators=[DataRequired()],
-        default="admin",
+        validators=[DataRequired(message="Please select a role.")]
     )
-    can_add_providers = BooleanField("Allow this admin to add service providers")  # NEW
+    can_add_providers = BooleanField("Allow this admin to add service providers")
     submit = SubmitField("Add Staff")
 
 class StaffLoginForm(FlaskForm):
