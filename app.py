@@ -10724,12 +10724,6 @@ def provider_status_location(interaction_id):
         "eta_minutes": eta_minutes,
     })
 
-from flask import abort, render_template, session, current_app
-from flask_login import current_user
-from your_app import app, db  # adjust import if needed
-from your_app.models import Interaction, Staff  # adjust paths if needed
-
-
 @app.route("/session/<int:interaction_id>/track")
 def track_provider(interaction_id):
     """
