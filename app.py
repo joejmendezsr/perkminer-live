@@ -10652,21 +10652,35 @@ def staff_update_status(interaction_id):
     return redirect(url_for('staff_active_session', interaction_id=interaction.id))
 
 @app.route("/session/<int:interaction_id>/provider_status_location")
-@login_required
 def provider_status_location(interaction_id):
     interaction = Interaction.query.get_or_404(interaction_id)
 
-    # who can see: user, business, assigned staff
-    is_user = interaction.user_id == getattr(current_user, 'id', None)
-    is_biz = session.get('business_id') == interaction.business_id
-
+    # identities
+    business_id = session.get('business_id')
     staff_id = session.get('staff_id')
+
+    # member via flask-login
+    is_member_authenticated = getattr(current_user, 'is_authenticated', False)
+    member_id = getattr(current_user, 'id', None)
+
+    # if nobody logged in at all
+    if not (is_member_authenticated or business_id or staff_id):
+        abort(401)
+
+    # who can see: user, business, assigned staff provider, admin with allow_live_tracking
+    is_user = is_member_authenticated and (interaction.user_id == member_id)
+    is_biz = (business_id == interaction.business_id)
+
     is_assigned_staff = False
+    is_admin_with_tracking = False
+
     if staff_id:
         s = Staff.query.get(staff_id)
-        is_assigned_staff = (s and s.id == interaction.assigned_staff_id)
+        if s and s.business_id == interaction.business_id:
+            is_assigned_staff = (s.role == 'service_provider' and s.id == interaction.assigned_staff_id)
+            is_admin_with_tracking = (s.role == 'admin' and s.allow_live_tracking)
 
-    if not (is_user or is_biz or is_assigned_staff):
+    if not (is_user or is_biz or is_assigned_staff or is_admin_with_tracking):
         abort(403)
 
     staff = interaction.assigned_staff
@@ -10677,11 +10691,10 @@ def provider_status_location(interaction_id):
             "provider_status_note": interaction.provider_status_note,
         })
 
-    # ETA: member destination = business address coords (or maybe member coords if you add those)
+    # ETA: destination coords (if set) or business coords
     dest_lat = None
     dest_lng = None
 
-    # prefer destination_lat/lng if set (future), else fall back to business coords
     if interaction.destination_lat is not None and interaction.destination_lng is not None:
         dest_lat = interaction.destination_lat
         dest_lng = interaction.destination_lng
@@ -10712,25 +10725,41 @@ def provider_status_location(interaction_id):
     })
 
 from flask import abort, render_template, session, current_app
-from flask_login import login_required, current_user
+from flask_login import current_user
+from your_app import app, db  # adjust import if needed
+from your_app.models import Interaction, Staff  # adjust paths if needed
+
 
 @app.route("/session/<int:interaction_id>/track")
 def track_provider(interaction_id):
+    """
+    Show live tracking for a service provider, for:
+      - the member (user) who owns the interaction
+      - the business owner for the interaction
+      - staff from the same business:
+          * assigned service provider for this interaction
+          * admins with allow_live_tracking = True
+    """
+
     interaction = Interaction.query.get_or_404(interaction_id)
 
-    # identities from session
-    user_id = session.get("user_id")
+    # identities
     business_id = session.get("business_id")
     staff_id = session.get("staff_id")
 
-    if not (user_id or business_id or staff_id):
-        abort(401)  # no one logged in at all
+    # member (user) via flask-login
+    is_member_authenticated = getattr(current_user, "is_authenticated", False)
+    member_id = getattr(current_user, "id", None)
+
+    # if absolutely nobody is logged in, block
+    if not (is_member_authenticated or business_id or staff_id):
+        abort(401)  # unauthorized
 
     allowed = False
     staff = None
 
     # 1) member who owns the interaction
-    if user_id and interaction.user_id == user_id:
+    if is_member_authenticated and interaction.user_id == member_id:
         allowed = True
 
     # 2) business owner for this interaction
@@ -10741,25 +10770,27 @@ def track_provider(interaction_id):
     if staff_id:
         staff = Staff.query.get(staff_id)
         if staff and staff.business_id == interaction.business_id:
-            # allow:
-            # - service_provider assigned to this interaction
-            # - admins with allow_live_tracking
+            # service provider assigned to this interaction
             if staff.role == "service_provider" and interaction.assigned_staff_id == staff.id:
                 allowed = True
+            # admin with explicit tracking permission
             elif staff.role == "admin" and staff.allow_live_tracking:
                 allowed = True
 
     if not allowed:
-        abort(403)
+        abort(403)  # forbidden
 
+    # who are we tracking?
     provider = interaction.assigned_staff
     if not provider:
+        # no assigned provider = nothing to track
         return render_template(
             "track_provider_unavailable.html",
             interaction=interaction,
             reason="No service provider has been assigned to this session yet."
         )
 
+    # must have GPS coordinates to track
     if provider.live_gps_lat is None or provider.live_gps_long is None:
         return render_template(
             "track_provider_unavailable.html",
