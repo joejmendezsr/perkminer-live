@@ -112,11 +112,12 @@
           </form>
 
           <!-- show/hide incorrect/update form with JS -->
-          <button type="button"
-                  class="btn btn-danger btn-sm"
-                  id="show-member-update-form-btn">
-            Incorrect address
-          </button>
+<button type="button"
+        class="btn btn-danger btn-sm"
+        id="show-member-update-form-btn"
+        data-destination="{{ interaction.destination_address }}">
+  Incorrect address
+</button>
         </div>
 
         <!-- address update form (hidden by default, can be re-used any time) -->
@@ -382,17 +383,20 @@
     const updateForm = document.getElementById('member-destination-form');
     const addressInput = document.getElementById('member-destination-address');
 
-    if (showUpdateBtn && updateForm && addressInput) {
-      showUpdateBtn.addEventListener('click', function () {
-        if (updateForm.style.display === 'none' || updateForm.style.display === '') {
-          updateForm.style.display = 'flex';
-          addressInput.value = "{{ interaction.destination_address|escapejs }}";
-          addressInput.focus();
-        } else {
-          updateForm.style.display = 'none';
-        }
-      });
+if (showUpdateBtn && updateForm && addressInput) {
+  // store destination text in a data- attribute to avoid JS escaping issues
+  const destText = showUpdateBtn.getAttribute('data-destination') || "";
+
+  showUpdateBtn.addEventListener('click', function () {
+    if (updateForm.style.display === 'none' || updateForm.style.display === '') {
+      updateForm.style.display = 'flex';
+      addressInput.value = destText;
+      addressInput.focus();
+    } else {
+      updateForm.style.display = 'none';
     }
+  });
+}
   });
 </script>
 
