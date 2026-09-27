@@ -2067,11 +2067,14 @@ class Staff(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     hashed_password = db.Column(db.String(128), nullable=False)
 
-    # NEW
+    # roles/permissions
     role = db.Column(db.String(20), default="admin", nullable=False)
     can_add_providers = db.Column(db.Boolean, default=False, nullable=False)
 
-    # NEW (live location)
+    # NEW: whether this staff member can track live location
+    allow_live_tracking = db.Column(db.Boolean, default=False, nullable=False)
+
+    # live location
     live_gps_lat = db.Column(db.Float)
     live_gps_long = db.Column(db.Float)
 
@@ -2109,6 +2112,9 @@ class StaffRegisterForm(FlaskForm):
         validators=[DataRequired(message="Please select a role.")]
     )
     can_add_providers = BooleanField("Allow this admin to add service providers")
+    allow_live_tracking = BooleanField(
+        "Allow this admin to track live locations of service providers"
+    )
     submit = SubmitField("Add Staff")
 
 class StaffLoginForm(FlaskForm):
@@ -8423,7 +8429,9 @@ def staff_new():
         email = form.email.data.strip().lower()
         name = form.name.data.strip()
         role = form.role.data  # "admin" or "service_provider"
+
         can_add_providers = bool(form.can_add_providers.data)
+        allow_live_tracking = bool(form.allow_live_tracking.data)
 
         existing_staff = Staff.query.filter_by(email=email).first()
         if existing_staff:
@@ -8441,12 +8449,12 @@ def staff_new():
             role=role,
             is_active=True,
             password_reset_required=True,
+            allow_live_tracking=allow_live_tracking if role == "admin" else False,
             can_add_providers=can_add_providers if role == "admin" else False,
         )
         db.session.add(staff)
         db.session.commit()
 
-        # email content unchanged...
         send_email(
             staff.email,
             "Your PerkMiner Staff Login",
@@ -10703,16 +10711,68 @@ def provider_status_location(interaction_id):
         "eta_minutes": eta_minutes,
     })
 
+from flask import abort, render_template, session, current_app
+from flask_login import login_required, current_user
+
 @app.route("/session/<int:interaction_id>/track")
 @login_required
 def track_provider(interaction_id):
     interaction = Interaction.query.get_or_404(interaction_id)
 
-    # only the user for now
-    if interaction.user_id != getattr(current_user, 'id', None):
+    user_id = session.get("user_id")
+    business_id = session.get("business_id")
+    staff_id = session.get("staff_id")
+
+    allowed = False
+    staff = None
+
+    # 1) member who owns the interaction
+    if user_id and interaction.user_id == user_id:
+        allowed = True
+
+    # 2) business owner for this interaction
+    if business_id and interaction.business_id == business_id:
+        allowed = True
+
+    # 3) staff from the same business
+    if staff_id:
+        staff = Staff.query.get(staff_id)
+        if staff and staff.business_id == interaction.business_id:
+            # allow:
+            # - service_provider assigned to this interaction (so they can see where app thinks they are)
+            # - admins with allow_live_tracking turned on
+            if staff.role == "service_provider" and interaction.assigned_staff_id == staff.id:
+                allowed = True
+            elif staff.role == "admin" and staff.allow_live_tracking:
+                allowed = True
+
+    if not allowed:
         abort(403)
 
-    return render_template("track_provider.html", interaction=interaction)
+    # make sure there is an assigned provider
+    provider = interaction.assigned_staff
+    if not provider:
+        # no assigned provider = nothing to track
+        return render_template(
+            "track_provider_unavailable.html",
+            interaction=interaction,
+            reason="No service provider has been assigned to this session yet."
+        )
+
+    # make sure we actually have live GPS
+    if provider.live_gps_lat is None or provider.live_gps_long is None:
+        return render_template(
+            "track_provider_unavailable.html",
+            interaction=interaction,
+            reason="Live location is not available yet for this provider."
+        )
+
+    return render_template(
+        "track_provider.html",
+        interaction=interaction,
+        provider=provider,
+        google_maps_api_key=current_app.config.get("GOOGLE_MAPS_API_KEY")
+    )
 
 @app.route("/staff/session/<int:interaction_id>/destination", methods=["POST"])
 def staff_set_destination(interaction_id):
