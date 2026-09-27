@@ -10715,13 +10715,16 @@ from flask import abort, render_template, session, current_app
 from flask_login import login_required, current_user
 
 @app.route("/session/<int:interaction_id>/track")
-@login_required
 def track_provider(interaction_id):
     interaction = Interaction.query.get_or_404(interaction_id)
 
+    # identities from session
     user_id = session.get("user_id")
     business_id = session.get("business_id")
     staff_id = session.get("staff_id")
+
+    if not (user_id or business_id or staff_id):
+        abort(401)  # no one logged in at all
 
     allowed = False
     staff = None
@@ -10739,8 +10742,8 @@ def track_provider(interaction_id):
         staff = Staff.query.get(staff_id)
         if staff and staff.business_id == interaction.business_id:
             # allow:
-            # - service_provider assigned to this interaction (so they can see where app thinks they are)
-            # - admins with allow_live_tracking turned on
+            # - service_provider assigned to this interaction
+            # - admins with allow_live_tracking
             if staff.role == "service_provider" and interaction.assigned_staff_id == staff.id:
                 allowed = True
             elif staff.role == "admin" and staff.allow_live_tracking:
@@ -10749,17 +10752,14 @@ def track_provider(interaction_id):
     if not allowed:
         abort(403)
 
-    # make sure there is an assigned provider
     provider = interaction.assigned_staff
     if not provider:
-        # no assigned provider = nothing to track
         return render_template(
             "track_provider_unavailable.html",
             interaction=interaction,
             reason="No service provider has been assigned to this session yet."
         )
 
-    # make sure we actually have live GPS
     if provider.live_gps_lat is None or provider.live_gps_long is None:
         return render_template(
             "track_provider_unavailable.html",
