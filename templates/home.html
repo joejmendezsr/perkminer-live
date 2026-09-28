@@ -428,6 +428,7 @@
         </a>
       </div>
 
+      {% if current_user.is_authenticated %}
       <div class="container-fluid d-flex flex-wrap justify-content-center totals-section px-0">
         <div class="totals-mini mx-1">
           <div class="totals-label-mini">Member Cash Back<br>and Commissions Paid</div>
@@ -452,6 +453,8 @@
           </div>
         </div>
       </div>
+      {% endif %}
+
     </div>
   </section>
 
