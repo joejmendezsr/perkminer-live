@@ -3846,6 +3846,7 @@ def business_home():
     return render_template("business_home.html")
 
 @app.route("/search")
+@login_required
 def search():
     q = request.args.get("q", "").strip()
     category = request.args.get("category", "").strip()
@@ -10049,6 +10050,10 @@ def business_tutorials():
 
 @app.route("/stats")
 def stats():
+
+    if not getattr(current_user, "is_authenticated", False):
+        abort(401)  # or return a small JSON like {"error":"login required"}
+
     # count confirmed users as members
     member_count = User.query.filter_by(email_confirmed=True).count()
 

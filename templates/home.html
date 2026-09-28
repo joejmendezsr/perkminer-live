@@ -918,155 +918,162 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Desktop collapse logic
-    const toggleBtn = document.getElementById('toggle-more');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        const cards = document.querySelectorAll('.category-card-wrapper');
-        const isExpanded = toggleBtn.classList.contains('expanded');
 
-        if (isExpanded) {
-          // Collapse - hide cards 5 and beyond
-          Array.from(cards).slice(4).forEach(card => {
-            card.style.display = 'none';
-          });
-          toggleBtn.textContent = 'More Categories';
-          toggleBtn.classList.remove('expanded');
-        } else {
-          // Expand - show all cards
-          Array.from(cards).slice(4).forEach(card => {
-            card.style.display = 'block';
-          });
-          toggleBtn.textContent = 'Show Fewer Categories';
-          toggleBtn.classList.add('expanded');
-        }
-      });
+<script>
+  // Desktop collapse logic (always available)
+  const toggleBtn = document.getElementById('toggle-more');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const cards = document.querySelectorAll('.category-card-wrapper');
+      const isExpanded = toggleBtn.classList.contains('expanded');
 
-      // Initial state on desktop: hide cards after the first 4
-      if (window.innerWidth >= 992) {
-        const cards = document.querySelectorAll('.category-card-wrapper');
+      if (isExpanded) {
+        // Collapse - hide cards 5 and beyond
         Array.from(cards).slice(4).forEach(card => {
           card.style.display = 'none';
         });
+        toggleBtn.textContent = 'More Categories';
+        toggleBtn.classList.remove('expanded');
+      } else {
+        // Expand - show all cards
+        Array.from(cards).slice(4).forEach(card => {
+          card.style.display = 'block';
+        });
+        toggleBtn.textContent = 'Show Fewer Categories';
+        toggleBtn.classList.add('expanded');
       }
+    });
+
+    // Initial state on desktop: hide cards after the first 4
+    if (window.innerWidth >= 992) {
+      const cards = document.querySelectorAll('.category-card-wrapper');
+      Array.from(cards).slice(4).forEach(card => {
+        card.style.display = 'none';
+      });
     }
-
-    // Geolocation scripts
-    window.addEventListener('DOMContentLoaded', function() {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          function(position) {
-            document.getElementById('search-lat').value = position.coords.latitude;
-            document.getElementById('search-lng').value = position.coords.longitude;
-          }
-        );
-      }
-    });
-
-    window.addEventListener('DOMContentLoaded', function() {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          function(position) {
-            var lat = position.coords.latitude;
-            var lng = position.coords.longitude;
-            var url = new URL(window.location.href);
-            var hasLatLng = url.searchParams.has('lat') && url.searchParams.has('lng');
-            if (!hasLatLng) {
-              url.searchParams.set('lat', lat);
-              url.searchParams.set('lng', lng);
-              window.location.replace(url);
-            } else {
-              document.getElementById('search-lat').value = lat;
-              document.getElementById('search-lng').value = lng;
-            }
-          }
-        );
-      }
-    });
-  </script>
-
-<!-- Your existing HTML stays the same -->
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  const marquee = document.querySelector('.marquee');
-  const content = document.querySelector('.marquee-content');
-
-  function setMarqueeSpeed() {
-    // Calculate pixels to travel = content width + gap
-    const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 64; // fallback 64px
-    const distance = content.offsetWidth + gap;
-    // Desired speed in pixels per second (adjust as needed)
-    const pxPerSec = 80; // change this for faster/slower
-    const duration = distance / pxPerSec;
-
-    marquee.style.animationDuration = duration + 's';
   }
-
-  setMarqueeSpeed();
-  window.addEventListener('resize', setMarqueeSpeed);
-});
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const marqueeEl = document.getElementById('live-marquee');
-  if (!marqueeEl) return;
+  // marquee speed logic (always available)
+  document.addEventListener("DOMContentLoaded", function() {
+    const marquee = document.querySelector('.marquee');
+    const content = document.querySelector('.marquee-content');
+    if (!marquee || !content) return;
 
-  async function updateMarqueeOnce() {
-    try {
-      const resp = await fetch('/stats', { cache: 'no-store' });
-      if (!resp.ok) return;
-
-      const data = await resp.json();
-      const members = data.members ?? 0;
-      const advertisers = data.advertisers ?? 0;
-
-      const text = 
-        `*** WE ARE LIVE!! Beta Testing Now *** LIVE STATS *** ` +
-        `Members:<span class="highlight">${members.toLocaleString()}</span> ` +
-        `Businesses:<span class="highlight">${advertisers.toLocaleString()}</span> ` +
-        `|    Free to join - always free.  Start earning cashback and referral commissions on real purchases (Paid by Perk Miner)`;
-
-      marqueeEl.innerHTML = text;   // clear any old children
-    } catch (err) {
-      console.error('Failed to update marquee stats:', err);
-      // optional: keep old text on error
+    function setMarqueeSpeed() {
+      const gap = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--gap')
+      ) || 64;
+      const distance = content.offsetWidth + gap;
+      const pxPerSec = 80;
+      const duration = distance / pxPerSec;
+      marquee.style.animationDuration = duration + 's';
     }
-  }
 
-  // initial load
-  updateMarqueeOnce();
-
-  // poll every 45 seconds (adjust as needed)
-  const POLL_MS = 45000;
-  setInterval(updateMarqueeOnce, POLL_MS);
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  if (!navigator.geolocation) {
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(function(pos) {
-    var lat = pos.coords.latitude;
-    var lng = pos.coords.longitude;
-
-    fetch("/api/me/location", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat: lat, lng: lng })
-    }).catch(function(err) {
-      console.error("home: location update failed", err);
-    });
-  }, function(error) {
-    // user denied or error; ignore
+    setMarqueeSpeed();
+    window.addEventListener('resize', setMarqueeSpeed);
   });
-});
 </script>
+
+{% if current_user.is_authenticated %}
+<script>
+  // Geolocation scripts for logged-in members only (search lat/lng)
+  window.addEventListener('DOMContentLoaded', function() {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const latInput = document.getElementById('search-lat');
+        const lngInput = document.getElementById('search-lng');
+        if (!latInput || !lngInput) return;
+
+        latInput.value = position.coords.latitude;
+        lngInput.value = position.coords.longitude;
+      });
+    }
+  });
+
+  window.addEventListener('DOMContentLoaded', function() {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+        var url = new URL(window.location.href);
+        var hasLatLng = url.searchParams.has('lat') && url.searchParams.has('lng');
+
+        if (!hasLatLng) {
+          url.searchParams.set('lat', lat);
+          url.searchParams.set('lng', lng);
+          window.location.replace(url);
+        } else {
+          const latInput = document.getElementById('search-lat');
+          const lngInput = document.getElementById('search-lng');
+          if (latInput && lngInput) {
+            latInput.value = lat;
+            lngInput.value = lng;
+          }
+        }
+      });
+    }
+  });
+</script>
+
+<script>
+  // live stats for marquee (logged-in members only)
+  document.addEventListener('DOMContentLoaded', function () {
+    const marqueeEl = document.getElementById('live-marquee');
+    if (!marqueeEl) return;
+
+    async function updateMarqueeOnce() {
+      try {
+        const resp = await fetch('/stats', { cache: 'no-store' });
+        if (!resp.ok) return;
+
+        const data = await resp.json();
+        const members = data.members ?? 0;
+        const advertisers = data.advertisers ?? 0;
+
+        const text = 
+          `*** WE ARE LIVE!! Beta Testing Now *** LIVE STATS *** ` +
+          `Members:<span class="highlight">${members.toLocaleString()}</span> ` +
+          `Businesses:<span class="highlight">${advertisers.toLocaleString()}</span> ` +
+          `|    Free to join - always free.  Start earning cashback and referral commissions on real purchases (Paid by Perk Miner)`;
+
+        marqueeEl.innerHTML = text;
+      } catch (err) {
+        console.error('Failed to update marquee stats:', err);
+      }
+    }
+
+    updateMarqueeOnce();
+    const POLL_MS = 45000;
+    setInterval(updateMarqueeOnce, POLL_MS);
+  });
+</script>
+
+<script>
+  // push member location to /api/me/location (logged-in members only)
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+
+      fetch("/api/me/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat: lat, lng: lng })
+      }).catch(function(err) {
+        console.error("home: location update failed", err);
+      });
+    }, function(error) {
+      // user denied or error; ignore
+    });
+  });
+</script>
+{% endif %}
 
 </body>
 </html>
