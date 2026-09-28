@@ -7516,16 +7516,44 @@ def view_listing(biz_id):
     verified = getattr(biz, "ecommerce_verified", False)
     balance = biz.account_balance or 0.0
 
-    # all four flags must be true
-    core_flags_ok = has_website and is_ecom and allows_web and online_terms and verified
+    # build a meta description using business fields
+    base_parts = []
 
+    if biz.business_name:
+        base_parts.append(biz.business_name)
+
+    if biz.category:
+        base_parts.append(biz.category)
+
+    # keywords might be a comma-separated string
+    if getattr(biz, "keywords", None):
+        kw = biz.keywords.strip()
+        kw = " ".join(kw.split())
+        base_parts.append(kw)
+
+    if getattr(biz, "about_us", None):
+        about_snippet = biz.about_us.strip().replace("\n", " ")
+        about_snippet = about_snippet[:160]
+        base_parts.append(about_snippet)
+
+    description = " - ".join(part for part in base_parts if part)
+
+    if not description:
+        description = "Learn more about this Perk Miner advertiser and their exclusive member perks."
+
+    # meta keywords from business.keywords
+    meta_keywords = None
+    if getattr(biz, "keywords", None):
+        kw = biz.keywords.strip()
+        kw = " ".join(kw.split())
+        meta_keywords = kw
+
+    core_flags_ok = has_website and is_ecom and allows_web and online_terms and verified
     can_shop_online_listing = core_flags_ok and balance >= 250.0
     show_online_warning = core_flags_ok and balance < 250.0
 
-    # NEW: finalized transaction count
     finalized_tx_count = get_finalized_tx_count_for_business(biz)
 
-    # >>> NEW: collect only non-empty photo URLs from live fields <<<
     raw_photos = [
         biz.photo1_url,
         biz.photo2_url,
@@ -7534,15 +7562,17 @@ def view_listing(biz_id):
         biz.photo5_url,
         biz.photo6_url,
     ]
-    photos = [url for url in raw_photos if url]  # filters out None and ""
+    photos = [url for url in raw_photos if url]
 
     return render_template(
         "large_listing.html",
         business=biz,
+        meta_description=description,
+        meta_keywords=meta_keywords,
         can_shop_online_listing=can_shop_online_listing,
         show_online_warning=show_online_warning,
         finalized_tx_count=finalized_tx_count,
-        photos=photos,  # <<< pass to template
+        photos=photos,
     )
 
 @app.route("/finance/combined-detailed-report", methods=["GET"])
