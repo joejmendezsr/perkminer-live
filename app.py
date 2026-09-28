@@ -3935,6 +3935,7 @@ def search():
     )
 
 @app.route("/category/<name>")
+@login_required
 def category_browse(name):
     # Get user location from query params if provided
     lat = request.args.get("lat", type=float)

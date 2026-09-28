@@ -422,13 +422,14 @@
         <input type="hidden" name="lng" id="search-lng">
       </form>
 
+      {% if current_user.is_authenticated %}
+
       <div class="mt-3">
         <a href="{{ url_for('online_marketplace') }}" class="btn btn-outline-light btn-sm">
           Online Marketplace
         </a>
       </div>
 
-      {% if current_user.is_authenticated %}
       <div class="container-fluid d-flex flex-wrap justify-content-center totals-section px-0">
         <div class="totals-mini mx-1">
           <div class="totals-label-mini">Member Cash Back<br>and Commissions Paid</div>
@@ -461,7 +462,7 @@
   <div class="marquee-container">
     <div class="marquee">
       <div class="marquee-content" id="live-marquee">
-        *** WE ARE LIVE!! Beta Testing Now ***<span class="highlight">Free to Join - join early and start earning cashback on real purchases (Paid By Perk Miner)</span>
+        *** WE ARE LIVE!! ***<span class="highlight">Free to Join - start earning cashback on real purchases (Paid By Perk Miner)</span>
       </div>
     </div>
   </div>
