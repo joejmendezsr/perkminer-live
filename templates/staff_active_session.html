@@ -367,7 +367,7 @@
         <form method="post"
               action="{{ url_for('end_session', interaction_id=interaction.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-danger btn-sm session-btn">
+          <button type="submit" class="btn btn-danger btn-sm session-btn w-100">
             End session
           </button>
         </form>
