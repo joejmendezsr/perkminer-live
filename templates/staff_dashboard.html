@@ -13,6 +13,26 @@
       min-height: 1px;
       overflow-y: visible;
     }
+
+    /* NEW: equal-width action buttons */
+    .session-list .d-flex.gap-2.flex-wrap {
+      display: flex;
+      width: 100%;
+    }
+
+    .session-btn {
+      flex: 1 1 0;
+      min-width: 140px;        /* adjust as needed */
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* NEW: spacing between sessions */
+    .session-list .list-group-item {
+      margin-bottom: 10px;      /* space between items */
+      border-radius: 10px;      /* optional: softer corners */
+    }
+
     @media (max-width: 650px) {
       .dashboard-card { margin:12px auto; padding:1em 6px; }
     }
@@ -113,24 +133,28 @@
 
           <div class="mt-2 mt-md-0 d-flex gap-2 flex-wrap">
             {% if ia.status == 'active' and ia.service_type and ia.service_type != 'Closed' %}
-              <a href="{{ url_for('staff_active_session', interaction_id=ia.id) }}" class="btn btn-secondary btn-sm">
+              <a href="{{ url_for('staff_active_session', interaction_id=ia.id) }}"
+                 class="btn btn-secondary btn-sm session-btn">
                 Open Active Session
               </a>
             {% endif %}
-            <a href="{{ url_for('staff_scan_qr', interaction_id=ia.id) }}" class="btn btn-success btn-sm">
+            <a href="{{ url_for('staff_scan_qr', interaction_id=ia.id) }}"
+               class="btn btn-success btn-sm session-btn">
               <i class="bi bi-upc-scan"></i> Scan QR Code
             </a>
-            <a href="{{ url_for('staff_finalize_transaction', interaction_id=ia.id) }}" class="btn btn-outline-primary btn-sm">
+            <a href="{{ url_for('staff_finalize_transaction', interaction_id=ia.id) }}"
+               class="btn btn-outline-primary btn-sm session-btn">
               Finalize Manually
             </a>
-  <form method="post"
-        action="{{ url_for('end_session', interaction_id=ia.id) }}"
-        class="d-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn btn-danger btn-sm">
-      End Session
-    </button>
-  </form>
+            <form method="post"
+                  action="{{ url_for('end_session', interaction_id=ia.id) }}"
+                  class="d-inline flex-grow-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit"
+                      class="btn btn-danger btn-sm session-btn w-100">
+                End Session
+              </button>
+            </form>
           </div>
         </li>
         {% else %}
