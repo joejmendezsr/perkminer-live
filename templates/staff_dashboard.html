@@ -32,15 +32,25 @@
     border-radius: 10px;
   }
 
-  /* make the right column a vertical stack */
+  /* right-side vertical button column */
   .button-col {
     min-width: 200px;
   }
 
+  /* shared fixed-width, touch-friendly buttons */
   .session-btn {
-    width: 200px;          /* fixed width on desktop */
+    width: 200px;
     text-align: center;
     white-space: nowrap;
+
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    font-size: 1.05rem;
+  }
+
+  .session-btn i {
+    font-size: 1.1em;
+    margin-right: 4px;
   }
 
   @media (max-width: 650px) {
@@ -49,7 +59,6 @@
       padding: 1em 6px;
     }
 
-    /* on mobile, let buttons stretch full width and stack */
     .button-col {
       width: 100%;
       align-items: stretch;
