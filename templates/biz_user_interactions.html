@@ -147,11 +147,11 @@
 <div class="mt-2 mt-md-0 d-flex flex-column align-items-stretch button-col">
   <a href="{{ url_for('biz_interaction_details', interaction_id=i.id) }}"
      class="btn btn-info btn-sm session-btn mb-1">
-    Details
+    View Details
   </a>
   <a href="{{ url_for('biz_active_session', interaction_id=i.id) }}"
      class="btn btn-primary btn-sm session-btn mb-1">
-    Select
+    Open Active Session
   </a>
   <a href="{{ url_for('finalize_transaction', interaction_id=i.id) }}"
      class="btn btn-outline-primary btn-sm session-btn mb-1">
