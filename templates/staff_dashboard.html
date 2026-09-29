@@ -57,6 +57,38 @@
               </span>
             {% endif %}
 
+            {% if ia.provider_status %}
+              {% set status_label = "Assigned" %}
+              {% if ia.provider_status == 'on_the_way' %}
+                {% set status_label = "On the way" %}
+              {% elif ia.provider_status == 'arrived' %}
+                {% set status_label = "Arrived" %}
+              {% elif ia.provider_status == 'no show - charge fee - no finalization' %}
+                {% set status_label = "No Show - Charge Fee - No Finalization" %}
+              {% elif ia.provider_status == 'no show - charge fee - finalization' %}
+                {% set status_label = "No Show - Charge Fee - Finalization" %}
+              {% elif ia.provider_status == 'no show - no fee' %}
+                {% set status_label = "No Show - No Fee" %}
+              {% elif ia.provider_status == 'contract_initial_paid' %}
+                {% set status_label = "Contract signed - initial fee paid" %}
+              {% elif ia.provider_status == 'contract_full_paid' %}
+                {% set status_label = "Contract signed - full fee paid" %}
+              {% elif ia.provider_status == 'service_fee_only' %}
+                {% set status_label = "Service call fee only paid" %}
+              {% elif ia.provider_status == 'rejected_no_contract' %}
+                {% set status_label = "Rejected quote - no contract or fee" %}
+              {% elif ia.provider_status == 'estimate_only' %}
+                {% set status_label = "Estimate only" %}
+              {% endif %}
+
+              <span class="d-block mt-1" style="font-size:0.85em;">
+                <span class="badge bg-primary">
+                  Status: {{ status_label }}
+                </span>
+              </span>
+            {% endif %}
+          </div>
+
             {% if is_admin and service_providers %}
             <form method="post"
                   action="{{ url_for('staff_assign_interaction', interaction_id=ia.id) }}"

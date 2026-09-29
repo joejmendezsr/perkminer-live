@@ -36,7 +36,6 @@
     <ul class="list-group">
 
       {% for i in interactions %}
-        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
           <div class="py-1">
             <strong>{{ i.user.name or i.user.email }}</strong><br>
             <small class="text-muted">{{ i.service_type }}</small><br>
@@ -46,6 +45,37 @@
               </small>
             {% else %}
               <small class="text-muted">Not assigned</small>
+            {% endif %}
+
+            {% if i.provider_status %}
+              {% set status_label = "Assigned" %}
+              {% if i.provider_status == 'on_the_way' %}
+                {% set status_label = "On the way" %}
+              {% elif i.provider_status == 'arrived' %}
+                {% set status_label = "Arrived" %}
+              {% elif i.provider_status == 'no show - charge fee - no finalization' %}
+                {% set status_label = "No Show - Charge Fee - No Finalization" %}
+              {% elif i.provider_status == 'no show - charge fee - finalization' %}
+                {% set status_label = "No Show - Charge Fee - Finalization" %}
+              {% elif i.provider_status == 'no show - no fee' %}
+                {% set status_label = "No Show - No Fee" %}
+              {% elif i.provider_status == 'contract_initial_paid' %}
+                {% set status_label = "Contract signed - initial fee paid" %}
+              {% elif i.provider_status == 'contract_full_paid' %}
+                {% set status_label = "Contract signed - full fee paid" %}
+              {% elif i.provider_status == 'service_fee_only' %}
+                {% set status_label = "Service call fee only paid" %}
+              {% elif i.provider_status == 'rejected_no_contract' %}
+                {% set status_label = "Rejected quote - no contract or fee" %}
+              {% elif i.provider_status == 'estimate_only' %}
+                {% set status_label = "Estimate only" %}
+              {% endif %}
+
+              <small class="d-block mt-1">
+                <span class="badge bg-primary">
+                  Status: {{ status_label }}
+                </span>
+              </small>
             {% endif %}
           </div>
 
