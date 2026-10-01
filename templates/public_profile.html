@@ -251,13 +251,58 @@
 {% if photos %}
 <div class="section js-reveal">
   <h2><i class="bi bi-images"></i> Gallery</h2>
-  <div class="row g-3">
-    {% for photo in photos %}
-      <div class="col-12 col-md-4">
-        <img src="{{ photo }}" class="gallery-img" alt="{{ business.business_name }} photo {{ loop.index }}">
+
+  <div id="bizGalleryCarousel"
+       class="carousel slide"
+       data-bs-ride="carousel"
+       data-bs-interval="5000"
+       data-bs-pause="hover">
+
+    {# indicators only if more than one photo #}
+    {% if photos|length > 1 %}
+    <div class="carousel-indicators">
+      {% for photo in photos %}
+        <button type="button"
+                data-bs-target="#bizGalleryCarousel"
+                data-bs-slide-to="{{ loop.index0 }}"
+                class="{% if loop.first %}active{% endif %}"
+                aria-current="{% if loop.first %}true{% endif %}"
+                aria-label="Slide {{ loop.index }}">
+        </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="carousel-inner">
+      {% for photo in photos %}
+      <div class="carousel-item {% if loop.first %}active{% endif %}">
+        <a href="{{ photo }}" target="_blank" rel="noopener">
+          <img src="{{ photo }}"
+               class="d-block w-100 gallery-img"
+               alt="{{ business.business_name }} photo {{ loop.index }}">
+        </a>
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
+
+    {# controls only if more than one photo #}
+    {% if photos|length > 1 %}
+      <button class="carousel-control-prev" type="button"
+              data-bs-target="#bizGalleryCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button class="carousel-control-next" type="button"
+              data-bs-target="#bizGalleryCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+    {% endif %}
   </div>
+
+  <small class="text-muted d-block mt-2">
+    Click any image to view the full-size version in a new tab.
+  </small>
 </div>
 {% endif %}
 
