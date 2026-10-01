@@ -248,7 +248,17 @@
 <div class="section js-reveal">
   <h2><i class="bi bi-info-circle"></i> About</h2>
   {% if business.about_us %}
-    <p style="white-space:pre-line;">{{ business.about_us }}</p>
+    <p>
+      <span class="about-text"
+            data-full="{{ business.about_us|e }}">
+        {{ business.about_us }}
+      </span>
+      <a href="#"
+         class="about-toggle-link"
+         style="display:none; font-size:0.9rem; margin-left:6px;">
+        read more
+      </a>
+    </p>
   {% else %}
     <p>This business has not added an about section yet.</p>
   {% endif %}
@@ -447,6 +457,43 @@
 
     sections.forEach(sec => observer.observe(sec));
   });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const aboutSpan = document.querySelector('.about-text');
+  const toggleLink = document.querySelector('.about-toggle-link');
+  if (!aboutSpan || !toggleLink) return;
+
+  const fullText = aboutSpan.getAttribute('data-full') || '';
+  const limit = 250;
+
+  if (fullText.length <= limit) {
+    // short text, no toggle needed
+    aboutSpan.textContent = fullText;
+    toggleLink.style.display = 'none';
+    return;
+  }
+
+  const shortText = fullText.slice(0, limit) + '…';
+  let expanded = false;
+
+  aboutSpan.textContent = shortText;
+  toggleLink.style.display = 'inline';
+  toggleLink.textContent = 'read more';
+
+  toggleLink.addEventListener('click', function (e) {
+    e.preventDefault();
+    expanded = !expanded;
+    if (expanded) {
+      aboutSpan.textContent = fullText;
+      toggleLink.textContent = 'read less';
+    } else {
+      aboutSpan.textContent = shortText;
+      toggleLink.textContent = 'read more';
+    }
+  });
+});
 </script>
 
 </body>
