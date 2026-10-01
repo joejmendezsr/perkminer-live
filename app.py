@@ -4,6 +4,7 @@ from flask import (
 )
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Numeric
 from flask_mail import Mail, Message as MailMessage
 from flask_bcrypt import Bcrypt
 from flask_login import (
