@@ -11029,11 +11029,6 @@ def update_destination_by_member(interaction_id):
     flash("You updated the destination address. The service provider will see this.", "success")
     return redirect(url_for('active_session', interaction_id=interaction.id))
 
-@app.route("/public_profiles/<slug>")
-def public_profile(slug):
-    biz = Business.query.filter_by(store_slug=slug, status="approved", is_suspended=False).first_or_404()
-    # render that single business
-
 @app.route("/public_profiles/<store_slug>")
 def public_profile(store_slug):
     biz = Business.query.filter_by(store_slug=store_slug, status="approved", is_suspended=False).first_or_404()
