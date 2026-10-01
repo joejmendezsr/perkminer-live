@@ -11071,6 +11071,7 @@ def public_profile(store_slug):
         photos=photos,
         meta_description=description,
         meta_keywords=meta_keywords,
+        google_maps_api_key=current_app.config.get("GOOGLE_MAPS_API_KEY"),
     )
 
 @app.errorhandler(500)
