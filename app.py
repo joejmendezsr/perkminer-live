@@ -1513,7 +1513,7 @@ def upload_testimonial():
 
     data = request.get_json() or {}
 
-    # NEW: optional title from client
+    # optional title from client
     title = data.get('title', '')
     if isinstance(title, str):
         title = title.strip() or None
@@ -1531,11 +1531,18 @@ def upload_testimonial():
 
     # simple ordering: member_100k > member_50k > member_10k
     level_order = {'member_10k': 1, 'member_50k': 2, 'member_100k': 3}
+    if level_code not in level_order:
+        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
     if level_order[level_code] > level_order[highest_level]:
         return jsonify({'error': 'You are not yet eligible for this level.'}), 403
 
-    # duration validation (Cloudinary returns seconds)
+    # duration validation (Cloudinary returns seconds, may be float)
     duration = data.get('duration')
+    try:
+        duration = float(duration) if duration is not None else None
+    except (TypeError, ValueError):
+        duration = None
+
     if duration is None or duration > 60:
         return jsonify({'error': 'Video duration must be 60 seconds or less.'}), 400
 
@@ -1567,13 +1574,13 @@ def upload_testimonial():
         tv.rejection_reason = None
         tv.lifetime_amount_at_submission = user.grand_total_earnings or Decimal('0')
 
-    # NEW: set or clear title for this submission
+    # set or clear title for this submission
     tv.title = title
 
     # update Cloudinary fields
     tv.cloudinary_public_id = public_id
     tv.cloudinary_secure_url = secure_url
-    tv.cloudinary_duration_sec = duration
+    tv.cloudinary_duration_sec = int(round(duration))
     tv.cloudinary_bytes = data.get('bytes')
     tv.cloudinary_format = data.get('format')
     tv.cloudinary_width = data.get('width')
@@ -1600,7 +1607,7 @@ def upload_business_testimonial():
 
     data = request.get_json() or {}
 
-    # NEW
+    # optional title from client
     title = data.get('title', '')
     if isinstance(title, str):
         title = title.strip() or None
@@ -1615,19 +1622,28 @@ def upload_business_testimonial():
     if highest_level is None:
         return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
 
-    # special case: founding level
+    # special case: founding-business level (5 finalized transactions)
     if highest_level == "biz_founding_5":
+        # founding businesses can only use this special level
         if level_code != "biz_founding_5":
             return jsonify({'error': 'You are only eligible for the founding business testimonial level.'}), 403
     else:
-        # normal sales-based levels
+        # normal sales-based levels (biz_25k, biz_100k, biz_250k)
         level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
+
         if level_code not in level_order:
             return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+
         if level_order[level_code] > level_order[highest_level]:
             return jsonify({'error': 'You are not yet eligible for this level.'}), 403
 
+    # duration validation (Cloudinary returns seconds, may be float)
     duration = data.get('duration')
+    try:
+        duration = float(duration) if duration is not None else None
+    except (TypeError, ValueError):
+        duration = None
+
     if duration is None or duration > 60:
         return jsonify({'error': 'Video duration must be 60 seconds or less.'}), 400
 
@@ -1657,12 +1673,13 @@ def upload_business_testimonial():
         tv.rejection_reason = None
         tv.lifetime_amount_at_submission = biz.lifetime_gross_sales or Decimal('0')
 
-    # NEW
+    # set or clear title
     tv.title = title
 
+    # Cloudinary fields
     tv.cloudinary_public_id = public_id
     tv.cloudinary_secure_url = secure_url
-    tv.cloudinary_duration_sec = duration
+    tv.cloudinary_duration_sec = int(round(duration))
     tv.cloudinary_bytes = data.get('bytes')
     tv.cloudinary_format = data.get('format')
     tv.cloudinary_width = data.get('width')
