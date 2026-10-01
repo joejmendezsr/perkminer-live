@@ -7336,21 +7336,21 @@ def start_review(listing_id):
 def approve_listing(listing_id):
     biz = Business.query.get_or_404(listing_id)
     if biz.status in ["pending", "in_review", "approved"]:
-        # Promote draft fields to live fields if needed; this block is unchanged
-
+        # Promote draft fields to live fields if needed
         promote_fields = [
             "business_name", "listing_type", "category", "finalization", "phone_number", "address", "latitude", "longitude",
             "website_url", "about_us", "hours_of_operation", "search_keywords",
             "service_1", "service_2", "service_3", "service_4", "service_5",
             "service_6", "service_7", "service_8", "service_9", "service_10",
             "profile_photo",
-            # NEW: gallery photos
+            # gallery photos
             "photo1_url", "photo2_url", "photo3_url",
             "photo4_url", "photo5_url", "photo6_url",
         ]
 
         if biz.draft_category == "Other" and biz.category not in [None, "", "Other"]:
             biz.draft_category = biz.category
+
         for field in promote_fields:
             draft_attr = f"draft_{field}"
             draft_value = getattr(biz, draft_attr, None)
@@ -7361,16 +7361,22 @@ def approve_listing(listing_id):
         # Status update
         biz.status = "approved"
 
-        # Add this to record who approved it:
-        biz.approved_by = current_user.id   # (or current_user.email if you want email)
+        # record who approved it
+        biz.approved_by = current_user.id
 
-        # Only super_admin can update manual_feature
-        if current_user.is_authenticated and getattr(current_user, 'has_role', None) and current_user.has_role("super_admin"):
+        # Only super_admin can update manual_feature and founding flag
+        if current_user.is_authenticated and getattr(current_user, "has_role", None) and current_user.has_role("super_admin"):
             biz.manual_feature = bool(request.form.get("manual_feature"))
-        # Otherwise, ignore
+            biz.is_founding_business = bool(request.form.get("is_founding_business"))
+        # Otherwise, ignore both
 
         db.session.commit()
-        flash(f"Listing {biz.business_name} approved!" + (" Manually Featured." if getattr(biz, 'manual_feature', False) else ""))
+
+        flash(
+            f"Listing {biz.business_name} approved!"
+            + (" Manually Featured." if getattr(biz, "manual_feature", False) else "")
+        )
+
     return redirect(url_for("approve_reject_dashboard"))
 
 @app.route("/admin/listing/<int:listing_id>/reject", methods=["POST"])
