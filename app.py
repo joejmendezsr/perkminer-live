@@ -1895,15 +1895,27 @@ def business_upload_params():
     if highest_level is None:
         return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
 
-    level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
-    if level_order[level_code] > level_order[highest_level]:
-        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+    # special case: founding-business level (5 finalized transactions)
+    if highest_level == "biz_founding_5":
+        # for founding businesses, we only allow this one special level
+        if level_code != "biz_founding_5":
+            return jsonify({'error': 'You are only eligible for the founding business testimonial level.'}), 403
+    else:
+        # normal sales-based levels (biz_25k, biz_100k, biz_250k)
+        level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
+
+        # if they somehow requested biz_founding_5 but aren't a founding business
+        if level_code not in level_order:
+            return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+
+        if level_order[level_code] > level_order[highest_level]:
+            return jsonify({'error': 'You are not yet eligible for this level.'}), 403
 
     timestamp = int(time.time())
 
     params_to_sign = {
-        'timestamp': timestamp,
-        'folder': f'testimonials/businesses/{biz.id}',
+      'timestamp': timestamp,
+      'folder': f'testimonials/businesses/{biz.id}',
     }
 
     api_secret = cloudinary.config().api_secret
