@@ -383,11 +383,18 @@
 
 {% if biz_level_code %}
   <div class="card p-4 mb-4">
-    <h5>Congratulations! You qualify to upload a Testimonial Video</h5>
-    <p class="mb-2">
-      Your business currently qualifies for level:
-      <strong>{{ biz_level_code }}</strong>.
-    </p>
+    {% if biz_level_code == 'biz_founding_5' %}
+      <h5>Congratulations, Founding Business!</h5>
+      <p class="mb-2">
+        As a founding business with <strong>5 finalized transactions</strong>, you can upload a testimonial video.
+      </p>
+    {% else %}
+      <h5>Congratulations! You qualify to upload a Testimonial Video</h5>
+      <p class="mb-2">
+        Your business currently qualifies for level:
+        <strong>{{ biz_level_code }}</strong>.
+      </p>
+    {% endif %}
 
     <button
       class="btn btn-primary mb-3"

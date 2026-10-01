@@ -1165,23 +1165,36 @@ def get_member_level_code(user: User) -> str | None:
         return None
 
 ALLOWED_MEMBER_LEVELS = ['member_10k', 'member_50k', 'member_100k']
-ALLOWED_BUSINESS_LEVELS = ['biz_25k', 'biz_100k', 'biz_250k']
+ALLOWED_BUSINESS_LEVELS = ['biz_25k', 'biz_100k', 'biz_250k', 'biz_founding_5']
 
 def get_business_level_code(biz: Business) -> str | None:
     """
-    Returns the highest level_code this business qualifies for
-    based on grand_total_earnings (sales).
+    Returns the highest testimonial level the business qualifies for
+    based on lifetime sales, or a special level for founding businesses
+    with >= 5 finalized transactions.
     """
-    total = biz.lifetime_gross_sales or Decimal('0')
 
-    if total >= Decimal('250000'):
-        return 'biz_250k'
-    elif total >= Decimal('100000'):
-        return 'biz_100k'
-    elif total >= Decimal('25000'):
-        return 'biz_25k'
-    else:
-        return None
+    # 1) founding-business special rule: 5 finalized transactions
+    if getattr(biz, "is_founding_business", False):
+        finalized_count = Interaction.query.filter_by(
+            business_id=biz.id,
+            status="ended",          # or whatever status you use for finalized
+        ).count()
+        if finalized_count >= 5:
+            # special level; does NOT depend on lifetime_gross_sales
+            return "biz_founding_5"
+
+    # 2) normal levels (keep your existing logic here)
+    gross = biz.lifetime_gross_sales or Decimal("0")
+
+    if gross >= Decimal("250000"):
+        return "biz_250k"
+    elif gross >= Decimal("100000"):
+        return "biz_100k"
+    elif gross >= Decimal("25000"):
+        return "biz_25k"
+
+    return None
 
 def issue_store_sale_rewards(business, amount, buyer_email=None):
     """
@@ -1435,6 +1448,7 @@ class Business(db.Model):
     live_gps_lat = db.Column(db.Float)
     live_gps_long = db.Column(db.Float)
     location_varies = db.Column(db.Boolean, default=False)
+    is_founding_business = db.Column(db.Boolean, nullable=False, default=False)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -1601,9 +1615,17 @@ def upload_business_testimonial():
     if highest_level is None:
         return jsonify({'error': 'You are not yet eligible to upload a testimonial video.'}), 403
 
-    level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
-    if level_order[level_code] > level_order[highest_level]:
-        return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+    # special case: founding level
+    if highest_level == "biz_founding_5":
+        if level_code != "biz_founding_5":
+            return jsonify({'error': 'You are only eligible for the founding business testimonial level.'}), 403
+    else:
+        # normal sales-based levels
+        level_order = {'biz_25k': 1, 'biz_100k': 2, 'biz_250k': 3}
+        if level_code not in level_order:
+            return jsonify({'error': 'You are not yet eligible for this level.'}), 403
+        if level_order[level_code] > level_order[highest_level]:
+            return jsonify({'error': 'You are not yet eligible for this level.'}), 403
 
     duration = data.get('duration')
     if duration is None or duration > 60:
