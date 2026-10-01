@@ -16,7 +16,7 @@ from wtforms import (
     TextAreaField, Form, BooleanField
 )
 from wtforms.validators import (
-    DataRequired, Email, Length, EqualTo, Optional, NumberRange
+    DataRequired, Regexp, Email, Length, EqualTo, Optional, NumberRange
 )
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, case
@@ -520,6 +520,14 @@ class BusinessProfileForm(FlaskForm):
     address = StringField('Address', validators=[Optional(), Length(max=255)])
     latitude = StringField('Latitude', validators=[Optional()])
     longitude = StringField('Longitude', validators=[Optional()])
+    store_slug = StringField(
+        "Public profile URL",
+        validators=[
+            Optional(),
+            Length(max=80),
+            Regexp(r"^[a-zA-Z0-9\-]+$", message="Use only letters, numbers, and dashes."),
+        ],
+    )
     submit = SubmitField('Save Profile')
 
 class EmptyForm(FlaskForm):
@@ -6337,7 +6345,7 @@ def business_dashboard():
     editable_fields = [
         "business_name", "listing_type", "category", "finalization", "perks", "phone_number", "address", "latitude", "longitude",
         "website_url", "about_us", "hours_of_operation", "search_keywords",
-        "service_1", "service_2", "service_3", "service_4", "service_5",
+        "store_slug", "service_1", "service_2", "service_3", "service_4", "service_5",
         "service_6", "service_7", "service_8", "service_9", "service_10"
     ]
 
@@ -6470,6 +6478,30 @@ def business_dashboard():
 
         if getattr(biz, "online_terms_agreed", False) != new_online_terms_agreed:
             biz.online_terms_agreed = new_online_terms_agreed
+            updated = True
+
+        # handle store_slug separately to enforce uniqueness
+        slug = request.form.get("store_slug", "").strip() or None
+        if slug:
+            # normalize to lower-case if you want
+            slug = slug.lower()
+            # validate characters (you can reuse your WTForms validator too)
+            import re
+            if not re.match(r"^[a-z0-9\-]+$", slug):
+                flash("Public profile URL can only contain letters, numbers, and dashes.", "danger")
+                return redirect(url_for("business_dashboard"))
+
+            # check uniqueness among businesses (excluding this one)
+            existing_slug = Business.query.filter(
+                Business.store_slug == slug,
+                Business.id != biz.id
+            ).first()
+            if existing_slug:
+                flash("That public profile URL is already taken. Please choose another.", "danger")
+                return redirect(url_for("business_dashboard"))
+        # assign slug (or clear if empty)
+        if biz.store_slug != slug:
+            biz.store_slug = slug
             updated = True
 
         if updated:
@@ -10996,6 +11028,55 @@ def update_destination_by_member(interaction_id):
 
     flash("You updated the destination address. The service provider will see this.", "success")
     return redirect(url_for('active_session', interaction_id=interaction.id))
+
+@app.route("/public_profiles/<slug>")
+def public_profile(slug):
+    biz = Business.query.filter_by(store_slug=slug, status="approved", is_suspended=False).first_or_404()
+    # render that single business
+
+@app.route("/public_profiles/<store_slug>")
+def public_profile(store_slug):
+    biz = Business.query.filter_by(store_slug=store_slug, status="approved", is_suspended=False).first_or_404()
+
+    # build meta description / keywords (similar to large listing)
+    base_parts = []
+    if biz.business_name:
+        base_parts.append(biz.business_name)
+    if biz.category:
+        base_parts.append(biz.category)
+    if getattr(biz, "search_keywords", None):
+        kw = " ".join(biz.search_keywords.strip().split())
+        base_parts.append(kw)
+    if getattr(biz, "about_us", None):
+        about_snippet = biz.about_us.strip().replace("\n", " ")
+        about_snippet = about_snippet[:160]
+        base_parts.append(about_snippet)
+
+    description = " - ".join(p for p in base_parts if p) or \
+        "Learn more about this Perk Miner advertiser and their exclusive member perks."
+
+    meta_keywords = None
+    if getattr(biz, "search_keywords", None):
+        meta_keywords = " ".join(biz.search_keywords.strip().split())
+
+    # get photos like you do elsewhere
+    photos = [
+        biz.photo1_url,
+        biz.photo2_url,
+        biz.photo3_url,
+        biz.photo4_url,
+        biz.photo5_url,
+        biz.photo6_url,
+    ]
+    photos = [p for p in photos if p]
+
+    return render_template(
+        "public_profile.html",
+        business=biz,
+        photos=photos,
+        meta_description=description,
+        meta_keywords=meta_keywords,
+    )
 
 @app.errorhandler(500)
 def internal_server_error(error):

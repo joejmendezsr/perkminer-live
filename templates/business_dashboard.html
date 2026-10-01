@@ -542,6 +542,23 @@
         <div class="form-text">Example: Mon-Fri 9am–5pm; Sat 10am–2pm</div>
       </div>
 
+<div class="mb-3">
+  <label class="form-label">Public profile URL</label>
+  <div class="input-group">
+    <span class="input-group-text">perkminer.com/public_profiles/</span>
+    <input
+      type="text"
+      name="store_slug"
+      class="form-control"
+      value="{{ form_data.get('store_slug', business.store_slug or '') }}"
+      placeholder="your-business-name"
+    >
+  </div>
+  <small class="text-muted">
+    Letters, numbers, and dashes only. Example: <code>my-plumbing-co</code>
+  </small>
+</div>
+
       <div class="col-12 mb-3">
         <label class="form-label">Website</label>
         <input type="url" class="form-control" id="website_url" name="website_url" maxlength="255"
