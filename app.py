@@ -9487,7 +9487,7 @@ def withdraw():
         flash(
             f"Withdrawal of ${transfer_amount:.2f} initiated! "
             f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
-            f\"Note: Stripe may also charge a separate withdrawal fee.\"",
+            f"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
     except Exception as e:
@@ -9639,7 +9639,7 @@ def business_withdraw():
         flash(
             f"Business withdrawal of ${transfer_amount:.2f} initiated! "
             f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
-            f\"Note: Stripe may also charge a separate withdrawal fee.\"",
+            f"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
     except Exception as e:
@@ -9785,7 +9785,7 @@ def withdraw_investor():
         flash(
             f"Silent investor withdrawal of ${transfer_amount:.2f} initiated! "
             f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
-            f\"Note: Stripe may also charge a separate withdrawal fee.\"",
+            f"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
     except Exception as e:
