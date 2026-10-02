@@ -4431,6 +4431,23 @@ def dashboard():
             flash("Profile updated!")
         return redirect(url_for('dashboard'))
 
+    # --- Perk Miner transfer fee preview for regular member earnings ---
+    FEE_RATE = Decimal("0.005")   # 0.5%
+    FIXED_FEE = Decimal("0.35")   # $0.35
+
+    # example basis: use current net_available if > 0, else show example on $100
+    if net_available and net_available > 0:
+        example_balance = net_available
+    else:
+        example_balance = Decimal("100.00")
+
+    std_fee = (example_balance * FEE_RATE + FIXED_FEE).quantize(Decimal("0.01"))
+    std_net = (example_balance - std_fee).quantize(Decimal("0.01"))
+
+    # --- initialize investor fee preview defaults (may be overwritten below) ---
+    std_fee_inv = Decimal("0")
+    std_net_inv = Decimal("0")
+
     # --- Rewards calculator setup ---
     if request.method == "GET":
         form.downline_level.data = '1'
@@ -4574,6 +4591,15 @@ def dashboard():
 
         db.session.commit()
 
+        # investor transfer fee preview
+        if investor_net_available and investor_net_available > 0:
+            example_inv_balance = investor_net_available
+        else:
+            example_inv_balance = Decimal("100.00")
+
+        std_fee_inv = (example_inv_balance * FEE_RATE + FIXED_FEE).quantize(Decimal("0.01"))
+        std_net_inv = (example_inv_balance - std_fee_inv).quantize(Decimal("0.01"))
+
     share_url = url_for("register", ref=user.referral_code, _external=True)
     business_share_url = url_for("business_register", ref=user.referral_code, _external=True)
 
@@ -4612,6 +4638,11 @@ def dashboard():
         available_earnings=available_earnings,           # raw, if you still want it
         net_available_earnings=net_available,            # matches Withdrawable Earnings
         withdrawn_total=withdrawn_total,                 # for "Total withdrawn" row
+
+        std_fee=std_fee,
+        std_net=std_net,
+        std_fee_inv=std_fee_inv,
+        std_net_inv=std_net_inv,
 
         # silent investor summary
         investor_total=investor_total,
@@ -6339,6 +6370,18 @@ def business_dashboard():
 
     db.session.commit()
 
+    # --- Perk Miner transfer fee preview for business earnings ---
+    FEE_RATE = Decimal("0.005")   # 0.5%
+    FIXED_FEE = Decimal("0.35")   # $0.35
+
+    if net_available_biz and net_available_biz > 0:
+        example_balance_biz = net_available_biz
+    else:
+        example_balance_biz = Decimal("100.00")
+
+    std_fee_biz = (example_balance_biz * FEE_RATE + FIXED_FEE).quantize(Decimal("0.01"))
+    std_net_biz = (example_balance_biz - std_fee_biz).quantize(Decimal("0.01"))
+
     if request.args.get("fund_success") == "1":
         flash("Funds added to your account!", "success")
 
@@ -6661,6 +6704,9 @@ def business_dashboard():
         available_biz_earnings=available_biz_earnings,   # raw available (if you still want it)
         net_available_biz_earnings=net_available_biz,    # net available = balance
         biz_withdrawn_total=biz_withdrawn_total,         # total withdrawn
+
+        std_fee_biz=std_fee_biz,
+        std_net_biz=std_net_biz,
 
         b2b_share_url=b2b_share_url,
         biz_level_code=biz_level_code,
@@ -9486,7 +9532,7 @@ def withdraw():
 
         flash(
             f"Withdrawal of ${transfer_amount:.2f} initiated! "
-            f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
+            f"Perk Miner transfer fee: ${fee:.2f} deducted. "
             f"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
@@ -9638,7 +9684,7 @@ def business_withdraw():
 
         flash(
             f"Business withdrawal of ${transfer_amount:.2f} initiated! "
-            f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
+            f"Perk Miner transfer fee: ${fee:.2f} deducted. "
             f"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
@@ -9784,7 +9830,7 @@ def withdraw_investor():
 
         flash(
             f"Silent investor withdrawal of ${transfer_amount:.2f} initiated! "
-            f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
+            f"Perk Miner transfer fee: ${fee:.2f} deducted. "
             f"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
