@@ -9134,6 +9134,23 @@ def onboard_stripe():
         current_user.stripe_account_id = account.id
         db.session.commit()
 
+        # NOW set automatic daily payouts using Balance Settings API
+        try:
+            stripe.BalanceSettings.update(
+                stripe_account=account.id,
+                payments={
+                    'payouts': {
+                        'schedule': {
+                            'interval': 'daily'
+                        }
+                    }
+                }
+            )
+            print(f"DEBUG: Enabled daily automatic payouts for user {current_user.id}, account {account.id}")
+        except Exception as e:
+            print(f"DEBUG: Failed to set payout schedule for {account.id}: {e}")
+            # Non-critical - account still works, just won't have custom schedule
+
     account_link = stripe.AccountLink.create(
         account=current_user.stripe_account_id,
         refresh_url=url_for('onboard_stripe', _external=True),
@@ -9181,6 +9198,23 @@ def onboard_business_stripe():
         )
         business.stripe_account_id = account.id
         db.session.commit()
+
+        # NOW set automatic daily payouts using Balance Settings API
+        try:
+            stripe.BalanceSettings.update(
+                stripe_account=account.id,
+                payments={
+                    'payouts': {
+                        'schedule': {
+                            'interval': 'daily'
+                        }
+                    }
+                }
+            )
+            print(f"DEBUG: Enabled daily automatic payouts for business {business.id}, account {account.id}")
+        except Exception as e:
+            print(f"DEBUG: Failed to set payout schedule for {account.id}: {e}")
+            # Non-critical - account still works, just won't have custom schedule
 
     # Create onboarding link (works to complete requirements too)
     account_link = stripe.AccountLink.create(
@@ -9315,23 +9349,29 @@ def business_stripe_dashboard():
 import time
 import uuid
 
+@csrf.exempt
 @app.route('/withdraw', methods=['POST'])
 @login_required
 def withdraw():
     """
-    Standard member withdrawal (1–3 business days).
-    Fee: 0.5% + $0.35
+    Standard member withdrawal.
+
+    Platform behavior:
+      - Perk Miner transfer fee: 0.5% + $0.35 (deducted before transfer)
+      - We create a TRANSFER from platform balance -> member's connected account.
+      - Connected account's payouts to bank are handled by Stripe (e.g., automatic payouts).
+
     Flow:
       1) lock via user.withdrawal_in_progress
       2) recompute earnings (7-day delay)
-      3) standard payout from connected account
+      3) stripe.Transfer.create(...) from platform to connected account
       4) update withdrawn_total / earnings_balance
     """
     print("DEBUG: /withdraw (member standard) called for user", current_user.id)
 
     MIN_PAYOUT = Decimal("10.00")
     FEE_RATE = Decimal("0.005")   # 0.5%
-    FIXED_FEE = Decimal("0.35")
+    FIXED_FEE = Decimal("0.35")   # Perk Miner transfer fee (fixed portion)
 
     user = current_user
 
@@ -9393,38 +9433,49 @@ def withdraw():
 
         print("DEBUG: member balance_to_withdraw =", balance_to_withdraw)
 
-        # standard payout fee: 0.5% + $0.35
+        # Perk Miner transfer fee: 0.5% + $0.35
         fee = (balance_to_withdraw * FEE_RATE + FIXED_FEE).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
-        payout_amount = (balance_to_withdraw - fee).quantize(
+        transfer_amount = (balance_to_withdraw - fee).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
 
-        print("DEBUG: member fee =", fee, "payout_amount =", payout_amount)
+        print("DEBUG: member fee =", fee, "transfer_amount =", transfer_amount)
 
-        if payout_amount <= 0:
-            flash("Insufficient balance after the payout fee is deducted.", "warning")
+        if transfer_amount <= 0:
+            flash("Insufficient balance after the Perk Miner transfer fee is deducted.", "warning")
             return redirect(url_for('dashboard'))
 
-        amount_cents = int(payout_amount * 100)
+        amount_cents = int(transfer_amount * 100)
 
-        # idempotency key to protect against duplicate charges at Stripe level
         idem_key = f"member_withdraw_{user.id}_{int(time.time())}_{amount_cents}_{uuid.uuid4().hex}"
         print("DEBUG: member withdraw idempotency_key =", idem_key)
 
-        payout = stripe.Payout.create(
-            amount=amount_cents,
-            currency='usd',
-            method='standard',
-            statement_descriptor="PerkMiner Payout",
-            stripe_account=user.stripe_account_id,
-            idempotency_key=idem_key,
-        )
-        payout_dict = payout.to_dict()
-        print("DEBUG: Member Payout created:", payout_dict.get("id"), payout_dict.get("status"))
+        # Transfer from platform -> member connected account
+        try:
+            transfer = stripe.Transfer.create(
+                amount=amount_cents,
+                currency='usd',
+                destination=user.stripe_account_id,
+                description=f"Perk Miner member earnings for user {user.id}",
+                idempotency_key=idem_key,
+            )
+            transfer_dict = transfer.to_dict()
+            print("DEBUG: Member Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
+        except stripe.error.InvalidRequestError as e:
+            print("DEBUG: member transfer failed with InvalidRequestError:", repr(e))
+            if getattr(e, "code", None) == "balance_insufficient":
+                flash(
+                    "Transfer cannot be completed yet because the platform balance is not ready. "
+                    "Please try again later.",
+                    "danger"
+                )
+            else:
+                flash("There was a problem creating your payout transfer. Please try again later.", "danger")
+            return redirect(url_for('dashboard'))
 
-        # mark withdrawn funds
+        # mark withdrawn funds in our DB
         user.withdrawn_total = (user.withdrawn_total or Decimal("0")) + balance_to_withdraw
         user.earnings_balance = available_earnings - user.withdrawn_total
 
@@ -9434,8 +9485,9 @@ def withdraw():
               "earnings_balance now", user.earnings_balance)
 
         flash(
-            f"Withdrawal of ${payout_amount:.2f} initiated! "
-            f"Payout fee: ${fee:.2f} deducted.",
+            f"Withdrawal of ${transfer_amount:.2f} initiated! "
+            f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
+            f\"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
     except Exception as e:
@@ -9447,18 +9499,22 @@ def withdraw():
 
     return redirect(url_for('dashboard'))
 
-
+@csrf.exempt
 @app.route('/business/withdraw', methods=['POST'])
 def business_withdraw():
     """
-    Standard business withdrawal (bank transfer).
-    Fee: 0.5% + $0.35
+    Standard business withdrawal.
+
+    Platform behavior:
+      - Perk Miner transfer fee: 0.5% + $0.35 (deducted before transfer)
+      - We create a TRANSFER from platform balance -> business connected account.
+      - Connected account's payouts to bank are handled by Stripe (e.g., automatic payouts).
+
     Flow:
       1) lock via biz.withdrawal_in_progress
       2) recompute business earnings (7-day delay)
-      3) transfer platform -> business connected account
-      4) standard payout from connected account
-      5) update withdrawn_total / earnings_balance
+      3) stripe.Transfer.create(...) from platform to business connected account
+      4) update withdrawn_total / earnings_balance
     """
     print("DEBUG: /business/withdraw (standard) called")
 
@@ -9500,7 +9556,6 @@ def business_withdraw():
             flash(f"You need at least ${MIN_PAYOUT} in available earnings (after the 7-day delay) to withdraw.", "warning")
             return redirect(url_for('business_dashboard'))
 
-        # optional amount
         amt_str = request.form.get("amount", "").strip()
         if amt_str:
             try:
@@ -9526,51 +9581,50 @@ def business_withdraw():
 
         print("DEBUG: business balance_to_withdraw =", balance_to_withdraw)
 
-        # 0.5% + $0.35 fee
+        # Perk Miner transfer fee: 0.5% + $0.35
         fee = (balance_to_withdraw * FEE_RATE + FIXED_FEE).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
-        payout_amount = (balance_to_withdraw - fee).quantize(
+        transfer_amount = (balance_to_withdraw - fee).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
 
-        print("DEBUG: business fee =", fee, "payout_amount =", payout_amount)
+        print("DEBUG: business fee =", fee, "transfer_amount =", transfer_amount)
 
-        if payout_amount <= 0:
-            flash("Insufficient balance after the payout fee is deducted.", "warning")
+        if transfer_amount <= 0:
+            flash("Insufficient balance after the Perk Miner transfer fee is deducted.", "warning")
             return redirect(url_for('business_dashboard'))
 
-        amount_cents = int(payout_amount * 100)
+        amount_cents = int(transfer_amount * 100)
 
-        # idempotency key
         idem_key = f"biz_withdraw_{biz.id}_{int(time.time())}_{amount_cents}_{uuid.uuid4().hex}"
         print("DEBUG: business withdraw idempotency_key =", idem_key)
 
-        # 1) Transfer platform -> business connected account
-        print("DEBUG: creating Business Transfer for", amount_cents, "cents to", biz.stripe_account_id)
-        transfer = stripe.Transfer.create(
-            amount=amount_cents,
-            currency='usd',
-            destination=biz.stripe_account_id,
-            description="PerkMiner Business Payout (Standard)",
-            idempotency_key=idem_key,
-        )
-        transfer_dict = transfer.to_dict()
-        print("DEBUG: Business Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
+        # Transfer from platform -> business connected account
+        try:
+            print("DEBUG: creating Business Transfer for", amount_cents, "cents to", biz.stripe_account_id)
+            transfer = stripe.Transfer.create(
+                amount=amount_cents,
+                currency='usd',
+                destination=biz.stripe_account_id,
+                description="Perk Miner Business Earnings",
+                idempotency_key=idem_key,
+            )
+            transfer_dict = transfer.to_dict()
+            print("DEBUG: Business Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
+        except stripe.error.InvalidRequestError as e:
+            print("DEBUG: business transfer failed with InvalidRequestError:", repr(e))
+            if getattr(e, "code", None) == "balance_insufficient":
+                flash(
+                    "Transfer cannot be completed yet because the platform balance is not ready. "
+                    "Please try again later.",
+                    "danger"
+                )
+            else:
+                flash("There was a problem creating your business payout transfer. Please try again later.", "danger")
+            return redirect(url_for('business_dashboard'))
 
-        # 2) standard payout from connected account to bank/debit
-        print("DEBUG: creating Business Payout (standard) for", amount_cents, "cents from", biz.stripe_account_id)
-        payout = stripe.Payout.create(
-            amount=amount_cents,
-            currency='usd',
-            method='standard',
-            statement_descriptor="PerkMiner Biz Payout",
-            stripe_account=biz.stripe_account_id,
-        )
-        payout_dict = payout.to_dict()
-        print("DEBUG: Business Payout created:", payout_dict.get("id"), payout_dict.get("status"), payout_dict.get("destination"))
-
-        # update DB
+        # update DB after successful transfer
         biz.withdrawn_total = (biz.withdrawn_total or Decimal("0")) + balance_to_withdraw
         biz.grand_total_earnings = total
         biz.pending_earnings = pending
@@ -9583,8 +9637,9 @@ def business_withdraw():
               "earnings_balance now", biz.earnings_balance)
 
         flash(
-            f"Business withdrawal of ${payout_amount:.2f} initiated! "
-            f"Payout fee: ${fee:.2f} deducted.",
+            f"Business withdrawal of ${transfer_amount:.2f} initiated! "
+            f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
+            f\"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
     except Exception as e:
@@ -9596,19 +9651,23 @@ def business_withdraw():
 
     return redirect(url_for('business_dashboard'))
 
-
+@csrf.exempt
 @app.route('/withdraw_investor', methods=['POST'])
 @login_required
 def withdraw_investor():
     """
-    Standard silent investor withdrawal (bank transfer).
-    Fee: 0.5% + $0.35
+    Standard silent investor withdrawal.
+
+    Platform behavior:
+      - Perk Miner transfer fee: 0.5% + $0.35 (deducted before transfer)
+      - We create a TRANSFER from platform balance -> investor's connected account.
+      - Connected account's payouts to bank are handled by Stripe (e.g., automatic payouts).
+
     Flow:
       1) lock via user.withdrawal_in_progress
       2) recompute investor earnings (7-day delay)
-      3) transfer platform -> investor connected account
-      4) standard payout from connected account
-      5) update investor_withdrawn_total / investor balances
+      3) stripe.Transfer.create(...) from platform to investor connected account
+      4) update investor_withdrawn_total / investor balances
     """
     print("DEBUG: /withdraw_investor (standard) called for user", current_user.id)
 
@@ -9671,47 +9730,50 @@ def withdraw_investor():
 
         print("DEBUG: investor balance_to_withdraw =", balance_to_withdraw)
 
-        # 0.5% + $0.35 fee
+        # Perk Miner transfer fee: 0.5% + $0.35
         fee = (balance_to_withdraw * FEE_RATE + FIXED_FEE).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
-        payout_amount = (balance_to_withdraw - fee).quantize(
+        transfer_amount = (balance_to_withdraw - fee).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
 
-        print("DEBUG: investor fee =", fee, "payout_amount =", payout_amount)
+        print("DEBUG: investor fee =", fee, "transfer_amount =", transfer_amount)
 
-        if payout_amount <= 0:
-            flash("Insufficient balance after the payout fee is deducted.", "warning")
+        if transfer_amount <= 0:
+            flash("Insufficient balance after the Perk Miner transfer fee is deducted.", "warning")
             return redirect(url_for('dashboard'))
 
-        amount_cents = int(payout_amount * 100)
+        amount_cents = int(transfer_amount * 100)
 
         idem_key = f"investor_withdraw_{user.id}_{int(time.time())}_{amount_cents}_{uuid.uuid4().hex}"
         print("DEBUG: investor withdraw idempotency_key =", idem_key)
 
-        print("DEBUG: creating Investor Transfer (standard) for", amount_cents, "cents to", user.stripe_account_id)
-        transfer = stripe.Transfer.create(
-            amount=amount_cents,
-            currency='usd',
-            destination=user.stripe_account_id,
-            description="PerkMiner Silent Investor Withdrawal",
-            idempotency_key=idem_key,
-        )
-        transfer_dict = transfer.to_dict()
-        print("DEBUG: Investor Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
+        # Transfer from platform -> investor connected account
+        try:
+            print("DEBUG: creating Investor Transfer (standard) for", amount_cents, "cents to", user.stripe_account_id)
+            transfer = stripe.Transfer.create(
+                amount=amount_cents,
+                currency='usd',
+                destination=user.stripe_account_id,
+                description="Perk Miner Silent Investor Earnings",
+                idempotency_key=idem_key,
+            )
+            transfer_dict = transfer.to_dict()
+            print("DEBUG: Investor Transfer created:", transfer_dict.get("id"), transfer_dict.get("status"))
+        except stripe.error.InvalidRequestError as e:
+            print("DEBUG: investor transfer failed with InvalidRequestError:", repr(e))
+            if getattr(e, "code", None) == "balance_insufficient":
+                flash(
+                    "Transfer cannot be completed yet because the platform balance is not ready. "
+                    "Please try again later.",
+                    "danger"
+                )
+            else:
+                flash("There was a problem creating your silent investor payout transfer. Please try again later.", "danger")
+            return redirect(url_for('dashboard'))
 
-        print("DEBUG: creating Investor Payout (standard) for", amount_cents, "cents from", user.stripe_account_id)
-        payout = stripe.Payout.create(
-            amount=amount_cents,
-            currency='usd',
-            method='standard',
-            statement_descriptor="PerkMiner Investor Payout",
-            stripe_account=user.stripe_account_id
-        )
-        payout_dict = payout.to_dict()
-        print("DEBUG: Investor Payout created:", payout_dict.get("id"), payout_dict.get("status"), payout_dict.get("destination"))
-
+        # update DB after successful transfer
         user.investor_withdrawn_total = (user.investor_withdrawn_total or Decimal("0")) + balance_to_withdraw
         user.investor_earnings_balance = investor_available - user.investor_withdrawn_total
 
@@ -9721,8 +9783,9 @@ def withdraw_investor():
               "investor_earnings_balance now", user.investor_earnings_balance)
 
         flash(
-            f"Silent investor withdrawal of ${payout_amount:.2f} initiated! "
-            f"Payout fee: ${fee:.2f} deducted.",
+            f"Silent investor withdrawal of ${transfer_amount:.2f} initiated! "
+            f"Perk Miner transfer fee\": ${fee:.2f} deducted. "
+            f\"Note: Stripe may also charge a separate withdrawal fee.\"",
             "success"
         )
     except Exception as e:
