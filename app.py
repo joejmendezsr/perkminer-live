@@ -646,7 +646,7 @@ def build_invite_email(inviter_name, join_url, video_url):
         <!-- Hero Banner with Logo -->
                 <tr>
                     <td style="position:relative;">
-                        <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1771635742/Email_Background_kgfx10.jpg" width="600"
+                        <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1791000255/member_flyer_zudb23.jpg" width="600"
                         alt="PerkMiner Hero Banner"
                         style="display:block; width:100%; height:auto; border:0;" border="0">
         </td>
@@ -671,7 +671,7 @@ def build_invite_email(inviter_name, join_url, video_url):
         <!-- Secondary Image -->
     <tr>
         <td style="padding: 0 40px 30px;">
-            <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1775719494/List-for-Free_pykazg.jpg" width="520" alt="PerkMiner Features"
+            <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1791000401/biz-flyer_pfg6os.jpg" width="520" alt="PerkMiner Features"
             style="display:block; width:100%; max-width:520px; height:auto; border-radius:10px; border:0;" border="0">
         </td>
     </tr>
