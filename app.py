@@ -11183,6 +11183,13 @@ def public_profile(store_slug):
         google_maps_api_key=current_app.config.get("GOOGLE_MAPS_API_KEY"),
     )
 
+@app.route('/robots.txt')
+def serve_robots():
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'robots.txt'
+    )
+
 @app.errorhandler(500)
 def internal_server_error(error):
     # Log the full error + traceback for debugging

@@ -1,5 +1,6 @@
 User-agent: *
 
+Allow: /
 #Allow search engines to crawl public profiles
 Allow: /public_profiles/
 
