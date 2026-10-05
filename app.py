@@ -11138,6 +11138,118 @@ def update_destination_by_member(interaction_id):
     flash("You updated the destination address. The service provider will see this.", "success")
     return redirect(url_for('active_session', interaction_id=interaction.id))
 
+@app.route("/public_profiles")
+def public_profiles_directory():
+    page = request.args.get("page", 1, type=int)
+
+    pagination = Business.query.filter_by(
+        status="approved",
+        is_suspended=False
+    ).order_by(
+        Business.business_name.asc()
+    ).paginate(page=page, per_page=20, error_out=False)
+
+    businesses = pagination.items
+
+    return render_template(
+        "public_profiles_directory.html",
+        businesses=businesses,
+        pagination=pagination,
+    )
+
+@app.route("/public_profiles")
+def public_profiles_directory():
+    q = request.args.get("q", "", type=str).strip()
+    category = request.args.get("category", "", type=str).strip()
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    distance = request.args.get("distance", "").strip()  # “5”, “10”, “25”, “50”, or “all”
+
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+
+    # base query: approved + not suspended
+    base_query = Business.query.filter_by(
+        status="approved",
+        is_suspended=False
+    )
+
+    if category:
+        base_query = base_query.filter(Business.category == category)
+    if q:
+        base_query = base_query.filter(Business.search_keywords.ilike(f"%{q}%"))
+
+    use_location = lat is not None and lng is not None
+
+    if use_location:
+        # very similar to your /search logic
+        candidates = (
+            base_query
+            .filter(
+                (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+                (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
+            )
+            .all()
+        )
+
+        businesses_with_dist = []
+        for biz in candidates:
+            biz_lat, biz_lng = get_business_coords_for_distance(biz)
+            if biz_lat is None or biz_lng is None:
+                continue
+            try:
+                d = haversine_py(lat, lng, biz_lat, biz_lng)
+            except ValueError:
+                continue
+            businesses_with_dist.append((biz, d))
+
+        # Filter by distance if set and not "all"
+        if distance and distance != "all":
+            try:
+                dist_num = float(distance)
+                businesses_with_dist = [
+                    (b, d) for (b, d) in businesses_with_dist if d <= dist_num
+                ]
+            except ValueError:
+                pass
+
+        # Order by distance
+        businesses_with_dist.sort(key=lambda x: x[1])
+
+        # Manual pagination
+        total = len(businesses_with_dist)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_items = businesses_with_dist[start:end]
+
+        businesses = []
+        for biz, d in page_items:
+            biz.distance_mi = round(d, 2)
+            businesses.append(biz)
+
+        pagination = SimplePagination(page=page, per_page=per_page, total=total)
+
+    else:
+        # no lat/lng: normal pagination
+        pagination = (
+            base_query
+            .order_by(Business.rank.desc(), Business.business_name.asc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+        businesses = pagination.items
+
+    return render_template(
+        "public_profiles_directory.html",
+        businesses=businesses,
+        pagination=pagination,
+        page=page,
+        q=q,
+        category=category,
+        lat=lat,
+        lng=lng,
+        selected_distance=distance or "all",
+    )
+
 @app.route("/public_profiles/<store_slug>")
 def public_profile(store_slug):
     biz = Business.query.filter_by(store_slug=store_slug, status="approved", is_suspended=False).first_or_404()
