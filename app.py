@@ -11140,25 +11140,6 @@ def update_destination_by_member(interaction_id):
 
 @app.route("/public_profiles")
 def public_profiles_directory():
-    page = request.args.get("page", 1, type=int)
-
-    pagination = Business.query.filter_by(
-        status="approved",
-        is_suspended=False
-    ).order_by(
-        Business.business_name.asc()
-    ).paginate(page=page, per_page=20, error_out=False)
-
-    businesses = pagination.items
-
-    return render_template(
-        "public_profiles_directory.html",
-        businesses=businesses,
-        pagination=pagination,
-    )
-
-@app.route("/public_profiles")
-def public_profiles_directory():
     q = request.args.get("q", "", type=str).strip()
     category = request.args.get("category", "", type=str).strip()
     lat = request.args.get("lat", type=float)
