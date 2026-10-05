@@ -11146,80 +11146,93 @@ def public_profiles_directory():
     category = request.args.get("category", "", type=str).strip()
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
-    distance = request.args.get("distance", "").strip()  # “5”, “10”, “25”, “50”, or “all”
-
+    distance = request.args.get("distance", "", type=str).strip()
     page = request.args.get("page", 1, type=int)
     per_page = 20
 
-    # base query: approved + not suspended
-    base_query = Business.query.filter_by(
-        status="approved",
-        is_suspended=False
+    # consider it a "search" only if at least one of these is set
+    has_filters = bool(
+        q
+        or category
+        or (distance and distance != "all")
+        or lat is not None
+        or lng is not None
     )
 
-    if category:
-        base_query = base_query.filter(Business.category == category)
-    if q:
-        base_query = base_query.filter(Business.search_keywords.ilike(f"%{q}%"))
+    businesses = []
+    pagination = None
 
-    use_location = lat is not None and lng is not None
+    if has_filters:
+        base_query = Business.query.filter_by(
+            status="approved",
+            is_suspended=False,
+        )
 
-    if use_location:
-        # very similar to your /search logic
-        candidates = (
-            base_query
-            .filter(
-                (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
-                (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
+        if category:
+            base_query = base_query.filter(Business.category == category)
+
+        if q:
+            ilike_pattern = f"%{q}%"
+            base_query = base_query.filter(
+                db.or_(
+                    Business.business_name.ilike(ilike_pattern),
+                    Business.search_keywords.ilike(ilike_pattern),
+                    Business.about_us.ilike(ilike_pattern),
+                )
             )
-            .all()
-        )
 
-        businesses_with_dist = []
-        for biz in candidates:
-            biz_lat, biz_lng = get_business_coords_for_distance(biz)
-            if biz_lat is None or biz_lng is None:
-                continue
-            try:
-                d = haversine_py(lat, lng, biz_lat, biz_lng)
-            except ValueError:
-                continue
-            businesses_with_dist.append((biz, d))
+        use_location = lat is not None and lng is not None
 
-        # Filter by distance if set and not "all"
-        if distance and distance != "all":
-            try:
-                dist_num = float(distance)
-                businesses_with_dist = [
-                    (b, d) for (b, d) in businesses_with_dist if d <= dist_num
-                ]
-            except ValueError:
-                pass
+        if use_location:
+            candidates = (
+                base_query
+                .filter(
+                    (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+                    (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
+                )
+                .all()
+            )
 
-        # Order by distance
-        businesses_with_dist.sort(key=lambda x: x[1])
+            businesses_with_dist = []
+            for biz in candidates:
+                biz_lat, biz_lng = get_business_coords_for_distance(biz)
+                if biz_lat is None or biz_lng is None:
+                    continue
+                try:
+                    d = haversine_py(lat, lng, biz_lat, biz_lng)
+                except ValueError:
+                    continue
+                businesses_with_dist.append((biz, d))
 
-        # Manual pagination
-        total = len(businesses_with_dist)
-        start = (page - 1) * per_page
-        end = start + per_page
-        page_items = businesses_with_dist[start:end]
+            if distance and distance != "all":
+                try:
+                    dist_num = float(distance)
+                    businesses_with_dist = [
+                        (b, d) for (b, d) in businesses_with_dist if d <= dist_num
+                    ]
+                except ValueError:
+                    pass
 
-        businesses = []
-        for biz, d in page_items:
-            biz.distance_mi = round(d, 2)
-            businesses.append(biz)
+            businesses_with_dist.sort(key=lambda x: x[1])
 
-        pagination = SimplePagination(page=page, per_page=per_page, total=total)
+            total = len(businesses_with_dist)
+            start = (page - 1) * per_page
+            end = start + per_page
+            page_items = businesses_with_dist[start:end]
 
-    else:
-        # no lat/lng: normal pagination
-        pagination = (
-            base_query
-            .order_by(Business.rank.desc(), Business.business_name.asc())
-            .paginate(page=page, per_page=per_page, error_out=False)
-        )
-        businesses = pagination.items
+            for biz, d in page_items:
+                biz.distance_mi = round(d, 2)
+            businesses = [b for (b, _) in page_items]
+
+            pagination = SimplePagination(page=page, per_page=per_page, total=total)
+
+        else:
+            pagination = (
+                base_query
+                .order_by(Business.rank.desc(), Business.business_name.asc())
+                .paginate(page=page, per_page=per_page, error_out=False)
+            )
+            businesses = pagination.items
 
     return render_template(
         "public_profiles_directory.html",
@@ -11228,8 +11241,6 @@ def public_profiles_directory():
         page=page,
         q=q,
         category=category,
-        lat=lat,
-        lng=lng,
         selected_distance=distance or "all",
         categories=CATEGORIES,
     )

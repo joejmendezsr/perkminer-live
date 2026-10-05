@@ -131,15 +131,15 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
 
 {% block content %}
   {# consider it a "search" if any of these are present #}
-  {% set has_filters =
-    q or
-    category or
-    (selected_distance and selected_distance != 'all') or
-    request.args.get('lat') or
-    request.args.get('lng') or
-    request.args.get('page')
-  %}
-  {% set show_results = has_filters and businesses %}
+{% set has_filters =
+  q or
+  category or
+  (selected_distance and selected_distance != 'all') or
+  request.args.get('lat') or
+  request.args.get('lng') or
+  request.args.get('page')
+%}
+{% set show_results = has_filters and businesses %}
 
   <div class="page-shell">
 
