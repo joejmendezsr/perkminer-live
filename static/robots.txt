@@ -1,4 +1,8 @@
 User-agent: *
+
+#Allow search engines to crawl public profiles
+Allow: /public_profiles/
+
 Disallow: /dashboard
 Disallow: /business/dashboard
 Disallow: /admin/dashboard
