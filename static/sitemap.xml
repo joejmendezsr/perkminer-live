@@ -7,12 +7,40 @@
     <loc>https://perkminer.com/login</loc>
   </url>
   <url>
+    <loc>https://www.perkminer.com/register</loc>
+  </url>
+  <url>
     <loc>https://perkminer.com/business</loc>
+  </url>
+  <url>
+    <loc>https://www.perkminer.com/business/login</loc>
+  </url>  <url>
+    <loc>https://www.perkminer.com/business/register</loc>
+  </url>  <url>
+    <loc>https://www.perkminer.com/staff/login</loc>
   </url>
   <url>
     <loc>https://perkminer.com/about</loc>
   </url>
   <url>
     <loc>https://perkminer.com/news</loc>
+  </url>
+  <url>
+    <loc>https://perkminer.com/faq</loc>
+  </url>
+  <url>
+    <loc>https://perkminer.com/news</loc>
+  </url>
+  <url>
+    <loc>https://www.perkminer.com/press-release</loc>
+  </url>
+  <url>
+    <loc>https://www.perkminer.com/new-featured-businesses</loc>
+  </url>
+  <url>
+    <loc>https://www.perkminer.com/how-it-works</loc>
+  </url>
+  <url>
+    <loc>https://www.perkminer.com/intro</loc>
   </url>
 </urlset>

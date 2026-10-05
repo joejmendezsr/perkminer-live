@@ -9149,7 +9149,7 @@ def press_release():
 
 @app.route("/new-featured-businesses")
 def new_featured_businesses():
-    return render_template('your_template.html')
+    return render_template('new_featured_businesses.html')
 
 @app.route('/onboard/stripe')
 @login_required
