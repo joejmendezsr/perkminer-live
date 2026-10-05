@@ -11190,6 +11190,13 @@ def serve_robots():
         'robots.txt'
     )
 
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'sitemap.xml'
+    )
+
 @app.errorhandler(500)
 def internal_server_error(error):
     # Log the full error + traceback for debugging
