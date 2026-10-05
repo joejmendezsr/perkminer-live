@@ -53,7 +53,7 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
     .hero-bg {
       position: absolute;
       inset: 0;
-      background-image: url("https://images.unsplash.com/photo-1523287562758-66c7fc58967a?auto=format&fit=crop&w=1600&q=80");
+      background-image: url("https://res.cloudinary.com/dmrntlcfd/image/upload/v1782601402/Cash-Back_rignwa.jpg?auto=format&fit=crop&w=1600&q=80");
       background-size: cover;
       background-position: center;
       filter: brightness(0.45);
@@ -130,11 +130,24 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
 {% endblock %}
 
 {% block content %}
-  {# decide if we should show results or just hero+search #}
-  {% set has_filters = q or category or (selected_distance and selected_distance != 'all') or request.args.get('lat') or request.args.get('lng') %}
+  {# consider it a "search" if any of these are present #}
+  {% set has_filters =
+    q or
+    category or
+    (selected_distance and selected_distance != 'all') or
+    request.args.get('lat') or
+    request.args.get('lng') or
+    request.args.get('page')
+  %}
   {% set show_results = has_filters and businesses %}
 
   <div class="page-shell">
+
+    <div class="mt-3 mb-2">
+      <a href="{{ url_for('/') }}" class="btn btn-outline-secondary btn-sm">
+        ← Return to Home
+      </a>
+    </div>
 
     {# HERO SECTION #}
     <section class="hero-section">
