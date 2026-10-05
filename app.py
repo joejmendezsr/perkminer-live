@@ -11138,6 +11138,8 @@ def update_destination_by_member(interaction_id):
     flash("You updated the destination address. The service provider will see this.", "success")
     return redirect(url_for('active_session', interaction_id=interaction.id))
 
+CATEGORIES = ["Automotive", "Health", "Retail"]  # etc.
+
 @app.route("/public_profiles")
 def public_profiles_directory():
     q = request.args.get("q", "", type=str).strip()
@@ -11229,6 +11231,7 @@ def public_profiles_directory():
         lat=lat,
         lng=lng,
         selected_distance=distance or "all",
+        categories=CATEGORIES,
     )
 
 @app.route("/public_profiles/<store_slug>")

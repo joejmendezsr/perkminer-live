@@ -9,12 +9,14 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
   <meta name="description" content="Search our public business profiles directory - no registration or login required. We make it easy for you to obtain enough information before deciding if you want to move forward.">
   <meta name="keywords" content="perk, perks, perk miner, grow your business, pay per sale, pay per close, no risk advertising, best advertising, high roi, roi, return on investment, return on advertising spend, highest roi, no sale no fee">
 
+  {# canonical #}
   {% if page and page > 1 %}
     <link rel="canonical" href="{{ url_for('public_profiles_directory', page=page, _external=True) }}">
   {% else %}
     <link rel="canonical" href="{{ url_for('public_profiles_directory', _external=True) }}">
   {% endif %}
 
+  {# prev/next hints #}
   {% if pagination %}
     {% if pagination.has_prev %}
       <link rel="prev" href="{{ url_for('public_profiles_directory', page=pagination.prev_num, _external=True) }}">
@@ -45,12 +47,13 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
       color: #fff;
       margin-left: -0.75rem;
       margin-right: -0.75rem;
+      overflow: hidden;
     }
 
     .hero-bg {
       position: absolute;
       inset: 0;
-      background-image: url("{{ url_for('static', filename='img/your-hero-image.jpg') }}");
+      background-image: url("https://images.unsplash.com/photo-1523287562758-66c7fc58967a?auto=format&fit=crop&w=1600&q=80");
       background-size: cover;
       background-position: center;
       filter: brightness(0.45);
@@ -127,6 +130,10 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
 {% endblock %}
 
 {% block content %}
+  {# decide if we should show results or just hero+search #}
+  {% set has_filters = q or category or (selected_distance and selected_distance != 'all') or request.args.get('lat') or request.args.get('lng') %}
+  {% set show_results = has_filters and businesses %}
+
   <div class="page-shell">
 
     {# HERO SECTION #}
@@ -145,76 +152,80 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
     {# SEARCH BAR OVERLAPPING HERO #}
     <section class="directory-search-wrapper">
       <div class="directory-search-box">
-<form method="get" action="{{ url_for('public_profiles_directory') }}">
-  <div class="row g-2 align-items-center">
-    <div class="col-12 col-md-4">
-      <label for="q" class="form-label mb-1">Search by business name or keyword</label>
-      <input
-        type="text"
-        class="form-control"
-        id="q"
-        name="q"
-        value="{{ request.args.get('q', '') }}"
-        placeholder="e.g. car wash, dentist, marketing"
-      >
-    </div>
+        <form method="get" action="{{ url_for('public_profiles_directory') }}">
+          <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
+              <label for="q" class="form-label mb-1">Search by business name or keyword</label>
+              <input
+                type="text"
+                class="form-control"
+                id="q"
+                name="q"
+                value="{{ q or '' }}"
+                placeholder="e.g. car wash, dentist, marketing"
+              >
+            </div>
 
-    <div class="col-12 col-md-3">
-      <label for="category" class="form-label mb-1">Category (optional)</label>
-      <input
-        type="text"
-        class="form-control"
-        id="category"
-        name="category"
-        value="{{ request.args.get('category', '') }}"
-        placeholder="e.g. Automotive, Health, Retail"
-      >
-    </div>
+            <div class="col-12 col-md-3">
+              <label for="category" class="form-label mb-1">Category</label>
+              <select
+                class="form-select"
+                id="category"
+                name="category"
+              >
+                <option value="">All categories</option>
+                {% for cat in categories %}
+                  <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>
+                    {{ cat }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
 
-    <div class="col-12 col-md-3">
-      <label for="distance" class="form-label mb-1">Distance</label>
-      <select
-        class="form-select"
-        id="distance"
-        name="distance"
-      >
-        {% set current_distance = request.args.get('distance', 'all') %}
-        <option value="all" {% if current_distance == 'all' %}selected{% endif %}>Any distance</option>
-        <option value="5" {% if current_distance == '5' %}selected{% endif %}>Within 5 miles</option>
-        <option value="10" {% if current_distance == '10' %}selected{% endif %}>Within 10 miles</option>
-        <option value="25" {% if current_distance == '25' %}selected{% endif %}>Within 25 miles</option>
-        <option value="50" {% if current_distance == '50' %}selected{% endif %}>Within 50 miles</option>
-      </select>
-    </div>
+            <div class="col-12 col-md-3">
+              <label for="distance" class="form-label mb-1">Distance</label>
+              <select
+                class="form-select"
+                id="distance"
+                name="distance"
+              >
+                {% set current_distance = selected_distance or 'all' %}
+                <option value="all" {% if current_distance == 'all' %}selected{% endif %}>Any distance</option>
+                <option value="5" {% if current_distance == '5' %}selected{% endif %}>Within 5 miles</option>
+                <option value="10" {% if current_distance == '10' %}selected{% endif %}>Within 10 miles</option>
+                <option value="25" {% if current_distance == '25' %}selected{% endif %}>Within 25 miles</option>
+                <option value="50" {% if current_distance == '50' %}selected{% endif %}>Within 50 miles</option>
+              </select>
+            </div>
 
-    <div class="col-12 col-md-2 d-grid mt-2 mt-md-4">
-      <button type="submit" class="btn btn-primary">
-        Search
-      </button>
-    </div>
-  </div>
+            <div class="col-12 col-md-2 d-grid mt-2 mt-md-4">
+              <button type="submit" class="btn btn-primary">
+                Search
+              </button>
+            </div>
+          </div>
 
-  {# hidden lat/lng, e.g. set by JS or previous search #}
-  <input type="hidden" name="lat" id="lat" value="{{ request.args.get('lat', '') }}">
-  <input type="hidden" name="lng" id="lng" value="{{ request.args.get('lng', '') }}">
-</form>
+          {# hidden lat/lng, filled by geolocation script #}
+          <input type="hidden" name="lat" id="lat" value="{{ request.args.get('lat', '') }}">
+          <input type="hidden" name="lng" id="lng" value="{{ request.args.get('lng', '') }}">
+        </form>
       </div>
     </section>
 
-    {# DIRECTORY LIST #}
-    <main class="mb-5">
-      <div class="d-flex justify-content-between align-items-center mb-3 flex-column flex-md-row">
-        <h2 class="h5 mb-2 mb-md-0">
-          Public business profiles
-        </h2>
-        {% if pagination %}
-          <span class="text-muted small">
-            Page {{ pagination.page }} of {{ pagination.pages }}
-          </span>
-        {% endif %}
-      </div>
+    {# DIRECTORY LIST – only when there are results + filters #}
+    {% if show_results %}
+      <main class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-column flex-md-row">
+          <h2 class="h5 mb-2 mb-md-0">
+            Public business profiles
+          </h2>
+          {% if pagination %}
+            <span class="text-muted small">
+              Page {{ pagination.page }} of {{ pagination.pages }}
+            </span>
+          {% endif %}
+        </div>
 
-      {% if businesses %}
         <div class="row g-3">
           {% for biz in businesses %}
             <div class="col-12 col-md-6 col-lg-4">
@@ -230,20 +241,20 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
                     </div>
                   {% endif %}
 
-{% if biz.distance_mi is defined %}
-  <div class="business-location">
-    {% if biz.city %}{{ biz.city }}{% endif %}
-    {% if biz.city and biz.state %}, {% endif %}
-    {% if biz.state %}{{ biz.state }}{% endif %}
-    · ~{{ "%.1f"|format(biz.distance_mi) }} miles away
-  </div>
-{% elif biz.city or biz.state %}
-  <div class="business-location">
-    {% if biz.city %}{{ biz.city }}{% endif %}
-    {% if biz.city and biz.state %}, {% endif %}
-    {% if biz.state %}{{ biz.state }}{% endif %}
-  </div>
-{% endif %}
+                  {% if biz.distance_mi is defined %}
+                    <div class="business-location">
+                      {% if biz.city %}{{ biz.city }}{% endif %}
+                      {% if biz.city and biz.state %}, {% endif %}
+                      {% if biz.state %}{{ biz.state }}{% endif %}
+                      · ~{{ "%.1f"|format(biz.distance_mi) }} miles away
+                    </div>
+                  {% elif biz.city or biz.state %}
+                    <div class="business-location">
+                      {% if biz.city %}{{ biz.city }}{% endif %}
+                      {% if biz.city and biz.state %}, {% endif %}
+                      {% if biz.state %}{{ biz.state }}{% endif %}
+                    </div>
+                  {% endif %}
 
                   {% if biz.about_us %}
                     <div class="business-snippet">
@@ -264,57 +275,55 @@ Perk Miner Public Business Profiles Directory – Search our public profiles
             </div>
           {% endfor %}
         </div>
-      {% else %}
-        <p class="text-muted">
-          No public business profiles found yet.
-        </p>
-      {% endif %}
 
-      {# PAGINATION #}
-      {% if pagination and pagination.pages > 1 %}
-        <nav aria-label="Public business profiles page navigation" class="mt-4">
-          <ul class="pagination justify-content-center">
-            {% if pagination.has_prev %}
-              <li class="page-item">
-                <a class="page-link"
-                   href="{{ url_for('public_profiles_directory',
-                                    page=pagination.prev_num,
-                                    q=request.args.get('q', ''),
-                                    category=request.args.get('category', '')) }}">
-                  &laquo; Previous
-                </a>
-              </li>
-            {% else %}
+        {# PAGINATION #}
+        {% if pagination and pagination.pages > 1 %}
+          <nav aria-label="Public business profiles page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+              {% if pagination.has_prev %}
+                <li class="page-item">
+                  <a class="page-link"
+                     href="{{ url_for('public_profiles_directory',
+                                      page=pagination.prev_num,
+                                      q=q,
+                                      category=category,
+                                      distance=selected_distance) }}">
+                    &laquo; Previous
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">&laquo; Previous</span>
+                </li>
+              {% endif %}
+
               <li class="page-item disabled">
-                <span class="page-link">&laquo; Previous</span>
+                <span class="page-link">
+                  Page {{ pagination.page }} of {{ pagination.pages }}
+                </span>
               </li>
-            {% endif %}
 
-            <li class="page-item disabled">
-              <span class="page-link">
-                Page {{ pagination.page }} of {{ pagination.pages }}
-              </span>
-            </li>
-
-            {% if pagination.has_next %}
-              <li class="page-item">
-                <a class="page-link"
-                   href="{{ url_for('public_profiles_directory',
-                                    page=pagination.next_num,
-                                    q=request.args.get('q', ''),
-                                    category=request.args.get('category', '')) }}">
-                  Next &raquo;
-                </a>
-              </li>
-            {% else %}
-              <li class="page-item disabled">
-                <span class="page-link">Next &raquo;</span>
-              </li>
-            {% endif %}
-          </ul>
-        </nav>
-      {% endif %}
-    </main>
+              {% if pagination.has_next %}
+                <li class="page-item">
+                  <a class="page-link"
+                     href="{{ url_for('public_profiles_directory',
+                                      page=pagination.next_num,
+                                      q=q,
+                                      category=category,
+                                      distance=selected_distance) }}">
+                    Next &raquo;
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">Next &raquo;</span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </main>
+    {% endif %}
   </div>
 {% endblock %}
 
@@ -328,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var latParam = getParam("lat");
   var lngParam = getParam("lng");
 
+  // if URL already has lat/lng, don't overwrite
   if (latParam && lngParam) {
     return;
   }
