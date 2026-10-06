@@ -7,3 +7,5 @@ Allow: /public_profiles/
 Disallow: /dashboard
 Disallow: /business/dashboard
 Disallow: /admin/dashboard
+
+Sitemap: https://www.perkminer.com/sitemap.xml
