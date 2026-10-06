@@ -43,6 +43,8 @@ import re
 import random
 import string
 import time
+from urllib.parse import quote
+from xml.sax.saxutils import escape
 import csv
 import uuid
 import hmac
@@ -11138,6 +11140,30 @@ def update_destination_by_member(interaction_id):
     flash("You updated the destination address. The service provider will see this.", "success")
     return redirect(url_for('active_session', interaction_id=interaction.id))
 
+BASE_URL = "https://www.perkminer.com"   # always the www host, matches your redirect
+
+SITEMAP_TTL_SECONDS = 3600     # rebuild the sitemap at most once per hour per worker
+MAX_SITEMAP_URLS = 50000       # Google's limit for a single sitemap file
+_sitemap_cache = {"xml": None, "built": 0.0}
+
+# Public marketing pages that are always in the sitemap
+STATIC_SITEMAP_PATHS = [
+    "/", "/about", "/how-it-works", "/intro", "/faq", "/news",
+    "/press-release", "/new-featured-businesses", "/business",
+    "/register", "/business/register", "/public_profiles",
+]
+
+
+def public_businesses_query():
+    """Single definition of 'has a public profile'. The directory, the profile
+    page and the sitemap all use it, so a business that returns 404 can never
+    appear in the sitemap or the directory."""
+    return Business.query.filter_by(status="approved", is_suspended=False)
+
+
+def public_profile_url(slug):
+    return f"{BASE_URL}/public_profiles/{quote(slug, safe='')}"
+
 CATEGORIES = ["Automotive", "Health", "Retail"]  # etc.
 
 @app.route("/public_profiles")
@@ -11147,10 +11173,10 @@ def public_profiles_directory():
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
     distance = request.args.get("distance", "", type=str).strip()
-    page = request.args.get("page", 1, type=int)
+    page = max(request.args.get("page", 1, type=int) or 1, 1)
     per_page = 20
 
-    # consider it a "search" only if at least one of these is set
+    # a "search" is any request with at least one filter set
     has_filters = bool(
         q
         or category
@@ -11159,80 +11185,84 @@ def public_profiles_directory():
         or lng is not None
     )
 
-    businesses = []
-    pagination = None
+    base_query = public_businesses_query()
 
-    if has_filters:
-        base_query = Business.query.filter_by(
-            status="approved",
-            is_suspended=False,
+    if category:
+        base_query = base_query.filter(Business.category == category)
+
+    if q:
+        ilike_pattern = f"%{q}%"
+        base_query = base_query.filter(
+            db.or_(
+                Business.business_name.ilike(ilike_pattern),
+                Business.search_keywords.ilike(ilike_pattern),
+                Business.about_us.ilike(ilike_pattern),
+            )
         )
 
-        if category:
-            base_query = base_query.filter(Business.category == category)
+    use_location = lat is not None and lng is not None
 
-        if q:
-            ilike_pattern = f"%{q}%"
-            base_query = base_query.filter(
-                db.or_(
-                    Business.business_name.ilike(ilike_pattern),
-                    Business.search_keywords.ilike(ilike_pattern),
-                    Business.about_us.ilike(ilike_pattern),
-                )
+    if use_location:
+        candidates = (
+            base_query
+            .filter(
+                (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
+                (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
             )
+            .all()
+        )
 
-        use_location = lat is not None and lng is not None
+        businesses_with_dist = []
+        for biz in candidates:
+            biz_lat, biz_lng = get_business_coords_for_distance(biz)
+            if biz_lat is None or biz_lng is None:
+                continue
+            try:
+                d = haversine_py(lat, lng, biz_lat, biz_lng)
+            except ValueError:
+                continue
+            businesses_with_dist.append((biz, d))
 
-        if use_location:
-            candidates = (
-                base_query
-                .filter(
-                    (Business.latitude.isnot(None) & Business.longitude.isnot(None)) |
-                    (Business.live_gps_lat.isnot(None) & Business.live_gps_long.isnot(None))
-                )
-                .all()
-            )
+        if distance and distance != "all":
+            try:
+                dist_num = float(distance)
+                businesses_with_dist = [
+                    (b, d) for (b, d) in businesses_with_dist if d <= dist_num
+                ]
+            except ValueError:
+                pass
 
-            businesses_with_dist = []
-            for biz in candidates:
-                biz_lat, biz_lng = get_business_coords_for_distance(biz)
-                if biz_lat is None or biz_lng is None:
-                    continue
-                try:
-                    d = haversine_py(lat, lng, biz_lat, biz_lng)
-                except ValueError:
-                    continue
-                businesses_with_dist.append((biz, d))
+        businesses_with_dist.sort(key=lambda x: x[1])
 
-            if distance and distance != "all":
-                try:
-                    dist_num = float(distance)
-                    businesses_with_dist = [
-                        (b, d) for (b, d) in businesses_with_dist if d <= dist_num
-                    ]
-                except ValueError:
-                    pass
+        total = len(businesses_with_dist)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_items = businesses_with_dist[start:end]
 
-            businesses_with_dist.sort(key=lambda x: x[1])
+        for biz, d in page_items:
+            biz.distance_mi = round(d, 2)
+        businesses = [b for (b, _) in page_items]
 
-            total = len(businesses_with_dist)
-            start = (page - 1) * per_page
-            end = start + per_page
-            page_items = businesses_with_dist[start:end]
+        pagination = SimplePagination(page=page, per_page=per_page, total=total)
 
-            for biz, d in page_items:
-                biz.distance_mi = round(d, 2)
-            businesses = [b for (b, _) in page_items]
+    else:
+        # Default view (no filters) AND text/category searches.
+        # With no filters this is the browse-all list that crawlers follow.
+        pagination = (
+            base_query
+            .order_by(Business.rank.desc(), Business.business_name.asc())
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+        businesses = pagination.items
 
-            pagination = SimplePagination(page=page, per_page=per_page, total=total)
-
-        else:
-            pagination = (
-                base_query
-                .order_by(Business.rank.desc(), Business.business_name.asc())
-                .paginate(page=page, per_page=per_page, error_out=False)
-            )
-            businesses = pagination.items
+    # SEO: only the plain browse pages (/public_profiles, ?page=2, ...) are indexable.
+    # Search/filter results are noindex so crawlers don't index endless variations.
+    if has_filters:
+        robots_meta = "noindex, follow"
+        canonical_url = f"{BASE_URL}/public_profiles"
+    else:
+        robots_meta = "index, follow"
+        canonical_url = f"{BASE_URL}/public_profiles" + (f"?page={page}" if page > 1 else "")
 
     return render_template(
         "public_profiles_directory.html",
@@ -11243,50 +11273,83 @@ def public_profiles_directory():
         category=category,
         selected_distance=distance or "all",
         categories=CATEGORIES,
+        has_filters=has_filters,
+        robots_meta=robots_meta,
+        canonical_url=canonical_url,
     )
 
 @app.route("/public_profiles/<store_slug>")
 def public_profile(store_slug):
-    biz = Business.query.filter_by(store_slug=store_slug, status="approved", is_suspended=False).first_or_404()
+    biz = public_businesses_query().filter_by(store_slug=store_slug).first_or_404()
 
-    # build meta description / keywords (similar to large listing)
-    base_parts = []
-    if biz.business_name:
-        base_parts.append(biz.business_name)
-    if biz.category:
-        base_parts.append(biz.category)
-    if getattr(biz, "search_keywords", None):
-        kw = " ".join(biz.search_keywords.strip().split())
-        base_parts.append(kw)
+    name = (biz.business_name or "Perk Miner advertiser").strip()
+    category = (biz.category or "").strip()
+
+    # Meta description: name, category, then the start of the about text (~155 chars)
+    about = ""
     if getattr(biz, "about_us", None):
-        about_snippet = biz.about_us.strip().replace("\n", " ")
-        about_snippet = about_snippet[:160]
-        base_parts.append(about_snippet)
+        about = " ".join(biz.about_us.split())
 
-    description = " - ".join(p for p in base_parts if p) or \
-        "Learn more about this Perk Miner advertiser and their exclusive member perks."
+    lead = f"{name} - {category}." if category else f"{name}."
+    description = lead
+    if about:
+        room = 155 - len(lead) - 1
+        if room > 20:
+            snippet = about if len(about) <= room else about[: room - 1].rstrip() + "…"
+            description = f"{lead} {snippet}"
+    if description == lead and not about:
+        description += " See business details and exclusive member perks on Perk Miner."
+
+    page_title = f"{name} - {category} | Perk Miner" if category else f"{name} | Perk Miner"
 
     meta_keywords = None
     if getattr(biz, "search_keywords", None):
         meta_keywords = " ".join(biz.search_keywords.strip().split())
 
-    # get photos like you do elsewhere
     photos = [
-        biz.photo1_url,
-        biz.photo2_url,
-        biz.photo3_url,
-        biz.photo4_url,
-        biz.photo5_url,
-        biz.photo6_url,
+        biz.photo1_url, biz.photo2_url, biz.photo3_url,
+        biz.photo4_url, biz.photo5_url, biz.photo6_url,
     ]
     photos = [p for p in photos if p]
+
+    canonical_url = public_profile_url(biz.store_slug)
+
+    # Structured data (schema.org LocalBusiness) for search engines
+    ld_json = {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": name,
+        "url": canonical_url,
+    }
+    if about:
+        ld_json["description"] = about[:300]
+    if photos:
+        ld_json["image"] = photos
+    phone = getattr(biz, "phone", None) or getattr(biz, "phone_number", None)
+    if phone:
+        ld_json["telephone"] = phone
+    if biz.latitude is not None and biz.longitude is not None:
+        try:
+            ld_json["geo"] = {
+                "@type": "GeoCoordinates",
+                "latitude": float(biz.latitude),
+                "longitude": float(biz.longitude),
+            }
+        except (TypeError, ValueError):
+            pass
+    # TODO: once you know your address field names, add:
+    # ld_json["address"] = {"@type": "PostalAddress", "streetAddress": ...,
+    #                       "addressLocality": ..., "addressRegion": ..., "postalCode": ...}
 
     return render_template(
         "public_profile.html",
         business=biz,
         photos=photos,
+        page_title=page_title,
         meta_description=description,
         meta_keywords=meta_keywords,
+        canonical_url=canonical_url,
+        ld_json=ld_json,
         google_maps_api_key=current_app.config.get("GOOGLE_MAPS_API_KEY"),
     )
 
@@ -11299,10 +11362,33 @@ def serve_robots():
 
 @app.route('/sitemap.xml')
 def serve_sitemap():
-    return send_from_directory(
-        os.path.join(app.root_path, 'static'),
-        'sitemap.xml'
-    )
+    now = time.time()
+    if _sitemap_cache["xml"] is None or now - _sitemap_cache["built"] > SITEMAP_TTL_SECONDS:
+        limit = MAX_SITEMAP_URLS - len(STATIC_SITEMAP_PATHS)
+        rows = (
+            public_businesses_query()
+            .filter(Business.store_slug.isnot(None), Business.store_slug != "")
+            .with_entities(Business.store_slug)
+            .order_by(Business.id)
+            .limit(limit)
+            .all()
+        )
+
+        urls = [BASE_URL + p for p in STATIC_SITEMAP_PATHS]
+        urls += [public_profile_url(slug) for (slug,) in rows]
+
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            + "".join(f"<url><loc>{escape(u)}</loc></url>" for u in urls)
+            + "</urlset>"
+        )
+        _sitemap_cache["xml"] = xml
+        _sitemap_cache["built"] = now
+
+    resp = Response(_sitemap_cache["xml"], mimetype="application/xml")
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 @app.errorhandler(500)
 def internal_server_error(error):
