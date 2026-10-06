@@ -157,13 +157,14 @@
       background: #f3f4f6;
     }
 
-    @media (min-width: 468px) {
-      .gallery-img {
-        width: 400px;
-        aspect-ratio: 1 / 1;
-        object-fit: cover;
-      }
-    }
+@media (min-width: 468px) {
+  .gallery-img {
+    width: 400px;
+    height: 400px;
+    object-fit: cover; /* keeps aspect ratio while filling the square */
+    display: block;    /* avoids inline spacing issues */
+  }
+}
 
     .pill-tag {
       display: inline-block;
