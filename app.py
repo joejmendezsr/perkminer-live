@@ -11150,7 +11150,8 @@ _sitemap_cache = {"xml": None, "built": 0.0}
 STATIC_SITEMAP_PATHS = [
     "/", "/about", "/how-it-works", "/intro", "/faq", "/news",
     "/press-release", "/new-featured-businesses", "/business",
-    "/register", "/business/register", "/public_profiles",
+    "/register", "/business/register", "/testimonials", 
+    "/public_profiles", "/privacy", "/terms"
 ]
 
 
