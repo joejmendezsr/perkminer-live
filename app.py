@@ -11165,7 +11165,7 @@ def public_businesses_query():
 def public_profile_url(slug):
     return f"{BASE_URL}/public_profiles/{quote(slug, safe='')}"
 
-CATEGORIES = ["Automotive", "Health", "Retail"]  # etc.
+CATEGORIES = ["All-Rentals", "Auto-Service-Repair-Parts", "Cleaning-Services", "Education-and-Training", "Events-and-Entertainment", "Financial-Services", "Gaming", "Handyman-Contractor", "Health-and-Beauty", "Home-and-Garden", "Industrial-Services", "Legal-Services", "Moving-and-Delivery", "Other", "Pet-Service-and-Supplies", "Professional-Services", "Real-Estate", "Restaurant-Food-and-Drink", "Security-and-Protection", "Shopping-and-Retail", "Sports-and-Recreation", "Transportation-Services", "Travel-Lodging-Tourism", "Wedding-Services"]  # etc.
 
 @app.route("/public_profiles")
 def public_profiles_directory():
