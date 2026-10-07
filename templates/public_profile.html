@@ -253,11 +253,11 @@
         <h1 class="hero-title">{{ business.business_name }}</h1>
         <div class="hero-sub mt-2">
           <div>{{ business.category }}</div>
-          {% if business.city or business.state %}
+          {% if area_city or area.state %}
             <div>
               <i class="bi bi-geo-alt"></i>
               Area served:
-              {{ business.city }}{% if business.city and business.state %}, {% endif %}{{ business.state }}
+              {{ area.city }}{% if area.city and area.state %}, {% endif %}{{ area.state }}
               {% if business.location_varies %} · Mobile / On-Location{% endif %}
             </div>
           {% elif business.address %}
@@ -412,8 +412,8 @@
     <div class="col-12 col-md-5">
       <p>
         <strong>Area served:</strong><br>
-        {% if business.city or business.state %}
-          {{ business.city }}{% if business.city and business.state %}, {% endif %}{{ business.state }}{% if business.country %} {{ business.country }}{% endif %}
+        {% if area_city or area_state %}
+          {{ area_city }}{% if area_city and area_state %}, {% endif %}{{ area_state }}{% if area_country %} {{ area_country }}{% endif %}
           {% if business.location_varies %}<br>Mobile / on-location{% endif %}
         {% else %}
           Not set

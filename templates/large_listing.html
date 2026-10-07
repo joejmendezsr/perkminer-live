@@ -373,12 +373,14 @@
           <i class="bi bi-signpost-2"></i>
           <span>
             <strong>Area served:</strong>
-            {% if business.city or business.state %}
-              {{ business.city }}{% if business.city and business.state %}, {% endif %}{{ business.state }}{% if business.country %} {{ business.country }}{% endif %}
-            {% else %}
+            {% if area_city or area_state %}
+              {{ area_city }}{% if area_city and area_state %}, {% endif %}{{ area_state }}{% if area_country %} {{ area_country }}{% endif %}
+            {% elif business.location_varies %}
               Mobile / on-location
+            {% else %}
+              Not set
             {% endif %}
-            {% if business.location_varies and (business.city or business.state) %}
+            {% if business.location_varies and (area_city or area_state) %}
               · Mobile / on-location
             {% endif %}
           </span>
