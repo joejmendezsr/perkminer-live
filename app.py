@@ -2590,6 +2590,36 @@ def haversine_miles(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+def area_from_address(address):
+    """City and state live in the address string, with or without a street."""
+    parts = [p.strip() for p in (address or "").split(",") if p.strip()]
+    city = state = country = ""
+    if len(parts) >= 3:
+        city = parts[-3]
+        state = parts[-2].split()[0]
+        country = parts[-1]
+    elif len(parts) == 2:
+        city = parts[0]
+        state = parts[1].split()[0]
+    elif len(parts) == 1:
+        city = parts[0]
+    return city, state, country
+
+def area_served_ld(city, state, country):
+    if not city and not state:
+        return None
+    area = {"@type": "City" if city else "AdministrativeArea"}
+    if city:
+        area["name"] = city
+    area["address"] = {"@type": "PostalAddress"}
+    if city:
+        area["address"]["addressLocality"] = city
+    if state:
+        area["address"]["addressRegion"] = state
+    if country:
+        area["address"]["addressCountry"] = country
+    return area
+
 def get_featured_businesses(lat, lng):
     RADIUS = 10  # miles
     N_FEATURED = 10
@@ -7656,37 +7686,25 @@ def view_listing(biz_id):
     verified = getattr(biz, "ecommerce_verified", False)
     balance = biz.account_balance or 0.0
 
-    # build a meta description using business fields
     base_parts = []
-
     if biz.business_name:
         base_parts.append(biz.business_name)
-
     if biz.category:
         base_parts.append(biz.category)
-
-    # keywords might be a comma-separated string
     if getattr(biz, "keywords", None):
-        kw = biz.keywords.strip()
-        kw = " ".join(kw.split())
+        kw = " ".join(biz.keywords.strip().split())
         base_parts.append(kw)
-
     if getattr(biz, "about_us", None):
         about_snippet = biz.about_us.strip().replace("\n", " ")
-        about_snippet = about_snippet[:160]
-        base_parts.append(about_snippet)
+        base_parts.append(about_snippet[:160])
 
     description = " - ".join(part for part in base_parts if part)
-
     if not description:
         description = "Learn more about this Perk Miner advertiser and their exclusive member perks."
 
-    # meta keywords from business.keywords
     meta_keywords = None
     if getattr(biz, "keywords", None):
-        kw = biz.keywords.strip()
-        kw = " ".join(kw.split())
-        meta_keywords = kw
+        meta_keywords = " ".join(biz.keywords.strip().split())
 
     core_flags_ok = has_website and is_ecom and allows_web and online_terms and verified
     can_shop_online_listing = core_flags_ok and balance >= 250.0
@@ -7695,14 +7713,11 @@ def view_listing(biz_id):
     finalized_tx_count = get_finalized_tx_count_for_business(biz)
 
     raw_photos = [
-        biz.photo1_url,
-        biz.photo2_url,
-        biz.photo3_url,
-        biz.photo4_url,
-        biz.photo5_url,
-        biz.photo6_url,
+        biz.photo1_url, biz.photo2_url, biz.photo3_url,
+        biz.photo4_url, biz.photo5_url, biz.photo6_url,
     ]
     photos = [url for url in raw_photos if url]
+    area_city, area_state, area_country = area_from_address(biz.address)
 
     return render_template(
         "large_listing.html",
@@ -7713,6 +7728,9 @@ def view_listing(biz_id):
         show_online_warning=show_online_warning,
         finalized_tx_count=finalized_tx_count,
         photos=photos,
+        area_city=area_city,
+        area_state=area_state,
+        area_country=area_country,
     )
 
 @app.route("/finance/combined-detailed-report", methods=["GET"])
@@ -11318,6 +11336,7 @@ def public_profile(store_slug):
     photos = [p for p in photos if p]
 
     canonical_url = public_profile_url(biz.store_slug)
+    area_city, area_state, area_country = area_from_address(biz.address)
 
     ld_json = {
         "@context": "https://schema.org",
@@ -11344,21 +11363,8 @@ def public_profile(store_slug):
             }
         except (TypeError, ValueError):
             pass
-
-    city = (getattr(biz, "city", None) or "").strip()
-    state = (getattr(biz, "state", None) or "").strip()
-    country = (getattr(biz, "country", None) or "").strip()
-    if city or state:
-        area = {"@type": "City" if city else "AdministrativeArea"}
-        if city:
-            area["name"] = city
-        area["address"] = {"@type": "PostalAddress"}
-        if city:
-            area["address"]["addressLocality"] = city
-        if state:
-            area["address"]["addressRegion"] = state
-        if country:
-            area["address"]["addressCountry"] = country
+    area = area_served_ld(area_city, area_state, area_country)
+    if area:
         ld_json["areaServed"] = area
 
     return render_template(
@@ -11370,6 +11376,9 @@ def public_profile(store_slug):
         meta_keywords=meta_keywords,
         canonical_url=canonical_url,
         ld_json=ld_json,
+        area_city=area_city,
+        area_state=area_state,
+        area_country=area_country,
         google_maps_api_key=current_app.config.get("GOOGLE_MAPS_API_KEY"),
     )
 
