@@ -335,9 +335,12 @@
         <a href="{{ url_for('business_tutorials') }}" class="btn btn-outline-primary">
           Tutorials
         </a>
-        <a href="{{ url_for(/public_profiles/'business_slug') }}"  target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
-          Public Profile
-        </a>
+<a href="{{ url_for('public_profile', store_slug=business.store_slug) }}"
+   target="_blank"
+   rel="noopener noreferrer"
+   class="btn btn-outline-primary">
+  View public profile
+</a>
       </div>
 
       <!-- Account Balance and Fund/Add Funds Button -->
