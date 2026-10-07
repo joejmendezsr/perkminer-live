@@ -11288,7 +11288,6 @@ def public_profile(store_slug):
     name = (biz.business_name or "Perk Miner advertiser").strip()
     category = (biz.category or "").strip()
 
-    # Meta description: name, category, then the start of the about text (~155 chars)
     about = ""
     if getattr(biz, "about_us", None):
         about = " ".join(biz.about_us.split())
@@ -11298,7 +11297,10 @@ def public_profile(store_slug):
     if about:
         room = 155 - len(lead) - 1
         if room > 20:
-            snippet = about if len(about) <= room else about[: room - 1].rstrip() + "…"
+            if len(about) <= room:
+                snippet = about
+            else:
+                snippet = about[:room].rsplit(" ", 1)[0].rstrip(".,;:") + "…"
             description = f"{lead} {snippet}"
     if description == lead and not about:
         description += " See business details and exclusive member perks on Perk Miner."
@@ -11317,7 +11319,6 @@ def public_profile(store_slug):
 
     canonical_url = public_profile_url(biz.store_slug)
 
-    # Structured data (schema.org LocalBusiness) for search engines
     ld_json = {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
@@ -11325,7 +11326,10 @@ def public_profile(store_slug):
         "url": canonical_url,
     }
     if about:
-        ld_json["description"] = about[:300]
+        cut = about[:300]
+        if len(about) > 300:
+            cut = cut.rsplit(" ", 1)[0].rstrip(".,;:") + "…"
+        ld_json["description"] = cut
     if photos:
         ld_json["image"] = photos
     phone = getattr(biz, "phone", None) or getattr(biz, "phone_number", None)
@@ -11340,9 +11344,22 @@ def public_profile(store_slug):
             }
         except (TypeError, ValueError):
             pass
-    # TODO: once you know your address field names, add:
-    # ld_json["address"] = {"@type": "PostalAddress", "streetAddress": ...,
-    #                       "addressLocality": ..., "addressRegion": ..., "postalCode": ...}
+
+    city = (getattr(biz, "city", None) or "").strip()
+    state = (getattr(biz, "state", None) or "").strip()
+    country = (getattr(biz, "country", None) or "").strip()
+    if city or state:
+        area = {"@type": "City" if city else "AdministrativeArea"}
+        if city:
+            area["name"] = city
+        area["address"] = {"@type": "PostalAddress"}
+        if city:
+            area["address"]["addressLocality"] = city
+        if state:
+            area["address"]["addressRegion"] = state
+        if country:
+            area["address"]["addressCountry"] = country
+        ld_json["areaServed"] = area
 
     return render_template(
         "public_profile.html",
