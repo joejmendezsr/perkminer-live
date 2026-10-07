@@ -18,7 +18,6 @@
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
-  {# Safety net: if JavaScript is off, show the sections that normally fade in #}
   <noscript>
     <style>
       .section { opacity: 1; transform: none; }
@@ -40,7 +39,6 @@
       color: var(--pm-dark);
     }
 
-    /* hero section */
     .hero-wrapper {
       position: relative;
       overflow: hidden;
@@ -111,7 +109,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.75rem;
-      justify-content: center; /* center buttons */
+      justify-content: center;
     }
 
     .btn-cta {
@@ -137,21 +135,19 @@
       border-width: 1.5px;
     }
 
-    /* cashback banner under hero */
     .cashback-banner {
       max-width: 1000px;
       margin: 0 auto;
       margin-top: -0.75rem;
       padding: 1rem 1.25rem;
       text-align: center;
-      background-color: #fff9d9; /* light yellow */
+      background-color: #fff9d9;
       color: #7a5a00;
       font-weight: 600;
       border-radius: 0 0 18px 18px;
       box-shadow: 0 6px 16px rgba(15,23,42,0.12);
     }
 
-    /* sections */
     .section {
       max-width: 1000px;
       margin: 1.75rem auto;
@@ -241,7 +237,6 @@
 </head>
 <body>
 
-<!-- HERO -->
 <div class="hero-wrapper">
   <div class="hero-bg"></div>
   <div class="hero-content">
@@ -258,7 +253,14 @@
         <h1 class="hero-title">{{ business.business_name }}</h1>
         <div class="hero-sub mt-2">
           <div>{{ business.category }}</div>
-          {% if business.address %}
+          {% if business.city or business.state %}
+            <div>
+              <i class="bi bi-geo-alt"></i>
+              Area served:
+              {{ business.city }}{% if business.city and business.state %}, {% endif %}{{ business.state }}
+              {% if business.location_varies %} · Mobile / On-Location{% endif %}
+            </div>
+          {% elif business.address %}
             <div><i class="bi bi-geo-alt"></i> {{ business.address }}</div>
           {% endif %}
         </div>
@@ -296,7 +298,6 @@
   Perk Miner members earn 2% Cashback on up to $2,500 of every purchase from this business.<br>(Paid by Perk Miner LLC and not the business)
 </div>
 
-<!-- ABOUT -->
 <div class="section js-reveal">
   <h2><i class="bi bi-info-circle"></i> About</h2>
   {% if business.about_us %}
@@ -316,7 +317,6 @@
   {% endif %}
 </div>
 
-<!-- GALLERY -->
 {% if photos %}
 <div class="section js-reveal">
   <h2><i class="bi bi-images"></i> Gallery</h2>
@@ -376,7 +376,6 @@
 </div>
 {% endif %}
 
-<!-- SERVICES & PERKS -->
 <div class="section js-reveal">
   <div class="row g-4">
     <div class="col-12 col-md-6">
@@ -407,11 +406,17 @@
   </div>
 </div>
 
-<!-- LOCATION & MAP -->
 <div class="section js-reveal">
   <h2><i class="bi bi-geo-alt-fill"></i> Location &amp; Contact</h2>
   <div class="row g-4">
     <div class="col-12 col-md-5">
+      {% if business.city or business.state %}
+        <p>
+          <strong>Area served:</strong><br>
+          {{ business.city }}{% if business.city and business.state %}, {% endif %}{{ business.state }}{% if business.country %} {{ business.country }}{% endif %}
+          {% if business.location_varies %}<br>Mobile / on-location{% endif %}
+        </p>
+      {% endif %}
       <p>
         <strong>Address:</strong><br>
         {{ business.address or "N/A" }}
@@ -492,7 +497,6 @@
 </script>
 {% endif %}
 
-<!-- Scroll-in animations -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const sections = document.querySelectorAll('.js-reveal');
@@ -510,7 +514,6 @@
   });
 </script>
 
-<!-- About read more/less -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const aboutSpan = document.querySelector('.about-text');
@@ -526,7 +529,12 @@ document.addEventListener('DOMContentLoaded', function () {
     return;
   }
 
-  const shortText = fullText.slice(0, limit) + '…';
+  let cut = fullText.slice(0, limit);
+  const lastSpace = cut.lastIndexOf(' ');
+  if (lastSpace > 180) {
+    cut = cut.slice(0, lastSpace);
+  }
+  const shortText = cut.replace(/[.,;:\s]+$/, '') + '…';
   let expanded = false;
 
   aboutSpan.textContent = shortText;

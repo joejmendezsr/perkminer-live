@@ -35,7 +35,7 @@ import time
 import os
 import stripe
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 import json
 from sqlalchemy import or_, and_, func, literal
 from flask_migrate import Migrate
@@ -1460,6 +1460,8 @@ class Business(db.Model):
     live_gps_long = db.Column(db.Float)
     location_varies = db.Column(db.Boolean, default=False)
     is_founding_business = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -11361,6 +11363,17 @@ def serve_robots():
         'robots.txt'
     )
 
+STATIC_SITEMAP_LASTMOD = "2026-10-06"  # change when marketing pages change
+
+def sitemap_lastmod(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.date().isoformat()
+    return str(value)
+
 @app.route('/sitemap.xml')
 def serve_sitemap():
     now = time.time()
@@ -11369,19 +11382,30 @@ def serve_sitemap():
         rows = (
             public_businesses_query()
             .filter(Business.store_slug.isnot(None), Business.store_slug != "")
-            .with_entities(Business.store_slug)
+            .with_entities(Business.store_slug, Business.updated_at)
             .order_by(Business.id)
             .limit(limit)
             .all()
         )
 
-        urls = [BASE_URL + p for p in STATIC_SITEMAP_PATHS]
-        urls += [public_profile_url(slug) for (slug,) in rows]
+        parts = []
+        for path in STATIC_SITEMAP_PATHS:
+            loc = escape(BASE_URL + path)
+            parts.append(
+                f"<url><loc>{loc}</loc><lastmod>{STATIC_SITEMAP_LASTMOD}</lastmod></url>"
+            )
+        for slug, updated_at in rows:
+            loc = escape(public_profile_url(slug))
+            lastmod = sitemap_lastmod(updated_at)
+            if lastmod:
+                parts.append(f"<url><loc>{loc}</loc><lastmod>{lastmod}</lastmod></url>")
+            else:
+                parts.append(f"<url><loc>{loc}</loc></url>")
 
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            + "".join(f"<url><loc>{escape(u)}</loc></url>" for u in urls)
+            + "".join(parts)
             + "</urlset>"
         )
         _sitemap_cache["xml"] = xml
