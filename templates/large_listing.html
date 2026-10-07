@@ -367,38 +367,35 @@
       {% endif %}
     </div>
 
-    <div class="main-info mt-2 section js-reveal">
-      {% if business.city or business.state or business.location_varies %}
-<div class="main-info-row">
-  <i class="bi bi-signpost-2"></i>
-  <span>
-    <strong>Area served:</strong>
-    {% if area_city or area_state %}
-      {{ area_city }}{% if area_city and area_state %}, {% endif %}{{ area_state }}{% if area_country %} {{ area_country }}{% endif %}
-    {% elif business.location_varies %}
-      Mobile / on-location
-    {% else %}
-      Not set
-    {% endif %}
-    {% if business.location_varies and (area_city or area_state) %}
-      · Mobile / on-location
-    {% endif %}
-  </span>
-</div>
+<div class="main-info mt-2 section js-reveal">
+  <div class="main-info-row">
+    <i class="bi bi-signpost-2"></i>
+    <span>
+      <strong>Area served:</strong>
+      {% if area_city or area_state %}
+        {{ area_city }}{% if area_city and area_state %}, {% endif %}{{ area_state }}{% if area_country %} {{ area_country }}{% endif %}
+        {% if business.location_varies %} · Mobile / on-location{% endif %}
+      {% elif business.location_varies %}
+        Mobile / on-location
+      {% else %}
+        Not set
       {% endif %}
-      <div class="main-info-row">
-        <i class="bi bi-pin-map"></i>
-        <span>
-          <strong>Address:</strong>
-          {% if business.address %}
-            {{ business.address }}
-          {% elif business.location_varies %}
-            No fixed address · mobile / on-location
-          {% else %}
-            -
-          {% endif %}
-        </span>
-      </div>
+    </span>
+  </div>
+  <div class="main-info-row">
+    <i class="bi bi-pin-map"></i>
+    <span>
+      <strong>Address:</strong>
+      {% if business.address %}
+        {{ business.address }}
+      {% elif business.location_varies %}
+        No fixed address · mobile / on-location
+      {% else %}
+        -
+      {% endif %}
+    </span>
+  </div>
+
       <div class="main-info-row">
         <i class="bi bi-telephone"></i>
         <span><strong>Phone:</strong> {{ business.phone_number or '-' }}</span>
