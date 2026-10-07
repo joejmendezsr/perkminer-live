@@ -325,22 +325,33 @@
         <button class="btn btn-secondary" type="button" id="previewListingBtn">
           Preview Listing
         </button>
-        <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-          data-bs-target="#profileCollapse" aria-expanded="false" aria-controls="profileCollapse">
-          View/Edit Profile
-        </button>
+
+<button id="profileToggleBtn"
+        class="btn btn-primary"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#profileCollapse"
+        aria-expanded="false"
+        aria-controls="profileCollapse">
+  View/Edit Profile
+</button>
+
         <a href="{{ url_for('business_change_password') }}" class="btn btn-outline-dark">
           Change Password
         </a>
         <a href="{{ url_for('business_tutorials') }}" class="btn btn-outline-primary">
           Tutorials
         </a>
-<a href="{{ url_for('public_profile', store_slug=business.store_slug) }}"
-   target="_blank"
-   rel="noopener noreferrer"
-   class="btn btn-outline-primary">
-  View public profile
-</a>
+
+{% if business.status == "approved" and not business.is_suspended %}
+  <a href="{{ url_for('public_profile', store_slug=business.store_slug) }}"
+     target="_blank"
+     rel="noopener noreferrer"
+     class="btn btn-outline-primary">
+    View public profile page
+  </a>
+{% endif %}
+
       </div>
 
       <!-- Account Balance and Fund/Add Funds Button -->
@@ -1606,6 +1617,24 @@ document.addEventListener('DOMContentLoaded', function () {
         addServiceBtn.disabled = false;
       }
     });
+  });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var btn = document.getElementById('profileToggleBtn');
+  var collapseEl = document.getElementById('profileCollapse');
+  if (!btn || !collapseEl) return;
+
+  // when collapse is shown
+  collapseEl.addEventListener('shown.bs.collapse', function () {
+    btn.textContent = 'Scroll Down';
+  });
+
+  // when collapse is hidden
+  collapseEl.addEventListener('hidden.bs.collapse', function () {
+    btn.textContent = 'View/Edit Profile';
   });
 });
 </script>
