@@ -11576,7 +11576,7 @@ def business_redeem_promo():
 
     flash(
         f"Congratulations, you have received enough funds in your account balance "
-        f"to cover ${promo['sales_covered']} in sales!",
+        f"to cover ${promo['sales_covered']} in sales!  You can now submit your listing without having to add funds to your account, unless your smallest sale amount exceeds ${promo['sales_covered']}.",
         "success",
     )
     return redirect(url_for("business_dashboard"))
