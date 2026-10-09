@@ -1333,20 +1333,28 @@
   </div>
 </div>
 
-<footer>
-  <div>
-    <div class="mb-2">
-      <a href="/" style="color:var(--pm-primary);font-weight:600;text-decoration:none;">PerkMiner</a> &copy; 2026
-    </div>
+  <footer>
     <div>
-      <small>Need help? <a href="mailto:support@perkminer.com" style="color:var(--pm-primary);">Contact Support</a></small>
+      <div class="mb-2">
+        <a href="/" class="footer-brand">
+          <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1771632656/New_Perk_Miner_Logo_xt8y0e.jpg" alt="Perk Miner" class="hero-logo" style="height:54px;" loading="lazy" decoding="async">
+        </a> &copy; 2026<br>Not a crypto mining site
+      </div>
+      <div>
+        <small>Need help? <a href="mailto:fromperkminer@gmail.com" class="footer-support">Contact Support</a></small>
+      </div>
+      <div class="mt-1">
+        <a href="https://www.perkminer.com/privacy" target="_blank" rel="noopener" class="footer-legal">Privacy</a>
+        <a href="https://www.perkminer.com/terms" target="_blank" rel="noopener" class="footer-legal">Terms</a>
+      </div>
+      <div class="mt-2">
+        <a href="{{ url_for('public_profiles_directory') }}" class="footer-directory">
+          Browse all Perk Miner Public Profiles
+        </a>
+      </div>
     </div>
-    <div class="mt-1">
-      <a href="#" style="color:#3dbbee; margin:0 6px;text-decoration:none;">Privacy</a>
-      <a href="#" style="color:#3dbbee; margin:0 6px;text-decoration:none;">Terms</a>
-    </div>
-  </div>
-</footer>
+  </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Preview Listing Modal -->
