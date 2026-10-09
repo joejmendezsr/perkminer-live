@@ -600,11 +600,11 @@ def build_invite_email(inviter_name, join_url, video_url):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>You have been invited to join PerkMiner.com!</title>
-        <style type="text/css">
-            body {{ margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
-            table, td {{ border-collapse: collapse; }}
-            a {{ color: #0066cc; text-decoration: none; }}
-            .button {{
+    <style type="text/css">
+        body {{ margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
+        table, td {{ border-collapse: collapse; }}
+        a {{ color: #0066cc; text-decoration: none; }}
+        .button {{
             display: inline-block;
             padding: 16px 36px;
             background-color: #6366f1;
@@ -615,102 +615,153 @@ def build_invite_email(inviter_name, join_url, video_url):
             text-decoration: none;
             border-radius: 8px;
             line-height: 1;
-            }}
-            .button:hover {{ background-color: #4f46e5 !important; }}
-        </style>
-    </head>
-        <body style="margin:0; padding:0; background-color:#f3f4f6;">
+        }}
+        .button:hover {{ background-color: #4f46e5 !important; }}
+    </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f4f6;">
 
-        <!-- Main Wrapper -->
-            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;">
-                <tr>
-                    <td align="center" style="padding: 20px 10px;">
+    <!-- Main Wrapper -->
+    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
 
-        <!-- Container -->
-            <table role="presentation" width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1); max-width:600px;">
+                <!-- Container -->
+                <table role="presentation" width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1); max-width:600px;">
 
-        <!-- Top Message -->
-                <tr>
-                    <td align="center" style="padding: 40px 30px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: bold; color: #1f2937; line-height: 1.2;">
-                        {inviter_name} has invited you to join Perk Miner (https://perkminer.com)!
-                    </td>
-                </tr>
+                    <!-- Top Message -->
+                    <tr>
+                        <td align="center" style="padding: 40px 30px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: bold; color: #1f2937; line-height: 1.2;">
+                            {inviter_name} has invited you to join Perk Miner (https://perkminer.com)!
+                        </td>
+                    </tr>
 
-        <!-- Join Button -->
-    <tr>
-        <td align="center" style="padding: 0 40px 50px;">
-            <a href="{join_url}" class="button" target="_blank" style=" font-size:20px; padding:18px 48px;">
-            Join PerkMiner Now
-            </a>
-        </td>
-    </tr>
+                    <!-- Join Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 40px;">
+                            <a href="{join_url}" class="button" target="_blank" style="font-size:20px; padding:18px 48px;">
+                                Join PerkMiner Now
+                            </a>
+                        </td>
+                    </tr>
 
-        <!-- Hero Banner with Logo -->
-                <tr>
-                    <td style="position:relative;">
-                        <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1791003112/member_flyer_gncgvf.jpg" width="600"
-                        alt="PerkMiner Hero Banner"
-                        style="display:block; width:100%; height:auto; border:0;" border="0">
-        </td>
-    </tr>
+                    <!-- Hero Banner -->
+                    <tr>
+                        <td>
+                            <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1791003112/member_flyer_gncgvf.jpg" width="600"
+                                 alt="PerkMiner Hero Banner"
+                                 style="display:block; width:100%; height:auto; border:0;" border="0">
+                        </td>
+                    </tr>
 
-        <!-- Introduction Text + Watch Video Button -->
-    <tr>
-        <td style="padding: 40px 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 28px; color: #374151; line-height: 1.6; text-align:center;">
-            <p style="margin:0 0 24px;">Discover how you earn Cash Back and Referral Commissions with Perk Miner.  <b>Members earn 2% Cashback for up to $2,500 of any purchase from our advertisers and Businesses earn 1% Cashback on up to $2,500 or their sale for offering at least one perk to our members.</b></p>
+                    <!-- Introduction + Video Button -->
+                    <tr>
+                        <td align="center" style="padding: 36px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 18px; color: #374151; line-height: 1.5;">
+                            <p style="margin:0 0 20px;">
+                                <b>Earn Cash Back and Referral Commissions with Perk Miner.</b><br>
+                                Free to join - Always Free for members: no contracts, monthly subscriptions or commitment.<br>
+                                Register in 4 easy steps:  Enter a valid email and password (for future login), click on captcha, click on register and verify your email.  That's it!
+                            </p>
+                            <a href="{video_url}" class="button" target="_blank">
+                                Watch our intro video
+                            </a>
+                        </td>
+                    </tr>
 
-                <a href="{video_url}" class="button" target="_blank" style="margin: 12px 0 32px;">
-                Watch our intro video
-                </a>
+                    <!-- Members Section -->
+                    <tr>
+                        <td style="padding: 30px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #374151; line-height: 1.5; text-align:left;">
+                            <p style="margin:0 0 12px; font-size:22px; font-weight:bold; color:#4f46e5;">For Members</p>
+                            <ul style="margin:0; padding-left:22px;">
+                                <li style="margin-bottom:10px;"><b>Exclusive member perks</b> offered by our advertisers.</li>
+                                <li style="margin-bottom:10px;"><b>2% Cash Back</b> on up to $2,500 of any purchase from our advertisers.</li>
+                                <li style="margin-bottom:10px;"><b>Your privacy is protected:</b> secure messaging, we never sell your contact information as a lead, and we don't track browsing history or listen to your conversations.</li>
+                                <li style="margin-bottom:10px;">Search for businesses, products or services with peace of mind.</li>
+                                <li style="margin-bottom:10px;">We connect <b>One Member</b> to <b>One Business</b> at a time.</li>
+                                <li style="margin-bottom:10px;">Live tracking of your service providers when status is "on the way" with real-time status updates.</li>
+                            </ul>
+                        </td>
+                    </tr>
 
-            <p style="margin:0 0 28px;">Free to join (no contracts, monthly subscriptions or commitment).</p>
-            <p style="margin:0 0 28px;"><b>Members:  Get exclusive member perks offered by our advertisers.</b>  We protect your privacy with secure messaging and never sell your contact information as a lead.  Search for businesses, products or services with peace of mind (we don't track browsing history or listen to your conversations).  We connect <b>One Member</b> to <b>One Business</b> at a time.</p>
-            <p style="margin:0 0 28px;"><b>Business Owners:</b>  YOU GET ZERO WASTED ADVERTISING DOLLARS!  <font color="#FF0000"></br>No Sale or Closed Deal = Zero Fees</font></br><b>(1,000% ROAS or higher - Spend $1 and get $10 in Return).</b>  No cost for exclusive leads, phone calls, website or foot traffic, appointments or meetups.  You only pay after you get paid (10% of the sale, capped at $250).  No hidden fees, no contracts, no membership fees and no commitment.  Only $25 required to get started in pre-funded dollars to cover the advertising (transactions over $250 require more funds).  Funds remain in your account balance until you make a sale).  Perk Miner LLC pays all cash back and referral commissions ... repeat business.</p>
-            <p style="margin:0 0 28px;">MEMBER SELECTS A BUSINESS -> BUSINESS AND MEMBER CONNECT</p>
-        </td>
-    </tr>
+                    <!-- Business Owners Section -->
+                    <tr>
+                        <td style="padding: 20px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #374151; line-height: 1.5; text-align:left;">
+                            <p style="margin:0 0 12px; font-size:22px; font-weight:bold; color:#4f46e5;">For Business Owners</p>
+                            <ul style="margin:0; padding-left:22px;">
+                                <li style="margin-bottom:10px;">
+                                    <b>ZERO wasted advertising dollars.</b>
+                                    <span style="color:#dc2626; font-weight:bold;">No Sale or Closed Deal = Zero Fees</span>
+                                </li>
+                                <li style="margin-bottom:10px;"><b>1,000% Return on Ad Spend or higher:</b> spend $1 and get $10 in return.</li>
+                                <li style="margin-bottom:10px;"><b>No cost</b> for exclusive leads, phone calls, website or foot traffic, appointments or meetups.</li>
+                                <li style="margin-bottom:10px;"><b>You only pay after you get paid:</b> 10% of the sale, capped at $250.</li>
+                                <li style="margin-bottom:10px;"><b>Earn 1% Cash Back</b> on up to $2,500 of your sale for offering at least one perk to our members.</li>
+                                <li style="margin-bottom:10px;">Only <b>$25</b> in pre-funded dollars needed to get started (transactions over $250 require more funds). Funds stay in your account balance until you make a sale.</li>
+                                <li style="margin-bottom:10px;">No hidden fees, contracts, membership fees or commitment.</li>
+                                <li style="margin-bottom:10px;">Live tracking of your service providers in the field when status is "on the way" with live status updates at no cost to your business.</li>
+                            </ul>
+                        </td>
+                    </tr>
 
-        <!-- Secondary Image -->
-    <tr>
-        <td style="padding: 0 40px 30px;">
-            <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1791000401/biz-flyer_pfg6os.jpg" width="600" alt="PerkMiner Features"
-            style="display:block; width:100%; max-width:520px; height:auto; border-radius:10px; border:0;" border="0">
-        </td>
-    </tr>
+                    <!-- Flow Statement -->
+                    <tr>
+                        <td align="center" style="padding: 10px 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight:bold; color:#1f2937; line-height: 1.5;">
+                            MEMBER SELECTS A BUSINESS &rarr; BUSINESS AND MEMBER CONNECT
+                        </td>
+                    </tr>
 
-        <!-- Join Button -->
-    <tr>
-        <td align="center" style="padding: 0 40px 50px;">
-            <a href="{join_url}" class="button" target="_blank" style="font-size:20px; padding:18px 48px;">
-            Join PerkMiner Now
-            </a>
-            <p style="margin:0 0 28px;">  </p>
-            <p style="margin:0 0 28px;">  </p>
-            <p style="margin:0 0 28px;"><b>Both Members and Business Owners earn Cash Back and generous Referral Commissions</b> (Paid by Perk Miner).  Up to 6 members and 6 businesses are paid from every finalized transaction (up to 84% of the ad revenue paid by our advertisers is used to pay all cash back and referral commissions from every finalized transaction).  Advertisers pay the ad fee after making a sale ... Perk Miner pays the cash back and commissions.  Real pay that is deposited to your bank account.  Not points or gift cards.</p>
-            <p style="margin:0 0 28px;"><b>EVERYONE WINS!</b></p>
-        </td>
-    </tr>
+                    <!-- Secondary Image -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px;">
+                            <img src="https://res.cloudinary.com/dmrntlcfd/image/upload/v1791000401/biz-flyer_pfg6os.jpg" width="520" alt="PerkMiner Features"
+                                 style="display:block; width:100%; max-width:520px; height:auto; border-radius:10px; border:0;" border="0">
+                        </td>
+                    </tr>
 
-        <!-- Footer -->
-    <tr>
-        <td align="center" style="padding: 30px 40px; background-color:#f8f9fa; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280; line-height:1.5; border-top:1px solid #e5e7eb;">
-            <p style="margin:0 0 8px;">
-                For questions regarding this email, contact
-                <a href="mailto:fromperkminer@gmail.com" style="color:#4f46e5;">Need help?</a>
-            </p>
-            <p style="margin:0;">
-                Copyright © PerkMiner 2026. All rights reserved.
-            </p>
+                    <!-- Everyone Earns Section -->
+                    <tr>
+                        <td style="padding: 0 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #374151; line-height: 1.5; text-align:left;">
+                            <p style="margin:0 0 12px; font-size:22px; font-weight:bold; color:#4f46e5;">Everyone Earns</p>
+                            <ul style="margin:0; padding-left:22px;">
+                                <li style="margin-bottom:10px;"><b>Both Members and Business Owners earn Cash Back and generous Referral Commissions</b>, paid by Perk Miner.</li>
+                                <li style="margin-bottom:10px;">Up to <b>6 members and 6 businesses</b> are paid from every finalized transaction.</li>
+                                <li style="margin-bottom:10px;">Up to <b>84%</b> of the ad revenue paid by our advertisers is used to pay all cash back and referral commissions (re-invested into the ecosystem).</li>
+                                <li style="margin-bottom:10px;">Advertisers pay the ad fee after making a sale. Perk Miner LLC pays the cash back and commissions.</li>
+                                <li style="margin-bottom:10px;"><b>Real pay deposited to your bank account.</b> Not points or gift cards.</li>
+                            </ul>
+                        </td>
+                    </tr>
+
+                    <!-- Join Button -->
+                    <tr>
+                        <td align="center" style="padding: 10px 40px 40px; font-family: Arial, Helvetica, sans-serif;">
+                            <p style="margin:0 0 20px; font-size:22px; font-weight:bold; color:#1f2937;">EVERYONE WINS!</p>
+                            <a href="{join_url}" class="button" target="_blank" style="font-size:20px; padding:18px 48px;">
+                                Join PerkMiner Now
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="padding: 30px 40px; background-color:#f8f9fa; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280; line-height:1.5; border-top:1px solid #e5e7eb;">
+                            <p style="margin:0 0 8px;">
+                                For questions regarding this email, contact
+                                <a href="mailto:fromperkminer@gmail.com" style="color:#4f46e5;">Need help?</a>
+                            </p>
+                            <p style="margin:0;">
+                                Copyright &copy; PerkMiner 2026. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
             </td>
-                </tr>
+        </tr>
+    </table>
 
-                    </table>
-
-                </td>
-            </tr>
-        </table>
-
-    </body>
+</body>
 </html>
     """
     return html_body
