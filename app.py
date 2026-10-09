@@ -11500,23 +11500,36 @@ def serve_sitemap():
 
 from decimal import Decimal
 from datetime import datetime
+from sqlalchemy import text
 
-# "max_businesses" = highest TOTAL registered business count at which the code still works
+# "max_redemptions" = how many businesses can use the code in total
 PROMO_CODES = {
     "foundingbiz500": {
         "label": "Foundingbiz500",
-        "max_businesses": 11,          # Perk Miner + 10 new businesses
+        "max_redemptions": 10,
         "amount": Decimal("50.00"),
         "sales_covered": 500,
     },
     "foundingbiz100": {
         "label": "Foundingbiz100",
-        "max_businesses": 61,          # Perk Miner + 60 new businesses
+        "max_redemptions": 50,
         "amount": Decimal("10.00"),
         "sales_covered": 100,
     },
 }
-PROMO_MAX_BUSINESSES = max(p["max_businesses"] for p in PROMO_CODES.values())
+
+PROMO_LOCK_KEY = 482011  # any fixed number; used to serialize redemptions
+
+
+def promo_redeemed_count(label):
+    return Business.query.filter(Business.promo_code_used == label).count()
+
+
+def any_promo_available():
+    return any(
+        promo_redeemed_count(p["label"]) < p["max_redemptions"]
+        for p in PROMO_CODES.values()
+    )
 
 
 @app.route("/business/redeem_promo", methods=["POST"])
@@ -11526,7 +11539,10 @@ def business_redeem_promo():
         flash("Please log in to apply a promo code.")
         return redirect(url_for("business_login"))
 
-    # Lock this business row so a double-click can't redeem twice
+    # Only one redemption can run at a time, so two businesses
+    # racing for the last spot can't both get it (released on commit/rollback)
+    db.session.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": PROMO_LOCK_KEY})
+
     biz = Business.query.filter_by(id=biz_id).with_for_update().first()
     if not biz or not biz.email_confirmed:
         db.session.rollback()
@@ -11546,10 +11562,9 @@ def business_redeem_promo():
         flash("That promo code is not valid.")
         return redirect(url_for("business_dashboard"))
 
-    total_registered = Business.query.count()
-    if total_registered > promo["max_businesses"]:
+    if promo_redeemed_count(promo["label"]) >= promo["max_redemptions"]:
         db.session.rollback()
-        flash(f"Sorry, the promo code {promo['label']} is no longer valid.  Try Foundingbiz100")
+        flash(f"Sorry, the promo code {promo['label']} is no longer valid.")
         return redirect(url_for("business_dashboard"))
 
     # Valid: deposit funds
