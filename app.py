@@ -1513,6 +1513,8 @@ class Business(db.Model):
     is_founding_business = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
+    promo_code_used = db.Column(db.String(50), nullable=True)
+    promo_redeemed_at = db.Column(db.DateTime, nullable=True)
     theme_type = db.Column(db.String(50))
 
 class Favorite(db.Model):
@@ -6763,6 +6765,9 @@ def business_dashboard():
     # remove Nones/empty strings
     preview_photos = [p for p in preview_photos if p]
 
+    # promo field: show only if no promo redeemed yet AND at least one code is still valid
+    show_promo_field = (not biz.promo_code_used) and (Business.query.count() <= PROMO_MAX_BUSINESSES)
+
     return render_template(
         "business_dashboard.html",
         form=form,
@@ -6803,6 +6808,7 @@ def business_dashboard():
         show_website_status=show_website_status,
         preview_photos=preview_photos,   # NEW
         website_status=website_status,
+        show_promo_field=show_promo_field,
     )
 
 @app.route("/business/logout")
@@ -11491,6 +11497,74 @@ def serve_sitemap():
     resp = Response(_sitemap_cache["xml"], mimetype="application/xml")
     resp.headers["Cache-Control"] = "public, max-age=3600"
     return resp
+
+from decimal import Decimal
+from datetime import datetime
+
+# "max_businesses" = highest TOTAL registered business count at which the code still works
+PROMO_CODES = {
+    "foundingbiz500": {
+        "label": "Foundingbiz500",
+        "max_businesses": 11,          # Perk Miner + 10 new businesses
+        "amount": Decimal("50.00"),
+        "sales_covered": 500,
+    },
+    "foundingbiz100": {
+        "label": "Foundingbiz100",
+        "max_businesses": 61,          # Perk Miner + 60 new businesses
+        "amount": Decimal("10.00"),
+        "sales_covered": 100,
+    },
+}
+PROMO_MAX_BUSINESSES = max(p["max_businesses"] for p in PROMO_CODES.values())
+
+
+@app.route("/business/redeem_promo", methods=["POST"])
+def business_redeem_promo():
+    biz_id = session.get("business_id")
+    if not biz_id:
+        flash("Please log in to apply a promo code.")
+        return redirect(url_for("business_login"))
+
+    # Lock this business row so a double-click can't redeem twice
+    biz = Business.query.filter_by(id=biz_id).with_for_update().first()
+    if not biz or not biz.email_confirmed:
+        db.session.rollback()
+        flash("Please log in and confirm your business email to access the dashboard.")
+        return redirect(url_for("business_login"))
+
+    if biz.promo_code_used:
+        db.session.rollback()
+        flash("A promo code has already been applied to your account.")
+        return redirect(url_for("business_dashboard"))
+
+    entered = (request.form.get("promo_code") or "").strip().lower()
+    promo = PROMO_CODES.get(entered)
+
+    if not promo:
+        db.session.rollback()
+        flash("That promo code is not valid.")
+        return redirect(url_for("business_dashboard"))
+
+    total_registered = Business.query.count()
+    if total_registered > promo["max_businesses"]:
+        db.session.rollback()
+        flash(f"Sorry, the promo code {promo['label']} is no longer valid.")
+        return redirect(url_for("business_dashboard"))
+
+    # Valid: deposit funds
+    current_balance = Decimal(str(biz.account_balance or 0))
+    biz.account_balance = current_balance + promo["amount"]
+    biz.promo_code_used = promo["label"]
+    biz.promo_redeemed_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(
+        f"Congratulations, you have received enough funds in your account balance "
+        f"to cover ${promo['sales_covered']} in sales!",
+        "success",
+    )
+    return redirect(url_for("business_dashboard"))
 
 @app.errorhandler(500)
 def internal_server_error(error):

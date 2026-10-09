@@ -281,6 +281,17 @@
         </div>
     </div>
 </nav>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="container">
+      <div class="alert alert-warning">
+        {% for message in messages %}{{ message }}<br>{% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endwith %}
+
 <div class="container py-4">
   <div class="card mb-4 p-4">
     <div class="d-flex align-items-center flex-wrap mb-3">
@@ -494,6 +505,20 @@
 <div class="collapse mb-4" id="profileCollapse">
   <div class="card p-4">
     <h4>Your Profile</h4>
+
+    {% if show_promo_field %}
+    <form method="post" action="{{ url_for('business_redeem_promo') }}" class="mb-4 p-3 border rounded bg-light">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="promo_code" class="form-label fw-bold">Promo Code</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="promo_code" name="promo_code"
+               placeholder="Enter promo code" maxlength="50" autocomplete="off" required>
+        <button type="submit" class="btn btn-warning">Apply</button>
+      </div>
+      <div class="form-text">Have a promo code? Enter it to add funds to your account balance.</div>
+    </form>
+    {% endif %}
+
     <form method="post" enctype="multipart/form-data" class="row g-3 align-items-center" id="profile-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <!-- Profile Photo -->
@@ -1281,23 +1306,14 @@
       </div>
     </div>
   </div>
-  <div class="card p-4 text-center">
-    <h4>This is your dashboard.</h4>
-    <p class="mb-0">Congrats on registering your business with PerkMiner!</p>
-    <a href="https://perkminer.com/discontinue" class="btn btn-danger btn-lg w-100 mb-3" style="max-width:400px; margin:auto; display:block;">
-    <i class="bi bi-x-circle-fill me-2"></i>
+
+<div class="card p-4 text-center">
+  <h4>This is your dashboard.</h4>
+  <p class="mb-3">Congrats on registering your business with PerkMiner!</p>
+  <a href="https://perkminer.com/discontinue" class="btn btn-danger btn-sm mx-auto">
+    <i class="bi bi-x-circle-fill me-1"></i>
     Discontinue Business Account
-</a>
-  </div>
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <div class="alert alert-warning mt-3">
-        {% for message in messages %}
-          {{ message }}<br>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
+  </a>
 </div>
 
 <div class="modal fade" id="businessEarningsInfo" tabindex="-1" aria-labelledby="businessEarningsInfoLabel" aria-hidden="true">
