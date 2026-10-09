@@ -656,7 +656,7 @@ def build_invite_email(inviter_name, join_url, video_url):
 
                     <!-- Introduction + Video Button -->
                     <tr>
-                        <td align="center" style="padding: 36px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 18px; color: #374151; line-height: 1.5;">
+                        <td align="center" style="padding: 36px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #374151; line-height: 1.5;">
                             <p style="margin:0 0 20px;">
                                 <b>Earn Cash Back and Referral Commissions with Perk Miner.</b><br>
                                 Free to join - Always Free for members: no contracts, monthly subscriptions or commitment.<br>
@@ -670,7 +670,7 @@ def build_invite_email(inviter_name, join_url, video_url):
 
                     <!-- Members Section -->
                     <tr>
-                        <td style="padding: 30px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #374151; line-height: 1.5; text-align:left;">
+                        <td style="padding: 30px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 18px; color: #374151; line-height: 1.5; text-align:left;">
                             <p style="margin:0 0 12px; font-size:22px; font-weight:bold; color:#4f46e5;">For Members</p>
                             <ul style="margin:0; padding-left:22px;">
                                 <li style="margin-bottom:10px;"><b>Exclusive member perks</b> offered by our advertisers.</li>
@@ -685,7 +685,7 @@ def build_invite_email(inviter_name, join_url, video_url):
 
                     <!-- Business Owners Section -->
                     <tr>
-                        <td style="padding: 20px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #374151; line-height: 1.5; text-align:left;">
+                        <td style="padding: 20px 40px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 18px; color: #374151; line-height: 1.5; text-align:left;">
                             <p style="margin:0 0 12px; font-size:22px; font-weight:bold; color:#4f46e5;">For Business Owners</p>
                             <ul style="margin:0; padding-left:22px;">
                                 <li style="margin-bottom:10px;">
@@ -705,7 +705,7 @@ def build_invite_email(inviter_name, join_url, video_url):
 
                     <!-- Flow Statement -->
                     <tr>
-                        <td align="center" style="padding: 10px 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight:bold; color:#1f2937; line-height: 1.5;">
+                        <td align="center" style="padding: 10px 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight:bold; color:#1f2937; line-height: 1.5;">
                             MEMBER SELECTS A BUSINESS &rarr; BUSINESS AND MEMBER CONNECT
                         </td>
                     </tr>
@@ -720,7 +720,7 @@ def build_invite_email(inviter_name, join_url, video_url):
 
                     <!-- Everyone Earns Section -->
                     <tr>
-                        <td style="padding: 0 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #374151; line-height: 1.5; text-align:left;">
+                        <td style="padding: 0 40px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 18px; color: #374151; line-height: 1.5; text-align:left;">
                             <p style="margin:0 0 12px; font-size:22px; font-weight:bold; color:#4f46e5;">Everyone Earns</p>
                             <ul style="margin:0; padding-left:22px;">
                                 <li style="margin-bottom:10px;"><b>Both Members and Business Owners earn Cash Back and generous Referral Commissions</b>, paid by Perk Miner.</li>
