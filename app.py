@@ -6766,7 +6766,7 @@ def business_dashboard():
     preview_photos = [p for p in preview_photos if p]
 
     # promo field: show only if no promo redeemed yet AND at least one code is still valid
-    show_promo_field = (not biz.promo_code_used) and (Business.query.count() <= PROMO_MAX_BUSINESSES)
+    show_promo_field = (not biz.promo_code_used) and any_promo_available()
 
     return render_template(
         "business_dashboard.html",
