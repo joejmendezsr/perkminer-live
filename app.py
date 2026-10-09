@@ -11549,7 +11549,7 @@ def business_redeem_promo():
     total_registered = Business.query.count()
     if total_registered > promo["max_businesses"]:
         db.session.rollback()
-        flash(f"Sorry, the promo code {promo['label']} is no longer valid.")
+        flash(f"Sorry, the promo code {promo['label']} is no longer valid.  Try Foundingbiz100")
         return redirect(url_for("business_dashboard"))
 
     # Valid: deposit funds
