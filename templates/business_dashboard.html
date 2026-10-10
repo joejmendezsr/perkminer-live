@@ -858,7 +858,7 @@
 
 <div class="collapse mb-3" id="changeRefCode">
   <form method="post" action="{{ url_for('business_change_referral_code') }}"
-        onsubmit="return confirm('Links, flyers and QR codes that use your old referral code may stop working. Continue?');">
+        onsubmit="return confirm('Invites, QR codes on flyers and social media posts that use your old referral code may stop working. Continue?');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input type="text" class="form-control" name="referral_code"

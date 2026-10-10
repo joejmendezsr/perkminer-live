@@ -2875,7 +2875,8 @@ def biz_tier_commission(t, tier_field, ref_field):
 REFERRAL_CODE_RE = re.compile(r"^[A-Za-z0-9\-]{4,32}$")   # DB column is String(32)
 RESERVED_REFERRAL_CODES = {
     "perkminer", "admin", "support", "staff", "official", "help",
-    "foundingbiz500", "foundingbiz100",
+    "foundingbiz500", "foundingbiz100", "perk-miner", "fromperkminer",
+    "from-perkminer", "from-perk-miner", "perkmineradmin", "official-perkminer",
 }
 REFERRAL_LOCK_KEY = 482012  # fixed number, serializes code changes
 

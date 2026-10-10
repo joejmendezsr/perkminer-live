@@ -189,6 +189,17 @@
     </script>
 </head>
 <body>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="alert alert-warning mt-3">
+      {% for message in messages %}
+        {{ message }}<br>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 <!-- Persistent navbar with home link -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
     <div class="container">
@@ -448,7 +459,7 @@
 
 <div class="collapse mb-2" id="changeRefCode">
   <form method="post" action="{{ url_for('member_change_referral_code') }}"
-        onsubmit="return confirm('Links, flyers and QR codes that use your old referral code may stop working. Continue?');">
+        onsubmit="return confirm('Invites, QR codes on flyers and social media posts that use your old referral code may stop working. Continue?');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input type="text" class="form-control" name="referral_code"
@@ -1128,15 +1139,6 @@
   <h4>This is your dashboard.</h4>
   <p class="mb-0">Enjoy your member benefits with Perk Miner!</p>
 </div>
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <div class="alert alert-warning mt-3">
-      {% for message in messages %}
-        {{ message }}<br>
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
 
 </div>
   <footer>
