@@ -253,6 +253,7 @@
         <h1 class="hero-title">{{ business.business_name }}</h1>
         <div class="hero-sub mt-2">
           <div>{{ business.category }}</div>
+
 {% if area_city or area_state %}
   <div>
     <i class="bi bi-geo-alt"></i>
@@ -288,6 +289,14 @@
               Visit Website
             </a>
           {% endif %}
+
+          {% if business.google_reviews_url %}
+            <a href="{{ business.google_reviews_url }}" target="_blank" rel="noopener noreferrer nofollow"
+               class="btn btn-outline-light btn-outline-light-pill">
+              <span aria-hidden="true">★</span> See Google reviews
+            </a>
+          {% endif %}
+
         </div>
       </div>
     </div>

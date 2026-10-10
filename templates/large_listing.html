@@ -351,6 +351,15 @@
         </a>
       </div>
 
+      {% if business.google_reviews_url %}
+        <div class="listing-btn-row__row">
+          <a href="{{ business.google_reviews_url }}" target="_blank" rel="noopener noreferrer nofollow"
+             class="btn btn-outline-primary btn-action">
+            <span aria-hidden="true">★</span> See Google reviews
+          </a>
+        </div>
+      {% endif %}
+
       {% if current_user.is_authenticated %}
         <div class="listing-btn-row__row">
           {% if can_shop_online_listing %}
@@ -468,11 +477,10 @@
       {% if map_lat and map_lng %}
         <div class="map-wrap">
           <iframe
-                width="100%" height="100%" style="border:0"
-                loading="lazy" allowfullscreen
-                referrerpolicy="no-referrer-when-downgrade"
-                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyDo-AojTUQUwwvvywrSiDRcF-oVpw9m_w4
-                &q={{ map_lat }},{{ map_lng }}">
+            width="100%" height="100%" style="border:0"
+            loading="lazy" allowfullscreen
+            referrerpolicy="no-referrer-when-downgrade"
+            src="https://www.google.com/maps/embed/v1/place?key=AIzaSyDo-AojTUQUwwvvywrSiDRcF-oVpw9m_w4&q={{ map_lat }},{{ map_lng }}">
           </iframe>
         </div>
         <div class="mt-2 mb-3">

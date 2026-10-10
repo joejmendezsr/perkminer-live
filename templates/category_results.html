@@ -208,6 +208,12 @@
                   </div>
                 {% endif %}
 
+                {% if biz.google_reviews_url %}
+                  <div style="font-size:0.9em; margin-bottom: 8px; color:#555;">
+                    <i class="bi bi-star-fill" style="color:#f5a623;"></i> Google reviews available
+                  </div>
+                {% endif %}
+
                 <div class="small-listing-services">
                   <b>Services:</b>
                   {% set services = [biz.service_1, biz.service_2, biz.service_3, biz.service_4, biz.service_5, biz.service_6, biz.service_7, biz.service_8, biz.service_9, biz.service_10] %}
@@ -342,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         var category = "{{ category|urlencode }}";
-        var distance = distanceParam ? distanceParam : 25;
+        var distance = distanceParam ? distanceParam : 10;
         var url = "/category/" + category +
                   "?lat=" + lat + "&lng=" + lng + "&distance=" + distance;
         window.location.replace(url);

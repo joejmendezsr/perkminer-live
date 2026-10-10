@@ -32,6 +32,8 @@ from itsdangerous import URLSafeSerializer
 from cloudinary.utils import api_sign_request
 import time
 
+from urllib.parse import urlparse
+
 import os
 import stripe
 import logging
@@ -1515,6 +1517,7 @@ class Business(db.Model):
     is_founding_business = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
+    google_reviews_url = db.Column(db.String(500), nullable=True)
     promo_code_used = db.Column(db.String(50), nullable=True)
     promo_redeemed_at = db.Column(db.DateTime, nullable=True)
     theme_type = db.Column(db.String(50))
@@ -2711,6 +2714,31 @@ def area_served_ld(city, state, country):
     if country:
         area["address"]["addressCountry"] = country
     return area
+
+GOOGLE_REVIEW_HOSTS = {
+    "g.page", "maps.app.goo.gl",
+    "google.com", "maps.google.com", "search.google.com",
+}
+
+def valid_google_reviews_url(url):
+    """Only https links on Google domains, so the field can't be used for arbitrary links."""
+    if not url or len(url) > 500:
+        return False
+    try:
+        p = urlparse(url)
+        host = (p.hostname or "").lower()
+    except ValueError:
+        return False
+    if p.scheme != "https" or not host:
+        return False
+    if host.startswith("www."):
+        host = host[4:]
+    if host not in GOOGLE_REVIEW_HOSTS:
+        return False
+    # google.com has redirect paths that can point anywhere; block them
+    if p.path.startswith(("/url", "/amp")):
+        return False
+    return True
 
 def get_featured_businesses(lat, lng):
     RADIUS = 10  # miles
@@ -6775,6 +6803,20 @@ def business_dashboard():
         if biz.store_slug != slug:
             biz.store_slug = slug
             updated = True
+
+        # --- Google reviews link: live field (no re-submission), editable but not removable ---
+        if "google_reviews_url" in request.form:
+            new_url = (request.form.get("google_reviews_url") or "").strip()
+            current_url = biz.google_reviews_url or ""
+            if new_url != current_url:
+                if not new_url:
+                    flash("Your Google reviews link can be updated, but it can't be removed once added.", "danger")
+                    return redirect(url_for("business_dashboard"))
+                if not valid_google_reviews_url(new_url):
+                    flash("Please enter a valid Google reviews link (use the share link from your Google Business Profile).", "danger")
+                    return redirect(url_for("business_dashboard"))
+                biz.google_reviews_url = new_url
+                updated = True
 
         if updated:
             db.session.commit()
