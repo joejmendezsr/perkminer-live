@@ -38,6 +38,8 @@ import logging
 from datetime import datetime, date, timezone
 import json
 from sqlalchemy import or_, and_, func, literal
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from flask_migrate import Migrate
 import re
 import random
@@ -1517,6 +1519,14 @@ class Business(db.Model):
     promo_redeemed_at = db.Column(db.DateTime, nullable=True)
     theme_type = db.Column(db.String(50))
 
+class ReferralCodeHistory(db.Model):
+    __tablename__ = "referral_code_history"
+    id = db.Column(db.Integer, primary_key=True)
+    owner_type = db.Column(db.String(10), nullable=False)   # 'user' or 'business'
+    owner_id = db.Column(db.Integer, nullable=False)
+    old_code = db.Column(db.String(50), nullable=False)
+    changed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -2861,6 +2871,108 @@ def biz_tier_commission(t, tier_field, ref_field):
         return getattr(t, tier_field) or 0
     return 0
 
+# ---- referral code settings ----
+REFERRAL_CODE_RE = re.compile(r"^[A-Za-z0-9\-]{4,32}$")   # DB column is String(32)
+RESERVED_REFERRAL_CODES = {
+    "perkminer", "admin", "support", "staff", "official", "help",
+    "foundingbiz500", "foundingbiz100",
+}
+REFERRAL_LOCK_KEY = 482012  # fixed number, serializes code changes
+
+
+# ---- helpers ----
+def referral_code_available(code, owner_type=None, owner_id=None):
+    """True if no member, business, or retired code (belonging to someone else) uses it."""
+    lowered = code.lower()
+
+    users = User.query.filter(db.func.lower(User.referral_code) == lowered)
+    if owner_type == "user":
+        users = users.filter(User.id != owner_id)
+
+    bizs = Business.query.filter(db.func.lower(Business.referral_code) == lowered)
+    if owner_type == "business":
+        bizs = bizs.filter(Business.id != owner_id)
+
+    hist = ReferralCodeHistory.query.filter(db.func.lower(ReferralCodeHistory.old_code) == lowered)
+    if owner_type:
+        hist = hist.filter(
+            db.not_(db.and_(ReferralCodeHistory.owner_type == owner_type,
+                            ReferralCodeHistory.owner_id == owner_id))
+        )
+
+    return not (users.first() or bizs.first() or hist.first())
+
+
+def make_unique_referral_code(base_code):
+    """Takes an auto-generated code; adds 3 random digits only if it collides
+    with any current or retired code."""
+    code = base_code
+    for _ in range(20):
+        if referral_code_available(code):
+            return code
+        suffix = "".join(secrets.choice(string.digits) for _ in range(3))
+        code = base_code[:29] + suffix
+    raise RuntimeError("Could not generate a unique referral code")
+
+
+def resolve_referral_code(code, include_businesses=False):
+    """Finds who owns a referral code. Returns ("user", User), ("business", Business),
+    or (None, None). Order: current codes (exact, then case-insensitive), then retired codes."""
+    code = (code or "").strip()
+    if not code:
+        return None, None
+
+    models = [("business", Business), ("user", User)] if include_businesses else [("user", User)]
+
+    # 1) current codes, exact match
+    for kind, model in models:
+        owner = model.query.filter_by(referral_code=code).first()
+        if owner:
+            return kind, owner
+
+    # 2) current codes, ignoring case
+    for kind, model in models:
+        owner = model.query.filter(db.func.lower(model.referral_code) == code.lower()).first()
+        if owner:
+            return kind, owner
+
+    # 3) retired codes, so old links keep crediting the right sponsor
+    for kind, model in models:
+        old = (ReferralCodeHistory.query
+               .filter(ReferralCodeHistory.owner_type == kind,
+                       db.func.lower(ReferralCodeHistory.old_code) == code.lower())
+               .order_by(ReferralCodeHistory.changed_at.desc())
+               .first())
+        if old:
+            owner = model.query.get(old.owner_id)
+            if owner:
+                return kind, owner
+
+    return None, None
+
+
+def apply_referral_code_change(owner_type, owner, raw_code):
+    """Validates and applies the change (does NOT commit). Returns (ok, message)."""
+    new_code = (raw_code or "").strip()   # case is preserved as typed
+
+    if not REFERRAL_CODE_RE.match(new_code):
+        return False, "Referral codes must be 4-32 characters: letters, numbers, and dashes only."
+    if new_code.lower() in RESERVED_REFERRAL_CODES:
+        return False, "That referral code is not available. Please try another."
+    if (owner.referral_code or "") == new_code:
+        return False, "That is already your referral code."
+    if new_code.startswith(("REF", "BIZ")):
+        return False, "Custom referral codes can't start with REF or BIZ. Please try another."
+    if not referral_code_available(new_code, owner_type, owner.id):
+        return False, "That referral code is already taken. Please try another."
+
+    if owner.referral_code:
+        db.session.add(ReferralCodeHistory(
+            owner_type=owner_type, owner_id=owner.id, old_code=owner.referral_code
+        ))
+    owner.referral_code = new_code
+    return True, f"Your referral code has been changed to {new_code}."
+
 # Add others (interaction, message, etc.) as needed here
 
 # ---------------- STORE ROUTES ----------------
@@ -4191,14 +4303,14 @@ def register():
             return redirect(url_for("register"))
         sponsor_id = None
         if referral_code:
-            sponsor = User.query.filter_by(referral_code=referral_code).first()
+            kind, sponsor = resolve_referral_code(referral_code)
             if sponsor:
                 sponsor_id = sponsor.id
             else:
                 flash("Invalid referral code.")
                 return redirect(url_for("register"))
         hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-        user_ref_code = random_referral_code(email)
+        user_ref_code = make_unique_referral_code(random_referral_code(email))
         email_code = random_email_code()
         new_user = User(
             email=email,
@@ -6080,18 +6192,16 @@ def business_register():
         sponsor_id = None
         user_sponsor_id = None
         if referral_code:
-            sponsor = Business.query.filter_by(referral_code=referral_code).first()
-            if sponsor:
-                sponsor_id = sponsor.id
+            kind, owner = resolve_referral_code(referral_code, include_businesses=True)
+            if kind == "business":
+                sponsor_id = owner.id
+            elif kind == "user":
+                user_sponsor_id = owner.id
             else:
-                user_sponsor = User.query.filter_by(referral_code=referral_code).first()
-                if user_sponsor:
-                    user_sponsor_id = user_sponsor.id
-                else:
-                    flash("Invalid referral code.")
-                    return redirect(url_for("business_register"))
+                flash("Invalid referral code.")
+                return redirect(url_for("business_register"))
         hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-        biz_ref_code = random_business_code(business_name)
+        biz_ref_code = make_unique_referral_code(random_business_code(business_name))
         email_code = random_email_code()
         new_biz = Business(
             business_name=business_name,
@@ -11531,7 +11641,6 @@ def any_promo_available():
         for p in PROMO_CODES.values()
     )
 
-
 @app.route("/business/redeem_promo", methods=["POST"])
 def business_redeem_promo():
     biz_id = session.get("business_id")
@@ -11580,6 +11689,57 @@ def business_redeem_promo():
         "success",
     )
     return redirect(url_for("business_dashboard"))
+
+# ---- change-code routes ----
+@app.route("/business/change_referral_code", methods=["POST"])
+def business_change_referral_code():
+    biz_id = session.get("business_id")
+    if not biz_id:
+        flash("Please log in to change your referral code.")
+        return redirect(url_for("business_login"))
+
+    # one change at a time, so two people can't grab the same code
+    db.session.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": REFERRAL_LOCK_KEY})
+    biz = Business.query.filter_by(id=biz_id).with_for_update().first()
+    if not biz or not biz.email_confirmed:
+        db.session.rollback()
+        flash("Please log in and confirm your business email to access the dashboard.")
+        return redirect(url_for("business_login"))
+
+    ok, msg = apply_referral_code_change("business", biz, request.form.get("referral_code"))
+    if ok:
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            msg = "That referral code is already taken. Please try another."
+    else:
+        db.session.rollback()
+
+    flash(msg)
+    return redirect(url_for("business_dashboard"))
+
+@app.route("/member/change_referral_code", methods=["POST"])
+@login_required
+def member_change_referral_code():
+    db.session.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": REFERRAL_LOCK_KEY})
+    user = User.query.filter_by(id=current_user.id).with_for_update().first()
+    if not user:
+        db.session.rollback()
+        return redirect(url_for("dashboard"))
+
+    ok, msg = apply_referral_code_change("user", user, request.form.get("referral_code"))
+    if ok:
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            msg = "That referral code is already taken. Please try another."
+    else:
+        db.session.rollback()
+
+    flash(msg)
+    return redirect(url_for("dashboard"))
 
 @app.errorhandler(500)
 def internal_server_error(error):

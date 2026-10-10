@@ -438,7 +438,27 @@
 
   <!-- referral code + sponsor -->
   <div class="mb-3">
-    <div><strong>{{ referral_code }}</strong></div>
+
+<div><strong>{{ referral_code }}</strong></div>
+
+<button class="btn btn-sm btn-outline-secondary mt-2 mb-2" type="button"
+        data-bs-toggle="collapse" data-bs-target="#changeRefCode">
+  Change my referral code
+</button>
+
+<div class="collapse mb-2" id="changeRefCode">
+  <form method="post" action="{{ url_for('member_change_referral_code') }}"
+        onsubmit="return confirm('Links, flyers and QR codes that use your old referral code may stop working. Continue?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="input-group">
+      <input type="text" class="form-control" name="referral_code"
+             minlength="4" maxlength="32" pattern="[A-Za-z0-9\-]{4,32}"
+             placeholder="New referral code" autocomplete="off" required>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+    <div class="form-text">4-32 characters: letters, numbers and dashes only. Can't start with REF or BIZ.</div>
+  </form>
+</div>
 
     {% if sponsor %}
       <small class="text-muted">
