@@ -878,18 +878,18 @@ def finalize_interaction(interaction, business, amount, staff_id=None, source=No
     if business.account_balance is None or business.account_balance < ad_fee:
         raise Exception("Insufficient funds to complete this transaction. Please fund your account.")
 
-    user_referral_id = interaction.user.referral_code or "REFjoejmendez"
+    user_referral_id = interaction.user.referral_code or "JoeJMendez"
     user_cash_back_raw = amount * 0.02
     user_cash_back = round(min(user_cash_back_raw, 50), 2)
 
     u2 = User.query.filter_by(id=interaction.user.sponsor_id).first()
-    tier2_user_referral_id = u2.referral_code if u2 else "REFmarjoriepint"
+    tier2_user_referral_id = u2.referral_code if u2 else "MarjorieMendez"
     u3 = User.query.filter_by(id=u2.sponsor_id).first() if u2 and u2.sponsor_id else None
-    tier3_user_referral_id = u3.referral_code if u3 else "REFmarjoriepint"
+    tier3_user_referral_id = u3.referral_code if u3 else "MarjorieMendez"
     u4 = User.query.filter_by(id=u3.sponsor_id).first() if u3 and u3.sponsor_id else None
-    tier4_user_referral_id = u4.referral_code if u4 else "REFmarjoriepint"
+    tier4_user_referral_id = u4.referral_code if u4 else "MarjorieMendez"
     u5 = User.query.filter_by(id=u4.sponsor_id).first() if u4 and u4.sponsor_id else None
-    tier5_user_referral_id = u5.referral_code if u5 else "REFjoejmendez"
+    tier5_user_referral_id = u5.referral_code if u5 else "JoeJMendez"
 
     tier2_commission_raw = amount * 0.002
     tier2_commission = round(min(tier2_commission_raw, 5.00), 2)
@@ -2495,6 +2495,35 @@ def get_finalized_tx_count_for_business(business: Business) -> int:
     )
     return count or 0
 
+def get_admin_pending_counts():
+    """Pending-item counts for the admin landing page buttons."""
+    counts = {}
+
+    if current_user.has_role("approve_reject_listings"):
+        counts["listings"] = Business.query.filter(
+            Business.status.in_(["pending", "in_review"])
+        ).count()
+
+    if current_user.has_role("approve_reject_testimonials"):
+        counts["testimonials"] = TestimonialVideo.query.filter_by(
+            status="pending"          # <-- change if your testimonials route uses a different status
+        ).count()
+
+    if current_user.has_role("customer_support"):
+        counts["support"] = Interaction.query.filter_by(
+            service_type="Support", status="active"
+        ).count()
+
+    if current_user.has_role("ecommerce"):
+        counts["ecommerce"] = Business.query.filter(
+            Business.is_ecommerce_site.is_(True),
+            Business.allow_website_purchases.is_(True),
+            Business.online_terms_agreed.is_(True),
+            Business.ecommerce_verified.is_(False)
+        ).count()
+
+    return counts
+
 def staff_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -2950,7 +2979,6 @@ def resolve_referral_code(code, include_businesses=False):
                 return kind, owner
 
     return None, None
-
 
 def apply_referral_code_change(owner_type, owner, raw_code):
     """Validates and applies the change (does NOT commit). Returns (ok, message)."""
@@ -6931,7 +6959,11 @@ def business_logout():
 @app.route('/admin/roles-landing')
 @admin_required  # or @role_required('super_admin')
 def admin_roles_landing():
-    return render_template('admin_roles_landing.html')  # create this template if needed
+    pending_counts = get_admin_pending_counts()
+    return render_template(
+        'admin_roles_landing.html',
+        pending_counts=pending_counts
+    )
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
@@ -9222,81 +9254,6 @@ def finalized_report():
     logs = FinalizedTransaction.query.filter_by(business_id=biz_id).order_by(FinalizedTransaction.timestamp.desc()).all()
     staff_lookup = {s.id: s for s in Staff.query.filter_by(business_id=biz_id)}
     return render_template("finalized_report.html", logs=logs, staff_lookup=staff_lookup)
-
-@app.route("/seed_admins_once")
-def seed_admins_once():
-    from app import db, User, Role, bcrypt
-    response = []
-
-    # Roles to create
-    role_names = [
-        "approve_reject_listings",
-        "finance",
-        "feedback_moderation",
-        "approve_reject_testimonials",
-        "customer_support"
-    ]
-    roles = {}
-    for name in role_names:
-        role = Role.query.filter_by(name=name).first()
-        if not role:
-            role = Role(name=name)
-            db.session.add(role)
-            response.append(f"Added role: {name}")
-        roles[name] = role
-    db.session.commit()
-
-    # Create demo admin users if needed
-    admins = [
-        {
-            "email": "admin1@perkminer.com",
-            "password": "49pi25yt!@3#",
-            "role_names": [
-                "approve_reject_listings", "finance", "feedback_moderation", "customer_support"
-            ]
-        },
-        {
-            "email": "finance1@perkminer.com",
-            "password": "84kf68oe^2&%",
-            "role_names": ["finance"]
-        }
-    ]
-    for admin in admins:
-        user = User.query.filter_by(email=admin["email"]).first()
-        if not user:
-            hashed_pw = bcrypt.generate_password_hash(admin["password"]).decode("utf-8")
-            user = User(
-                email=admin["email"],
-                password=hashed_pw,
-                email_confirmed=True
-            )
-            db.session.add(user)
-            db.session.commit()
-            response.append(f"Created user: {admin['email']}")
-        # Assign roles
-        for role_name in admin["role_names"]:
-            role = Role.query.filter_by(name=role_name).first()
-            if role and role not in user.roles:
-                user.roles.append(role)
-                response.append(f"Granted {role_name} to {admin['email']}")
-        db.session.commit()
-
-    # Assign roles to your own account if needed
-    target_email = "joejmendez@gmail.com"
-    target_roles = ["finance"]  # Change or add as needed
-    user = User.query.filter_by(email=target_email).first()
-    if user:
-        for role_name in target_roles:
-            role = Role.query.filter_by(name=role_name).first()
-            if role and role not in user.roles:
-                user.roles.append(role)
-                response.append(f"Granted {role_name} to {target_email}")
-        db.session.commit()
-    else:
-        response.append(f"User {target_email} not found; cannot assign roles.")
-
-    response.append("Seeding complete!")
-    return "<br>".join(response)
 
 @app.route("/how-it-works")
 def how_it_works():
