@@ -4841,6 +4841,8 @@ def dashboard():
 
     stripe_status = get_stripe_payout_status(current_user)
 
+    admin_pending_total = sum(get_admin_pending_counts().values())
+
     return render_template(
         "dashboard.html",
         form=form,
@@ -4882,6 +4884,7 @@ def dashboard():
         share_url=share_url,
         business_share_url=business_share_url,
         stripe_status=stripe_status,
+        admin_pending_total=admin_pending_total,
         member_level_code=member_level_code,
         member_testimonials=member_testimonials,
     )
